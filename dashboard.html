@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Growth Partner — Dashboard GEMA V4</title>
+  <title>Growth Partner AI — Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
@@ -326,6 +326,12 @@ const GEMA_TASKS = [
 const WEEKS = ["Semana 1","Semana 2","Semana 3","Semana 4+"];
 const AREAS = ["Gerencia","Tráfico","Comunicaciones","Gestión del Cliente"];
 const CHANNELS = ["Meta Ads","Referido","Orgánico","Otro"];
+const AREA_AGENT = {
+  "Gerencia":             { label:"JP · Gerencia",    file:"orquestador.md",          color:"#8B5CF6" },
+  "Tráfico":              { label:"Media Buyer",       file:"media_buyer.md",           color:"#3B82F6" },
+  "Comunicaciones":       { label:"Estratega",         file:"agente_contenido.md",      color:"#06B6D4" },
+  "Gestión del Cliente":  { label:"Account Manager",   file:"agente_account_manager.md",color:"#22C55E" },
+};
 
 const NODE_TYPES = {
   inicio:   { label:"Inicio",            bg:"#D4AF37", color:"#141414", border:"#D4AF37" },
@@ -334,6 +340,28 @@ const NODE_TYPES = {
   accion:   { label:"Acción",            bg:"#ECFDF5", color:"#1A7A4A", border:"#4CAF7D" },
   alerta:   { label:"Alerta / Objeción", bg:"#FEF2F2", color:"#B91C1C", border:"#E06C6C" },
 };
+
+// ─── LAUNCH STEPS ─────────────────────────────────────────────────────────────
+const MVP_STEPS = [
+  { n:1,  title:"Diagnóstico",             desc:"Cuestionario en llamada o llenado por el cliente" },
+  { n:2,  title:"Proyección financiera",   desc:"LTV, CAC, CPA máximo, proyección 3 meses" },
+  { n:3,  title:"Creación de oferta",      desc:"Oferta + guiones + VSL + imágenes para el mínimo viable" },
+  { n:4,  title:"Estrategia general",      desc:"Todos los loops del sistema de captación" },
+  { n:5,  title:"Estrategia comercial",    desc:"Loop de contacto humano con el lead" },
+  { n:6,  title:"CRM + guiones de venta",  desc:"Crear CRM y guiones para el equipo comercial" },
+  { n:7,  title:"Entrenamiento comercial", desc:"Capacitar al equipo en los guiones y el proceso" },
+  { n:8,  title:"Lanzamiento de campaña",  desc:"Activación y primeras 48h de seguimiento" },
+];
+
+const FULL_STEPS = [
+  { n:9,  title:"Análisis y optimización", desc:"Revisar datos del MVP, ajustar audiencias, creativos y CPA" },
+  { n:10, title:"Banco de creativos completo", desc:"Video largo, carrusel, UGC, testimonios, variantes A/B" },
+  { n:11, title:"Automatización de leads",  desc:"Bot WhatsApp + secuencia de seguimiento automática post-lead" },
+  { n:12, title:"Sistema de contenido orgánico", desc:"Calendario de contenido activo + perfiles optimizados" },
+  { n:13, title:"Proceso de retención",     desc:"Onboarding del cliente final, check-ins quincenales, ruta de upsell" },
+  { n:14, title:"Dashboard de métricas",    desc:"Reportería semanal en tiempo real + reunión de resultados con el cliente" },
+  { n:15, title:"Escala y expansión",       desc:"Nuevos canales, presupuesto ampliado, nuevas ofertas al mercado" },
+];
 
 // ─── SEED DATA ────────────────────────────────────────────────────────────────
 function makeClient(name, channel) {
@@ -344,6 +372,10 @@ function makeClient(name, channel) {
     profile: { phone:"", email:"", contractValue:"", channel: channel||"Meta Ads", startDate:null, nextMeeting:null, notes:"" },
     tasks: GEMA_TASKS.map(t => ({ ...t, id: uid(), done: false, assigneeId: null, doneAt: null })),
     flows: [{ id: uid(), name:"Proceso comercial v1", createdAt: Date.now(), nodes:[], edges:[] }],
+    mvpChecks: {},
+    fullChecks: {},
+    customMvpSteps: null,   // null = use global MVP_STEPS defaults
+    customFullSteps: null,  // null = use global FULL_STEPS defaults
   };
 }
 
@@ -355,6 +387,7 @@ function getInitialData() {
     team: [{ id: uid(), name:"Pena" }, { id: uid(), name:"JP" }],
     clients: [],
     settings: { apiKey:"" },
+    flowTemplates: [],  // { id, name, createdAt, nodes, edges }
   };
 }
 
@@ -526,6 +559,47 @@ function EjecucionTab({ client, team, onChange }) {
         })}
       </div>
 
+      {/* Launch milestones */}
+      {(() => {
+        const start = client.profile?.startDate;
+        if (!start) return (
+          <div style={{ background:"rgba(212,175,55,0.06)", border:`1px solid ${GOLD_DIM}`, borderRadius:10, padding:"10px 14px", marginBottom:16, fontSize:11, color:GOLD_DIM }}>
+            ⚡ Define la <strong style={{color:GOLD}}>Fecha inicio</strong> en Perfil para ver los hitos de lanzamiento MVP y Full.
+          </div>
+        );
+        const d = new Date(start);
+        const mvp = new Date(d); mvp.setDate(mvp.getDate() + 14);
+        const full = new Date(d); full.setDate(full.getDate() + 21);
+        const fmt = dt => dt.toLocaleDateString("es-CO", { day:"2-digit", month:"short" });
+        const today = new Date();
+        const diffDays = (dt) => Math.ceil((dt - today) / 86400000);
+        const mvpDiff = diffDays(mvp), fullDiff = diffDays(full);
+        const status = (diff) => diff < 0 ? { color:"#E06C6C", label:`hace ${-diff}d` } : diff === 0 ? { color:GREEN, label:"hoy" } : { color:GOLD, label:`en ${diff}d` };
+        return (
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
+            {[
+              { icon:"🎯", name:"MVP Launch", date:mvp, diff:mvpDiff, desc:"Semana 2 · Mínimo viable activo" },
+              { icon:"🚀", name:"Full Launch", date:full, diff:fullDiff, desc:"Semana 3 · Sistema completo en marcha" },
+            ].map(m => {
+              const st = status(m.diff);
+              return (
+                <div key={m.name} style={{ background:CARD, border:`1px solid ${st.color}44`, borderRadius:10, padding:"10px 14px", display:"flex", alignItems:"center", gap:12 }}>
+                  <div style={{ fontSize:22 }}>{m.icon}</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:WHITE }}>{m.name}</div>
+                    <div style={{ fontSize:11, color:GRAY }}>{m.desc}</div>
+                  </div>
+                  <div style={{ textAlign:"right" }}>
+                    <div style={{ fontSize:14, fontWeight:700, color:st.color }}>{fmt(m.date)}</div>
+                    <div style={{ fontSize:10, color:st.color, opacity:0.8 }}>{st.label}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {/* Filters */}
       <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:10 }}>
         {["Todas",...WEEKS].map(w=><Pill key={w} active={weekFilter===w} onClick={()=>setWeekFilter(w)}>{w}</Pill>)}
@@ -633,12 +707,23 @@ function EjecucionTab({ client, team, onChange }) {
 
       {/* Task list */}
       {weekFilter === "Todas" ? (
-        Object.entries(grouped).map(([area, areaTask]) => (
+        Object.entries(grouped).map(([area, areaTask]) => {
+          const ag = AREA_AGENT[area];
+          return (
           <div key={area} style={{ marginBottom:20 }}>
-            <div style={{ fontSize:12, fontWeight:600, color:GOLD, textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>{area}</div>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+              <span style={{ fontSize:12, fontWeight:600, color:GOLD, textTransform:"uppercase", letterSpacing:1 }}>{area}</span>
+              {ag && (
+                <span title={`Agente: ${ag.file} · Actívalo en Claude /agentes`}
+                  style={{ fontSize:10, padding:"2px 7px", borderRadius:4, background:`${ag.color}20`, color:ag.color, border:`1px solid ${ag.color}55`, cursor:"default", fontWeight:600 }}>
+                  🤖 {ag.label}
+                </span>
+              )}
+            </div>
             {areaTask.map(t => <TaskRow key={t.id} task={t} team={team} onToggle={toggleTask} onAssign={assignTask} onDelete={deleteTask} />)}
           </div>
-        ))
+          );
+        })
       ) : (
         filtered.map(t => <TaskRow key={t.id} task={t} team={team} onToggle={toggleTask} onAssign={assignTask} onDelete={deleteTask} />)
       )}
@@ -702,8 +787,11 @@ function FlowCanvas({ flow, clientName, clientProfile, clientTasks, onUpdate, ap
   const [selectionRect, setSelectionRect] = useState(null);
   const [toolMode, setToolMode] = useState("select");
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
+  const spacePanning = useRef(false);
   const [history, setHistory] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [clipboard, setClipboard] = useState(null); // {nodes: [], edges: []}
+  const [nodeSearch, setNodeSearch] = useState("");
 
   const NODE_COLORS = [
     { label:"Default",   bg:null },
@@ -908,24 +996,84 @@ function FlowCanvas({ flow, clientName, clientProfile, clientTasks, onUpdate, ap
   useEffect(() => {
     const handler = (e) => {
       if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      // Ctrl+C — copy selected nodes
+      if ((e.ctrlKey || e.metaKey) && e.key === "c") {
+        if (selectedIds.size > 0) {
+          const copiedNodes = nodes.filter(n=>selectedIds.has(n.id));
+          const copiedEdges = edges.filter(ed=>selectedIds.has(ed.from)&&selectedIds.has(ed.to));
+          setClipboard({ nodes:copiedNodes, edges:copiedEdges });
+        }
+        return;
+      }
+      // Ctrl+V — paste at +40,+40 offset
+      if ((e.ctrlKey || e.metaKey) && e.key === "v") {
+        if (clipboard) {
+          const idMap = {};
+          const newNodes = clipboard.nodes.map(n => {
+            const newId = uid();
+            idMap[n.id] = newId;
+            return { ...n, id:newId, x:n.x+40, y:n.y+40 };
+          });
+          const newEdges = clipboard.edges.map(ed => ({
+            ...ed, id:uid(), from:idMap[ed.from]||ed.from, to:idMap[ed.to]||ed.to
+          }));
+          update({ ...flow, nodes:[...nodes,...newNodes], edges:[...edges,...newEdges] });
+          setSelectedIds(new Set(newNodes.map(n=>n.id)));
+        }
+        return;
+      }
+      // Ctrl+D — duplicate selected
+      if ((e.ctrlKey || e.metaKey) && e.key === "d") {
+        e.preventDefault();
+        if (selectedIds.size > 0) {
+          const toDup = nodes.filter(n=>selectedIds.has(n.id));
+          const idMap = {};
+          const newNodes = toDup.map(n=>{ const newId=uid(); idMap[n.id]=newId; return {...n,id:newId,x:n.x+40,y:n.y+40}; });
+          const newEdges = edges.filter(ed=>selectedIds.has(ed.from)&&selectedIds.has(ed.to)).map(ed=>({...ed,id:uid(),from:idMap[ed.from],to:idMap[ed.to]}));
+          update({ ...flow, nodes:[...nodes,...newNodes], edges:[...edges,...newEdges] });
+          setSelectedIds(new Set(newNodes.map(n=>n.id)));
+        }
+        return;
+      }
       if (e.key === "Delete" || e.key === "Backspace") {
         if (selectedIds.size > 0) {
           const ids = selectedIds;
           update({
             ...flow,
             nodes: nodes.filter(n=>!ids.has(n.id)),
-            edges: edges.filter(e=>!ids.has(e.from)&&!ids.has(e.to))
+            edges: edges.filter(ed=>!ids.has(ed.from)&&!ids.has(ed.to))
           });
           setSelectedIds(new Set());
         } else if (selectedEdgeId) {
-          update({ ...flow, edges: edges.filter(e=>e.id!==selectedEdgeId) });
+          update({ ...flow, edges: edges.filter(ed=>ed.id!==selectedEdgeId) });
           setSelectedEdgeId(null);
         }
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [selectedIds, selectedEdgeId, nodes, edges, flow]);
+  }, [selectedIds, selectedEdgeId, nodes, edges, flow, clipboard]);
+
+  // Space key = temporary pan mode
+  useEffect(() => {
+    const onDown = (e) => {
+      if (e.code !== "Space" || e.repeat) return;
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      e.preventDefault();
+      spacePanning.current = true;
+      setToolMode("pan");
+    };
+    const onUp = (e) => {
+      if (e.code !== "Space") return;
+      if (spacePanning.current) {
+        spacePanning.current = false;
+        setToolMode("select");
+      }
+    };
+    window.addEventListener("keydown", onDown);
+    window.addEventListener("keyup", onUp);
+    return () => { window.removeEventListener("keydown", onDown); window.removeEventListener("keyup", onUp); };
+  }, []);
 
   // Analysis block
   const buildAnalysis = () => {
@@ -940,7 +1088,7 @@ function FlowCanvas({ flow, clientName, clientProfile, clientTasks, onUpdate, ap
     lines.push(`  Fecha inicio: ${clientProfile.startDate||"—"}`);
     if (clientProfile.notes) lines.push(`  Notas: ${clientProfile.notes}`);
     lines.push(``);
-    lines.push(`PROGRESO MÉTODO GEMA V4:`);
+    lines.push(`PROGRESO GROWTH PARTNER AI:`);
     WEEKS.forEach(w => {
       const s = weekStats(clientTasks, w);
       lines.push(`  ${w}: ${s.done}/${s.total} tareas completadas (${s.total ? Math.round(s.done/s.total*100) : 0}%)`);
@@ -1069,10 +1217,18 @@ ${text}`;
         <button onClick={()=>setZoom(z=>Math.max(0.3,+(z-0.1).toFixed(1)))} style={{ padding:"4px 8px", borderRadius:6, fontSize:11, cursor:"pointer", background:"#222225", color:WHITE, border:`1px solid ${BORDER}` }}>−</button>
         <button onClick={()=>{ setZoom(1); setPan({x:0,y:0}); }}
           style={{ padding:"4px 10px", borderRadius:6, fontSize:11, cursor:"pointer", background:"#222225", color:WHITE, border:`1px solid ${BORDER}` }}>Reset</button>
+        <input value={nodeSearch} onChange={e=>setNodeSearch(e.target.value)}
+          placeholder="🔍 Buscar nodo..."
+          onPointerDown={e=>e.stopPropagation()}
+          style={{ padding:"4px 10px", borderRadius:6, fontSize:11, background:"#222225", border:`1px solid ${nodeSearch ? GOLD : BORDER}`, color:WHITE, outline:"none", width:140 }} />
+        {nodeSearch && <button onClick={()=>setNodeSearch("")} style={{ padding:"4px 6px", fontSize:11, background:"none", border:"none", color:GRAY, cursor:"pointer" }}>✕</button>}
         <button onClick={()=>setIsFullscreen(f=>!f)}
           style={{ padding:"4px 10px", borderRadius:6, fontSize:11, cursor:"pointer", background: isFullscreen ? GOLD : "#222225", color: isFullscreen ? "#141414" : WHITE, border:`1px solid ${isFullscreen ? GOLD : BORDER}` }}>
           {isFullscreen ? "⊠ Salir" : "⛶ Pantalla completa"}
         </button>
+        {clipboard && (
+          <span style={{ fontSize:10, color:GRAY, padding:"0 4px" }}>📋 {clipboard.nodes.length} en clipboard</span>
+        )}
         <div style={{ flex:1 }} />
         <button
           onClick={apiKey ? runAiAnalysis : ()=>setShowAnalysis(s=>!s)}
@@ -1149,6 +1305,18 @@ ${text}`;
                   </button>
                 ))}
               </div>
+            </div>
+            {/* Text field */}
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
+              <span style={{ color:GRAY, fontSize:11, fontWeight:600, minWidth:50 }}>Texto:</span>
+              <textarea
+                value={sn.text || ""}
+                onChange={e=>updateNodeProp(sn.id, { text: e.target.value })}
+                placeholder="Texto del nodo..."
+                rows={2}
+                onPointerDown={e=>e.stopPropagation()}
+                style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"4px 8px", color:WHITE, fontSize:11, outline:"none", resize:"vertical", fontFamily:"inherit" }}
+              />
             </div>
             {/* Link field */}
             <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
@@ -1287,12 +1455,13 @@ ${text}`;
             const cfg = NODE_TYPES[node.type] || NODE_TYPES.speech;
             const isConnSrc = connectFrom === node.id;
             const isSelected = selectedIds.has(node.id);
+            const matchesSearch = nodeSearch && node.text?.toLowerCase().includes(nodeSearch.toLowerCase());
             const nodeBg = node.customBg !== undefined ? (node.customBg || cfg.bg) : cfg.bg;
             const shapeStyle = getShapeStyle(node.shape);
             const isClipped = ["diamond","hexagon","parallelogram"].includes(node.shape);
             const borderStyle = isClipped
-              ? { border:"none", boxShadow: isSelected ? `0 0 0 3px ${GOLD}88` : `0 0 0 2px ${cfg.border}` }
-              : { border:`2px solid ${isSelected ? GOLD : isConnSrc ? "#60A5FA" : cfg.border}`, boxShadow: isSelected ? `0 0 0 3px ${GOLD}44` : "0 2px 8px rgba(0,0,0,0.12)" };
+              ? { border:"none", boxShadow: matchesSearch ? `0 0 0 3px #60A5FA, 0 0 12px #60A5FA66` : (isSelected ? `0 0 0 3px ${GOLD}88` : `0 0 0 2px ${cfg.border}`) }
+              : { border:`2px solid ${matchesSearch ? "#60A5FA" : isSelected ? GOLD : isConnSrc ? "#60A5FA" : cfg.border}`, boxShadow: matchesSearch ? `0 0 0 3px #60A5FA, 0 0 12px #60A5FA66` : (isSelected ? `0 0 0 3px ${GOLD}44` : "0 2px 8px rgba(0,0,0,0.12)") };
             return (
               <div key={node.id}
                 style={{
@@ -1325,6 +1494,33 @@ ${text}`;
             );
           })}
         </div>
+
+        {/* Minimap */}
+        {nodes.length > 0 && (() => {
+          const MM_W = 140, MM_H = 90;
+          const CANVAS_W = 3200, CANVAS_H = 2400;
+          const scaleX = MM_W / CANVAS_W, scaleY = MM_H / CANVAS_H;
+          const vpEl = outerRef.current;
+          const vpW = vpEl ? vpEl.clientWidth / zoom : 600;
+          const vpH = vpEl ? vpEl.clientHeight / zoom : 400;
+          const vpX = -pan.x / zoom;
+          const vpY = -pan.y / zoom;
+          return (
+            <div style={{ position:"absolute", bottom:12, right:12, width:MM_W, height:MM_H,
+              background:"rgba(20,20,22,0.92)", border:`1px solid ${BORDER}`, borderRadius:8,
+              overflow:"hidden", pointerEvents:"none", zIndex:10 }}>
+              <svg width={MM_W} height={MM_H}>
+                {nodes.map(n => (
+                  <rect key={n.id} x={n.x*scaleX} y={n.y*scaleY} width={180*scaleX} height={60*scaleY}
+                    fill={selectedIds.has(n.id) ? GOLD : (n.customBg || "#3B3B3F")} rx={2} opacity={0.85} />
+                ))}
+                <rect x={vpX*scaleX} y={vpY*scaleY} width={vpW*scaleX} height={vpH*scaleY}
+                  fill="none" stroke="#60A5FA" strokeWidth={1} strokeDasharray="3,2" rx={2} />
+              </svg>
+              <div style={{ position:"absolute", bottom:3, left:5, fontSize:8, color:GRAY, letterSpacing:0.5 }}>MINIMAP</div>
+            </div>
+          );
+        })()}
 
         {/* Hint */}
         {nodes.length === 0 && (
@@ -1393,10 +1589,11 @@ ${text}`;
 }
 
 // ─── PROCESO COMERCIAL TAB ────────────────────────────────────────────────────
-function ProcesoComercialTab({ client, onChange, apiKey }) {
+function ProcesoComercialTab({ client, onChange, apiKey, flowTemplates, onSaveTemplate, onDeleteTemplate }) {
   const [activeFlowId, setActiveFlowId] = useState(client.flows[0]?.id || null);
   const [renamingId, setRenamingId] = useState(null);
   const [renameVal, setRenameVal] = useState("");
+  const [showTemplates, setShowTemplates] = useState(false);
 
   const flows = client.flows || [];
   const activeFlow = flows.find(f=>f.id===activeFlowId) || flows[0];
@@ -1428,10 +1625,26 @@ function ProcesoComercialTab({ client, onChange, apiKey }) {
     setRenamingId(null);
   };
 
+  const handleSaveTemplate = () => {
+    if (!activeFlow) return;
+    const name = window.prompt("Nombre del template:", activeFlow.name || "Mi template");
+    if (!name) return;
+    onSaveTemplate(name, activeFlow);
+  };
+
+  const handleLoadTemplate = (template) => {
+    if (!activeFlow) return;
+    if (!confirm(`¿Cargar template "${template.name}"? Se reemplazarán los nodos del proceso actual.`)) return;
+    const idMap = {};
+    const newNodes = template.nodes.map(n => { const newId=uid(); idMap[n.id]=newId; return {...n,id:newId}; });
+    const newEdges = template.edges.map(ed => ({ ...ed, id:uid(), from:idMap[ed.from]||ed.from, to:idMap[ed.to]||ed.to }));
+    updateFlow({ ...activeFlow, nodes:newNodes, edges:newEdges });
+  };
+
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100%", minHeight:600 }}>
       {/* Flow selector */}
-      <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:12 }}>
+      <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:12, alignItems:"center" }}>
         {flows.map(f => (
           <div key={f.id} style={{ display:"flex", alignItems:"center", gap:2 }}>
             {renamingId === f.id ? (
@@ -1454,7 +1667,48 @@ function ProcesoComercialTab({ client, onChange, apiKey }) {
           style={{ padding:"4px 12px", borderRadius:6, fontSize:12, cursor:"pointer", background:"transparent", color:GOLD, border:`1px dashed ${GOLD_DIM}` }}>
           + Nuevo proceso
         </button>
+        <div style={{ flex:1 }} />
+        <button onClick={()=>setShowTemplates(s=>!s)}
+          style={{ padding:"4px 12px", borderRadius:6, fontSize:12, cursor:"pointer",
+            background: showTemplates ? "rgba(212,175,55,0.12)" : "#222225",
+            color: showTemplates ? GOLD : GRAY,
+            border:`1px solid ${showTemplates ? GOLD_DIM : BORDER}` }}>
+          📋 Templates
+        </button>
       </div>
+
+      {/* Templates panel */}
+      {showTemplates && (
+        <div style={{ background:"#1A1A1D", border:`1px solid ${BORDER}`, borderRadius:8, padding:14, marginBottom:12 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+            <span style={{ color:WHITE, fontWeight:600, fontSize:13 }}>Templates de proceso</span>
+            <button onClick={handleSaveTemplate}
+              style={{ padding:"5px 14px", background:GOLD, color:"#141414", border:"none", borderRadius:6, cursor:"pointer", fontWeight:700, fontSize:12 }}>
+              + Guardar como template
+            </button>
+          </div>
+          {(!flowTemplates || flowTemplates.length === 0) ? (
+            <div style={{ color:GRAY, fontSize:12, padding:"8px 0" }}>No hay templates guardados. Guarda el proceso actual como template.</div>
+          ) : (
+            <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+              {flowTemplates.map(t => (
+                <div key={t.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", background:"rgba(255,255,255,0.02)", border:`1px solid ${BORDER}`, borderRadius:6 }}>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:12, color:WHITE, fontWeight:500 }}>{t.name}</div>
+                    <div style={{ fontSize:10, color:GRAY }}>{t.nodes.length} nodos · {t.edges.length} conexiones · {new Date(t.createdAt).toLocaleDateString("es-CO")}</div>
+                  </div>
+                  <button onClick={()=>handleLoadTemplate(t)}
+                    style={{ padding:"4px 10px", borderRadius:5, fontSize:11, cursor:"pointer", background:GOLD, color:"#141414", border:"none", fontWeight:600 }}>
+                    Cargar
+                  </button>
+                  <button onClick={()=>onDeleteTemplate(t.id)}
+                    style={{ padding:"4px 8px", borderRadius:5, fontSize:11, cursor:"pointer", border:`1px solid ${RED}`, color:RED, background:"transparent" }}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {activeFlow && (
         <FlowCanvas
@@ -1471,7 +1725,194 @@ function ProcesoComercialTab({ client, onChange, apiKey }) {
 }
 
 // ─── CLIENT DETAIL ────────────────────────────────────────────────────────────
-function ClientDetail({ client, team, onBack, onChange, apiKey }) {
+// ─── LAUNCH TAB ──────────────────────────────────────────────────────────────
+function LaunchTab({ client, onChange }) {
+  const mvpSteps = client.customMvpSteps || MVP_STEPS;
+  const fullSteps = client.customFullSteps || FULL_STEPS;
+  const [showMvpEditor, setShowMvpEditor] = useState(false);
+  const [showFullEditor, setShowFullEditor] = useState(false);
+
+  const checks = client.mvpChecks || {};
+  const fchecks = client.fullChecks || {};
+  const toggleMvp = (n) => onChange({ ...client, mvpChecks: { ...checks, [n]: !checks[n] } });
+  const toggleFull = (n) => onChange({ ...client, fullChecks: { ...fchecks, [n]: !fchecks[n] } });
+  const done = mvpSteps.filter(s => checks[s.n]).length;
+  const pct = Math.round(done / mvpSteps.length * 100);
+  const fdone = fullSteps.filter(s => fchecks[s.n]).length;
+  const fpct = Math.round(fdone / fullSteps.length * 100);
+
+  const start = client.profile?.startDate;
+  const mvpDate = start ? (() => { const d=new Date(start); d.setDate(d.getDate()+14); return d; })() : null;
+  const fullDate = start ? (() => { const d=new Date(start); d.setDate(d.getDate()+21); return d; })() : null;
+  const fmt = dt => dt.toLocaleDateString("es-CO", { weekday:"long", day:"2-digit", month:"long" });
+
+  return (
+    <div style={{ maxWidth:680 }}>
+      {/* Launch timeline */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:24 }}>
+        {[
+          { icon:"🎯", name:"Mínimo Viable", sub:"Semana 2", date:mvpDate, color:GOLD },
+          { icon:"🚀", name:"Full Launch",   sub:"Semana 3", date:fullDate, color:"#22C55E" },
+        ].map(m => (
+          <div key={m.name} style={{ background:CARD, border:`1px solid ${m.color}44`, borderRadius:12, padding:"14px 16px" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <span style={{ fontSize:24 }}>{m.icon}</span>
+              <div>
+                <div style={{ fontSize:13, fontWeight:700, color:WHITE }}>{m.name}</div>
+                <div style={{ fontSize:11, color:GRAY }}>{m.sub}</div>
+              </div>
+            </div>
+            {m.date ? (
+              <div style={{ marginTop:10, fontSize:12, color:m.color, fontWeight:600 }}>{fmt(m.date)}</div>
+            ) : (
+              <div style={{ marginTop:10, fontSize:11, color:GRAY }}>Define fecha inicio en Perfil</div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* MVP checklist */}
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
+        <span style={{ color:GOLD, fontWeight:700, fontSize:14 }}>🎯 Pasos Mínimo Viable</span>
+        <span style={{ fontSize:12, color:GOLD }}>{done}/{mvpSteps.length}</span>
+        <div style={{ flex:1, height:4, background:"#222", borderRadius:2, overflow:"hidden" }}>
+          <div style={{ height:"100%", width:pct+"%", background:GOLD, borderRadius:2, transition:"width 0.3s" }} />
+        </div>
+        <span style={{ fontSize:11, color:GOLD }}>{pct}%</span>
+        <button onClick={()=>setShowMvpEditor(s=>!s)} style={{ padding:"2px 10px", borderRadius:5, fontSize:10, cursor:"pointer", border:`1px solid ${showMvpEditor ? GOLD : BORDER}`, background:showMvpEditor?"rgba(212,175,55,0.1)":"transparent", color:showMvpEditor?GOLD:GRAY }}>
+          {showMvpEditor ? "✕ Cerrar" : "✎ Editar"}
+        </button>
+      </div>
+
+      {/* MVP Editor panel */}
+      {showMvpEditor && (
+        <div style={{ background:"#1A1A1D", border:`1px solid ${BORDER}`, borderRadius:8, padding:14, marginBottom:14 }}>
+          {mvpSteps.map((step, idx) => (
+            <div key={step.n || idx} style={{ display:"flex", gap:8, alignItems:"flex-start", marginBottom:8 }}>
+              <span style={{ color:GRAY, fontSize:11, minWidth:22, paddingTop:6 }}>#{step.n||idx+1}</span>
+              <div style={{ flex:1, display:"flex", flexDirection:"column", gap:4 }}>
+                <input value={step.title} onChange={e => {
+                  const updated = mvpSteps.map((s,i)=>i===idx?{...s,title:e.target.value}:s);
+                  onChange({...client, customMvpSteps:updated});
+                }} style={{ background:"#111113", border:`1px solid ${BORDER}`, borderRadius:5, padding:"4px 8px", color:WHITE, fontSize:12, outline:"none" }} />
+                <input value={step.desc} onChange={e => {
+                  const updated = mvpSteps.map((s,i)=>i===idx?{...s,desc:e.target.value}:s);
+                  onChange({...client, customMvpSteps:updated});
+                }} style={{ background:"#111113", border:`1px solid ${BORDER}`, borderRadius:5, padding:"4px 8px", color:GRAY, fontSize:11, outline:"none" }} placeholder="Descripción..." />
+              </div>
+              <button onClick={()=>{ const updated=mvpSteps.filter((_,i)=>i!==idx); onChange({...client,customMvpSteps:updated}); }}
+                style={{ padding:"4px 8px", borderRadius:5, border:`1px solid ${RED}`, color:RED, background:"transparent", fontSize:11, cursor:"pointer", flexShrink:0, marginTop:2 }}>✕</button>
+            </div>
+          ))}
+          <div style={{ display:"flex", gap:8, marginTop:8 }}>
+            <button onClick={()=>{ const n=(mvpSteps[mvpSteps.length-1]?.n||0)+1; onChange({...client,customMvpSteps:[...mvpSteps,{n,title:"Nuevo paso",desc:""}]}); }}
+              style={{ padding:"5px 12px", background:"#222225", color:WHITE, border:`1px solid ${BORDER}`, borderRadius:6, cursor:"pointer", fontSize:11 }}>+ Añadir paso</button>
+            <button onClick={()=>onChange({...client,customMvpSteps:null,mvpChecks:{}})}
+              style={{ padding:"5px 12px", background:"transparent", color:GRAY, border:`1px solid ${BORDER}`, borderRadius:6, cursor:"pointer", fontSize:11 }}>↺ Restaurar defaults</button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+        {mvpSteps.map(step => {
+          const isDone = !!checks[step.n];
+          return (
+            <div key={step.n} onClick={()=>toggleMvp(step.n)}
+              style={{ display:"flex", alignItems:"flex-start", gap:12, padding:"12px 14px", borderRadius:10, cursor:"pointer",
+                background: isDone ? "rgba(212,175,55,0.06)" : CARD,
+                border:`1px solid ${isDone ? GOLD_DIM : BORDER}`,
+                opacity: isDone ? 0.7 : 1, transition:"all 0.15s" }}>
+              <div style={{ width:24, height:24, borderRadius:6, border:`2px solid ${isDone ? GOLD : BORDER}`,
+                background: isDone ? GOLD : "transparent", display:"flex", alignItems:"center", justifyContent:"center",
+                flexShrink:0, marginTop:1, transition:"all 0.15s" }}>
+                {isDone && <span style={{ color:"#141414", fontSize:13, fontWeight:800 }}>✓</span>}
+              </div>
+              <div>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontSize:10, fontFamily:"monospace", color:GRAY }}>#{step.n}</span>
+                  <span style={{ fontSize:13, fontWeight:600, color: isDone ? GRAY : WHITE, textDecoration: isDone ? "line-through" : "none" }}>{step.title}</span>
+                </div>
+                <div style={{ fontSize:11, color:GRAY, marginTop:2 }}>{step.desc}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Full launch checklist */}
+      <div style={{ marginTop:28 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
+          <span style={{ color:"#22C55E", fontWeight:700, fontSize:14 }}>🚀 Pasos Full Launch — Semana 3</span>
+          <span style={{ fontSize:12, color:"#22C55E" }}>{fdone}/{fullSteps.length}</span>
+          <div style={{ flex:1, height:4, background:"#222", borderRadius:2, overflow:"hidden" }}>
+            <div style={{ height:"100%", width:fpct+"%", background:"#22C55E", borderRadius:2, transition:"width 0.3s" }} />
+          </div>
+          <span style={{ fontSize:11, color:"#22C55E" }}>{fpct}%</span>
+          <button onClick={()=>setShowFullEditor(s=>!s)} style={{ padding:"2px 10px", borderRadius:5, fontSize:10, cursor:"pointer", border:`1px solid ${showFullEditor ? GREEN : BORDER}`, background:showFullEditor?"rgba(76,175,125,0.1)":"transparent", color:showFullEditor?GREEN:GRAY }}>
+            {showFullEditor ? "✕ Cerrar" : "✎ Editar"}
+          </button>
+        </div>
+
+        {/* Full Editor panel */}
+        {showFullEditor && (
+          <div style={{ background:"#1A1A1D", border:`1px solid ${BORDER}`, borderRadius:8, padding:14, marginBottom:14 }}>
+            {fullSteps.map((step, idx) => (
+              <div key={step.n || idx} style={{ display:"flex", gap:8, alignItems:"flex-start", marginBottom:8 }}>
+                <span style={{ color:GRAY, fontSize:11, minWidth:22, paddingTop:6 }}>#{step.n||idx+1}</span>
+                <div style={{ flex:1, display:"flex", flexDirection:"column", gap:4 }}>
+                  <input value={step.title} onChange={e => {
+                    const updated = fullSteps.map((s,i)=>i===idx?{...s,title:e.target.value}:s);
+                    onChange({...client, customFullSteps:updated});
+                  }} style={{ background:"#111113", border:`1px solid ${BORDER}`, borderRadius:5, padding:"4px 8px", color:WHITE, fontSize:12, outline:"none" }} />
+                  <input value={step.desc} onChange={e => {
+                    const updated = fullSteps.map((s,i)=>i===idx?{...s,desc:e.target.value}:s);
+                    onChange({...client, customFullSteps:updated});
+                  }} style={{ background:"#111113", border:`1px solid ${BORDER}`, borderRadius:5, padding:"4px 8px", color:GRAY, fontSize:11, outline:"none" }} placeholder="Descripción..." />
+                </div>
+                <button onClick={()=>{ const updated=fullSteps.filter((_,i)=>i!==idx); onChange({...client,customFullSteps:updated}); }}
+                  style={{ padding:"4px 8px", borderRadius:5, border:`1px solid ${RED}`, color:RED, background:"transparent", fontSize:11, cursor:"pointer", flexShrink:0, marginTop:2 }}>✕</button>
+              </div>
+            ))}
+            <div style={{ display:"flex", gap:8, marginTop:8 }}>
+              <button onClick={()=>{ const n=(fullSteps[fullSteps.length-1]?.n||0)+1; onChange({...client,customFullSteps:[...fullSteps,{n,title:"Nuevo paso",desc:""}]}); }}
+                style={{ padding:"5px 12px", background:"#222225", color:WHITE, border:`1px solid ${BORDER}`, borderRadius:6, cursor:"pointer", fontSize:11 }}>+ Añadir paso</button>
+              <button onClick={()=>onChange({...client,customFullSteps:null,fullChecks:{}})}
+                style={{ padding:"5px 12px", background:"transparent", color:GRAY, border:`1px solid ${BORDER}`, borderRadius:6, cursor:"pointer", fontSize:11 }}>↺ Restaurar defaults</button>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+          {fullSteps.map(step => {
+            const isDone = !!fchecks[step.n];
+            return (
+              <div key={step.n} onClick={()=>toggleFull(step.n)}
+                style={{ display:"flex", alignItems:"flex-start", gap:12, padding:"12px 14px", borderRadius:10, cursor:"pointer",
+                  background: isDone ? "rgba(34,197,94,0.05)" : CARD,
+                  border:`1px solid ${isDone ? "#22C55E55" : BORDER}`,
+                  opacity: isDone ? 0.7 : 1, transition:"all 0.15s" }}>
+                <div style={{ width:24, height:24, borderRadius:6, border:`2px solid ${isDone ? "#22C55E" : BORDER}`,
+                  background: isDone ? "#22C55E" : "transparent", display:"flex", alignItems:"center", justifyContent:"center",
+                  flexShrink:0, marginTop:1, transition:"all 0.15s" }}>
+                  {isDone && <span style={{ color:"#141414", fontSize:13, fontWeight:800 }}>✓</span>}
+                </div>
+                <div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ fontSize:10, fontFamily:"monospace", color:GRAY }}>#{step.n}</span>
+                    <span style={{ fontSize:13, fontWeight:600, color: isDone ? GRAY : WHITE, textDecoration: isDone ? "line-through" : "none" }}>{step.title}</span>
+                  </div>
+                  <div style={{ fontSize:11, color:GRAY, marginTop:2 }}>{step.desc}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ClientDetail({ client, team, onBack, onChange, apiKey, flowTemplates, onSaveTemplate, onDeleteTemplate }) {
   const [subTab, setSubTab] = useState("perfil");
   const pct = overallPct(client.tasks);
   const done = client.tasks.filter(t=>t.done).length;
@@ -1492,7 +1933,7 @@ function ClientDetail({ client, team, onBack, onChange, apiKey }) {
 
       {/* Sub tabs */}
       <div style={{ display:"flex", gap:2, marginBottom:20, borderBottom:`1px solid ${BORDER}` }}>
-        {[["perfil","Perfil"],["ejecucion","Ejecución"],["proceso","Proceso Comercial"]].map(([id,label]) => (
+        {[["perfil","Perfil"],["lanzamiento","🎯 Lanzamiento"],["ejecucion","Ejecución"],["proceso","Proceso Comercial"]].map(([id,label]) => (
           <button key={id} onClick={()=>setSubTab(id)}
             style={{ padding:"8px 16px", background:"none", border:"none", borderBottom:`2px solid ${subTab===id ? GOLD : "transparent"}`, color: subTab===id ? GOLD : GRAY, cursor:"pointer", fontSize:13, fontWeight: subTab===id ? 600 : 400, transition:"all 0.15s" }}>
             {label}
@@ -1501,8 +1942,9 @@ function ClientDetail({ client, team, onBack, onChange, apiKey }) {
       </div>
 
       {subTab === "perfil" && <PerfilTab client={client} onChange={onChange} />}
+      {subTab === "lanzamiento" && <LaunchTab client={client} onChange={onChange} />}
       {subTab === "ejecucion" && <EjecucionTab client={client} team={team} onChange={onChange} />}
-      {subTab === "proceso" && <ProcesoComercialTab client={client} onChange={onChange} apiKey={apiKey} />}
+      {subTab === "proceso" && <ProcesoComercialTab client={client} onChange={onChange} apiKey={apiKey} flowTemplates={flowTemplates} onSaveTemplate={onSaveTemplate} onDeleteTemplate={onDeleteTemplate} />}
     </div>
   );
 }
@@ -1765,6 +2207,13 @@ function MetodoGrowthPartner() {
     setData(d => ({ ...d, clients: d.clients.map(c => c.id === updatedClient.id ? updatedClient : c) }));
   };
 
+  const saveTemplate = (name, flow) => {
+    setData(d => ({ ...d, flowTemplates: [...(d.flowTemplates||[]), { id:uid(), name, createdAt:Date.now(), nodes:flow.nodes, edges:flow.edges }] }));
+  };
+  const deleteTemplate = (templateId) => {
+    setData(d => ({ ...d, flowTemplates: (d.flowTemplates||[]).filter(t=>t.id!==templateId) }));
+  };
+
   const selectedClient = data.clients.find(c=>c.id===selectedClientId);
 
   return (
@@ -1774,7 +2223,7 @@ function MetodoGrowthPartner() {
         <div style={{ maxWidth:1200, margin:"0 auto", display:"flex", alignItems:"center", gap:0 }}>
           <div style={{ padding:"14px 0", marginRight:24 }}>
             <span style={{ color:GOLD, fontWeight:800, fontSize:16, letterSpacing:0.5 }}>GP</span>
-            <span style={{ color:GRAY, fontWeight:400, fontSize:13, marginLeft:8 }}>Método GEMA V4</span>
+            <span style={{ color:GRAY, fontWeight:400, fontSize:13, marginLeft:8 }}>GROWTH PARTNER AI</span>
           </div>
           <div style={{ display:"flex", gap:0 }}>
             {[["clientes","Clientes"],["equipo","Equipo y roles"],["configuracion","Configuración"]].map(([id,label]) => (
@@ -1795,7 +2244,7 @@ function MetodoGrowthPartner() {
       <div style={{ maxWidth:1200, margin:"0 auto", padding:"28px 24px" }}>
         {/* Client detail takes precedence */}
         {selectedClientId && selectedClient ? (
-          <ClientDetail client={selectedClient} team={data.team} onBack={()=>setSelectedClientId(null)} onChange={updateClient} apiKey={data.settings?.apiKey || ""} />
+          <ClientDetail client={selectedClient} team={data.team} onBack={()=>setSelectedClientId(null)} onChange={updateClient} apiKey={data.settings?.apiKey || ""} flowTemplates={data.flowTemplates||[]} onSaveTemplate={saveTemplate} onDeleteTemplate={deleteTemplate} />
         ) : (
           <>
             {tab === "clientes" && (
