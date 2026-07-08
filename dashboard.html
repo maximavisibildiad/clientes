@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Growth Partner — Dashboard GEMA V4</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0E0E10; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0E0E10; }
+    ::-webkit-scrollbar-thumb { background: #2A2A2E; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-type="module">
+// Growth Partner — Dashboard V4
+// Self-contained React component (no imports beyond React hooks)
+
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── COLORS ───────────────────────────────────────────────────────────────────
+const BG = "#0E0E10";
+const CARD = "#17171A";
+const BORDER = "#2A2A2E";
+const GOLD = "#D4AF37";
+const GOLD_DIM = "#8A7420";
+const WHITE = "#F5F5F3";
+const GRAY = "#9B9B9F";
+const GREEN = "#4CAF7D";
+const RED = "#E06C6C";
+const CANVAS_BG = "#FFFFFF";
+const CANVAS_DOT = "rgba(0,0,0,0.08)";
+
+// ─── STORAGE ──────────────────────────────────────────────────────────────────
+const STORAGE_KEY = "gp_metodo_v4";
+const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+
+function storageGet() {
+  try {
+    if (window.storage) return window.storage.get(STORAGE_KEY) || null;
+  } catch (_) {}
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) { return null; }
+}
+
+function storageSet(val) {
+  try {
+    if (window.storage) { window.storage.set(STORAGE_KEY, val); return; }
+  } catch (_) {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(val)); } catch (_) {}
+}
+
+// ─── GEMA TASKS (261) ─────────────────────────────────────────────────────────
+const GEMA_TASKS = [
+  { n:1, week:"Semana 1", area:"Gerencia", title:"[GEMA V4] Firma oficial del contrato B2B (Equity + Fee o Fee + Success).", owner:"GEMA V4" },
+  { n:2, week:"Semana 1", area:"Gerencia", title:"[GEMA V4] Inserción de Cláusula de Propiedad Intelectual (Sistema e IA son de la agencia).", owner:"GEMA V4" },
+  { n:3, week:"Semana 1", area:"Gerencia", title:"[GEMA V4] Confirmación de recepción del pago de Setup inicial.", owner:"GEMA V4" },
+  { n:4, week:"Semana 1", area:"Gerencia", title:"[TUYO] Creacion de acuerdo comercial: Recibir terminos del acuerdo.", owner:"TUYO" },
+  { n:5, week:"Semana 1", area:"Gerencia", title:"[TUYO] Presentar terminos acuerdo a CEO y COO.", owner:"TUYO" },
+  { n:6, week:"Semana 1", area:"Gerencia", title:"[TUYO] Enviar y hacer seguimiento firma de contrato.", owner:"TUYO" },
+  { n:7, week:"Semana 1", area:"Gestión del Cliente", title:"[TUYO] Reunion diagnostico de empresa y brief comercial.", owner:"TUYO" },
+  { n:8, week:"Semana 1", area:"Gestión del Cliente", title:"[TUYO] Realizar brief comercial.", owner:"TUYO" },
+  { n:9, week:"Semana 1", area:"Gestión del Cliente", title:"[TUYO] Realizar brief general.", owner:"TUYO" },
+  { n:10, week:"Semana 1", area:"Gerencia", title:"[TUYO] De acuerdo al brief comercial agendar reuniones internas.", owner:"TUYO" },
+  { n:11, week:"Semana 1", area:"Gestión del Cliente", title:"[GEMA V4] Activación de la 'Regla 48h' (Notificación de pausa por falta de activos).", owner:"GEMA V4" },
+  { n:12, week:"Semana 1", area:"Gestión del Cliente", title:"[GEMA V4] Envío de formulario 'Diagnóstico Comercial' (13 puntos estratégicos).", owner:"GEMA V4" },
+  { n:13, week:"Semana 1", area:"Gestión del Cliente", title:"[GEMA V4] Envío de formulario 'Solicitud de Datos y Activos' (Accesos, Branding).", owner:"GEMA V4" },
+  { n:14, week:"Semana 1", area:"Gerencia", title:"[TUYO] Pedir consolidado de venta de los ultimo 3 meses al cliente.", owner:"TUYO" },
+  { n:15, week:"Semana 1", area:"Gestión del Cliente", title:"[TUYO] Pedir requerimientos de arranque.", owner:"TUYO" },
+  { n:16, week:"Semana 1", area:"Gerencia", title:"[GEMA V4] Auditoría Financiera: Acceso de 'solo lectura' a pasarelas (Stripe/PayU/Banco).", owner:"GEMA V4" },
+  { n:17, week:"Semana 1", area:"Gerencia", title:"[GEMA V4] Ingeniería Financiera I: Cálculo de LTV vs. CAC histórico del cliente.", owner:"GEMA V4" },
+  { n:18, week:"Semana 1", area:"Tráfico", title:"[GEMA V4] Ingeniería Financiera II: Definición del CPA máximo permitido para pauta.", owner:"GEMA V4" },
+  { n:19, week:"Semana 1", area:"Gerencia", title:"[GEMA V4] Ingeniería Financiera III: Proyección de Facturación a 3 meses.", owner:"GEMA V4" },
+  { n:20, week:"Semana 1", area:"Gerencia", title:"[GEMA V4] Seteo de Facturación Mensual: Definición del día de corte para conciliación.", owner:"GEMA V4" },
+  { n:21, week:"Semana 1", area:"Gestión del Cliente", title:"[TUYO] Abrir Whatsapp web del cliente (Auditar forma de atender, falencias y objeciones).", owner:"TUYO" },
+  { n:22, week:"Semana 1", area:"Comunicaciones", title:"[TUYO] Crear grupo de equipo y grupo de ventas con foto de perfil y dar administrador.", owner:"TUYO" },
+  { n:23, week:"Semana 1", area:"Gestión del Cliente", title:"[TUYO] Crear grupo de clientes potenciales.", owner:"TUYO" },
+  { n:24, week:"Semana 1", area:"Gerencia", title:"[TUYO] Crear grupo de rrhh y dar administracion al equipo; agregar a los encargados.", owner:"TUYO" },
+  { n:25, week:"Semana 1", area:"Gerencia", title:"[TUYO] Crear grupo de horarios y novedades y dar administracion.", owner:"TUYO" },
+  { n:26, week:"Semana 1", area:"Gestión del Cliente", title:"[TUYO] Agregar a equipo comercial a grupo clientes potenciales.", owner:"TUYO" },
+  { n:27, week:"Semana 1", area:"Gerencia", title:"[TUYO] Creación de empresa en Airtable, en todas las tareas recurrentes.", owner:"TUYO" },
+  { n:28, week:"Semana 1", area:"Gerencia", title:"[TUYO] Creacion de empresa en drive con todas las carpetas.", owner:"TUYO" },
+  { n:29, week:"Semana 1", area:"Gerencia", title:"[TUYO] Creacion de carpeta en google drive y espacio en airtable (Validación de respaldo).", owner:"TUYO" },
+  { n:30, week:"Semana 1", area:"Gerencia", title:"[GEMA V4] Creación de carpeta raíz en Drive con permisos restringidos.", owner:"GEMA V4" },
+  { n:31, week:"Semana 1", area:"Comunicaciones", title:"[TUYO] Presentacion formal de cada miembro de la agencia en los grupos.", owner:"TUYO" },
+  { n:32, week:"Semana 1", area:"Gerencia", title:"[TUYO] Delegar empresa al area comercial y diseño (Comité General).", owner:"TUYO" },
+  { n:33, week:"Semana 1", area:"Gerencia", title:"[TUYO] Delegar empresa al area comercial y diseño (Comité Directivo).", owner:"TUYO" },
+  { n:34, week:"Semana 1", area:"Gerencia", title:"[GEMA V4] Asignación de líderes: Tráfico, Comercial y Estrategia.", owner:"GEMA V4" },
+  { n:35, week:"Semana 1", area:"Comunicaciones", title:"[GEMA V4] Apertura de canal oficial de comunicación (WhatsApp/Slack) con el founder.", owner:"GEMA V4" },
+  { n:36, week:"Semana 1", area:"Gerencia", title:"[TUYO] Revisar que esten contratados por nomina con todas las prestaciones (Staff cliente).", owner:"TUYO" },
+  { n:37, week:"Semana 1", area:"Gerencia", title:"[GEMA V4] Reunión interna de Comité para alineación técnica.", owner:"GEMA V4" },
+  { n:38, week:"Semana 1", area:"Gerencia", title:"[GEMA V4] Presentación de metas financieras y aprobación de presupuesto con el cliente.", owner:"GEMA V4" },
+  { n:39, week:"Semana 1", area:"Gerencia", title:"[GEMA V4] Firma de Acta de Inicio de Onboarding.", owner:"GEMA V4" },
+  { n:40, week:"Semana 1", area:"Comunicaciones", title:"[TUYO] Verificar que envien logotipo, identididad de marca en alta calidad.", owner:"TUYO" },
+  { n:41, week:"Semana 1", area:"Gerencia", title:"[TUYO] Verificar que envien Tarjeta.", owner:"TUYO" },
+  { n:42, week:"Semana 1", area:"Gerencia", title:"[TUYO] Colocar nit de facturacion.", owner:"TUYO" },
+  { n:43, week:"Semana 1", area:"Tráfico", title:"[GEMA V4] Compra de dominio espejo corporativo (blindaje de marca).", owner:"GEMA V4" },
+  { n:44, week:"Semana 1", area:"Tráfico", title:"[TUYO] Accesos a dominio o comprar dominio (Confirmación).", owner:"TUYO" },
+  { n:45, week:"Semana 1", area:"Tráfico", title:"[GEMA V4] Configuración de registros DNS (SPF, DKIM, DMARC).", owner:"GEMA V4" },
+  { n:46, week:"Semana 1", area:"Comunicaciones", title:"[GEMA V4] Creación de correos corporativos y perfiles de equipo.", owner:"GEMA V4" },
+  { n:47, week:"Semana 1", area:"Comunicaciones", title:"[TUYO] crear correo electronico (nombre de la empresa+genelypse+@gmail).", owner:"TUYO" },
+  { n:48, week:"Semana 1", area:"Comunicaciones", title:"[TUYO] colocar acceso del correo electronico en el excel accesos rr.ss. y correos.", owner:"TUYO" },
+  { n:49, week:"Semana 1", area:"Comunicaciones", title:"[GEMA V4] Activación de Warm-Up (calentamiento) de correos por 14 días.", owner:"GEMA V4" },
+  { n:50, week:"Semana 1", area:"Tráfico", title:"[TUYO] Verificar accesos de facebook.", owner:"TUYO" },
+  { n:51, week:"Semana 1", area:"Tráfico", title:"[TUYO] Verificar accesos de instagram.", owner:"TUYO" },
+  { n:52, week:"Semana 1", area:"Tráfico", title:"[TUYO] colocar acceso de instagram en el excel accesos rr.ss. y correos.", owner:"TUYO" },
+  { n:53, week:"Semana 1", area:"Tráfico", title:"[GEMA V4] Auditoría del Meta Business Manager (BM) principal del cliente.", owner:"GEMA V4" },
+  { n:54, week:"Semana 1", area:"Tráfico", title:"[TUYO] Verificar negocio en Facebook.", owner:"TUYO" },
+  { n:55, week:"Semana 1", area:"Gerencia", title:"[TUYO] Verificar que hayan enviando Rut y camara y comercio (Subir documentos).", owner:"TUYO" },
+  { n:56, week:"Semana 1", area:"Gerencia", title:"[GEMA V4] Verificación comercial del negocio en Meta (Documentos legales).", owner:"GEMA V4" },
+  { n:57, week:"Semana 1", area:"Tráfico", title:"[GEMA V4] Setup de BM de Respaldo: Creación/Verificación de segundo BM independiente.", owner:"GEMA V4" },
+  { n:58, week:"Semana 1", area:"Tráfico", title:"[GEMA V4] Registro de la Agencia en Meta Developers para el cliente.", owner:"GEMA V4" },
+  { n:59, week:"Semana 1", area:"Tráfico", title:"[GEMA V4] Creación de la App B2B en Meta Developers.", owner:"GEMA V4" },
+  { n:60, week:"Semana 1", area:"Comunicaciones", title:"[TUYO] Creacion de Whatsapp API.", owner:"TUYO" },
+  { n:61, week:"Semana 1", area:"Comunicaciones", title:"[GEMA V4] Activación del Caso de Uso de WhatsApp y vinculación de número oficial.", owner:"GEMA V4" },
+  { n:62, week:"Semana 1", area:"Tráfico", title:"[GEMA V4] Generación del Token de Acceso Permanente.", owner:"GEMA V4" },
+  { n:63, week:"Semana 1", area:"Tráfico", title:"[GEMA V4] Pruebas de envío Graph API para asegurar conexión.", owner:"GEMA V4" },
+  { n:64, week:"Semana 1", area:"Tráfico", title:"[GEMA V4] Configuración de Píxel de Respaldo (Espejo) en BM independiente.", owner:"GEMA V4" },
+  { n:65, week:"Semana 1", area:"Tráfico", title:"[GEMA V4] Configuración de la API de Conversiones (CAPI) lado servidor.", owner:"GEMA V4" },
+  { n:66, week:"Semana 1", area:"Gerencia", title:"[GEMA V4] El Handoff: Entrega técnica de Tokens y accesos al Grupo de Estrategia.", owner:"GEMA V4" },
+  { n:67, week:"Semana 1", area:"Comunicaciones", title:"[TUYO] Crear Fan Page FB con: Nombre, Nombre de usuario, Descripción, Categorías, Web.", owner:"TUYO" },
+  { n:68, week:"Semana 1", area:"Comunicaciones", title:"[TUYO] Dar administracion de fan page a Diseño y comercial.", owner:"TUYO" },
+  { n:69, week:"Semana 1", area:"Comunicaciones", title:"[TUYO] Conectar Whatsapp a fanpage.", owner:"TUYO" },
+  { n:70, week:"Semana 1", area:"Comunicaciones", title:"[TUYO] Conectar instagram a facebook.", owner:"TUYO" },
+  { n:71, week:"Semana 1", area:"Comunicaciones", title:"[TUYO] configuración de precio: Moderado.", owner:"TUYO" },
+  { n:72, week:"Semana 1", area:"Gerencia", title:"[TUYO] Divisa: pesos colombianos.", owner:"TUYO" },
+  { n:73, week:"Semana 1", area:"Comunicaciones", title:"[TUYO] Foto de perfil, foto de portada.", owner:"TUYO" },
+  { n:74, week:"Semana 1", area:"Comunicaciones", title:"[TUYO] Crear historias destacadas.", owner:"TUYO" },
+  { n:75, week:"Semana 1", area:"Comunicaciones", title:"[TUYO] Crear descripcion.", owner:"TUYO" },
+  { n:76, week:"Semana 1", area:"Comunicaciones", title:"[TUYO] Conectar whatsapp como contacto en instagram y en fan page.", owner:"TUYO" },
+  { n:77, week:"Semana 1", area:"Comunicaciones", title:"[TUYO] crear google my business: con fotos reales, descripción, categoría, maps, web.", owner:"TUYO" },
+  { n:78, week:"Semana 1", area:"Gestión del Cliente", title:"[TUYO] Enviar link de google my bussines al equipo para calificar con 5 estrellas la empresa.", owner:"TUYO" },
+  { n:79, week:"Semana 1", area:"Comunicaciones", title:"[TUYO] colocar el numero de celular principal en el excel accesos rr.ss.", owner:"TUYO" },
+  { n:80, week:"Semana 1", area:"Gestión del Cliente", title:"[TUYO] verificar 2da linea de atencion de whatsapp para evitar baneos.", owner:"TUYO" },
+  { n:81, week:"Semana 1", area:"Tráfico", title:"[TUYO] Crear cuenta en Tik Tok Ads con correo y contraseña de la empresa.", owner:"TUYO" },
+  { n:82, week:"Semana 1", area:"Gerencia", title:"[TUYO] Guardar accesos en la app de accesos.", owner:"TUYO" },
+  { n:83, week:"Semana 2", area:"Gerencia", title:"[TUYO] Reunion creacion oferta irresistible.", owner:"TUYO" },
+  { n:84, week:"Semana 2", area:"Gestión del Cliente", title:"[GEMA V4] Auditoría de la oferta B2C basada en el Diagnóstico Comercial.", owner:"GEMA V4" },
+  { n:85, week:"Semana 2", area:"Tráfico", title:"[GEMA V4] Definición de los 3 Ángulos de pauta (Dolor, Deseo, Autoridad).", owner:"GEMA V4" },
+  { n:86, week:"Semana 2", area:"Comunicaciones", title:"[GEMA V4] Mapeo visual del Ecosistema en Figma (Loop WP, Email, Landing).", owner:"GEMA V4" },
+  { n:87, week:"Semana 2", area:"Comunicaciones", title:"[GEMA V4] Diseño del Loop 1 (WhatsApp): Arquitectura de perfilamiento IA.", owner:"GEMA V4" },
+  { n:88, week:"Semana 2", area:"Comunicaciones", title:"[GEMA V4] Diseño del Loop 2 (Email): Secuencia de bienvenida y rescate frío.", owner:"GEMA V4" },
+  { n:89, week:"Semana 2", area:"Comunicaciones", title:"[TUYO] Programar grabacion de anuncios.", owner:"TUYO" },
+  { n:90, week:"Semana 2", area:"Comunicaciones", title:"[TUYO] Programar grabacion de VSL.", owner:"TUYO" },
+  { n:91, week:"Semana 2", area:"Comunicaciones", title:"[GEMA V4] Redacción de Guion VSL (Hook, Contexto, Mecanismo, Filtro).", owner:"GEMA V4" },
+  { n:92, week:"Semana 2", area:"Comunicaciones", title:"[GEMA V4] Redacción de 5 Guiones UGC (9:16) con requerimientos de B-roll.", owner:"GEMA V4" },
+  { n:93, week:"Semana 2", area:"Gerencia", title:"[GEMA V4] Aprobación interna de guiones por Dirección Comercial.", owner:"GEMA V4" },
+  { n:94, week:"Semana 2", area:"Gestión del Cliente", title:"[GEMA V4] Envío de guiones al founder con tutorial de grabación.", owner:"GEMA V4" },
+  { n:95, week:"Semana 2", area:"Gestión del Cliente", title:"[GEMA V4] Seguimiento agresivo de grabación (Recordatorio 48h).", owner:"GEMA V4" },
+  { n:96, week:"Semana 2", area:"Comunicaciones", title:"[GEMA V4] Recepción y auditoría de calidad de videos crudos.", owner:"GEMA V4" },
+  { n:97, week:"Semana 2", area:"Comunicaciones", title:"[TUYO] Creacion piezas/contenido de auncios.", owner:"TUYO" },
+  { n:98, week:"Semana 2", area:"Comunicaciones", title:"[GEMA V4] Edición Pro: Cortes, audio, subtítulos dinámicos y pop-ups.", owner:"GEMA V4" },
+  { n:99, week:"Semana 2", area:"Comunicaciones", title:"[GEMA V4] Diseño de creativos estáticos para retargeting.", owner:"GEMA V4" },
+  { n:100, week:"Semana 2", area:"Comunicaciones", title:"[GEMA V4] Redacción de Copys persuasivos y Captions finales.", owner:"GEMA V4" },
+  { n:101, week:"Semana 2", area:"Comunicaciones", title:"[TUYO] Creacion de copys para responder comentarios de acuerdo a la estrategia.", owner:"TUYO" },
+  { n:102, week:"Semana 2", area:"Comunicaciones", title:"[TUYO] hacer entrega de los cometarios al diseñador y colocarlos en el excel.", owner:"TUYO" },
+  { n:103, week:"Semana 2", area:"Tráfico", title:"[GEMA V4] Aprobación final del paquete creativo para Tráfico.", owner:"GEMA V4" },
+  { n:104, week:"Semana 2", area:"Gestión del Cliente", title:"[TUYO] crear crm y colocar los accesos en el excel accesos rr.ss.", owner:"TUYO" },
+  { n:105, week:"Semana 2", area:"Gestión del Cliente", title:"[GEMA V4] Creación del Pipeline visual (Embudo) en Kommo/SaaS.", owner:"GEMA V4" },
+  { n:106, week:"Semana 2", area:"Gestión del Cliente", title:"[GEMA V4] Configuración de etapas: Prospecto -> IA Activa -> Perfilado -> Agendado.", owner:"GEMA V4" },
+  { n:107, week:"Semana 2", area:"Tráfico", title:"[TUYO] Conectar WhatsApp Api al CRM.", owner:"TUYO" },
+  { n:108, week:"Semana 2", area:"Tráfico", title:"[TUYO] conectar facebook al crm.", owner:"TUYO" },
+  { n:109, week:"Semana 2", area:"Tráfico", title:"[TUYO] conectar instagram al crm.", owner:"TUYO" },
+  { n:110, week:"Semana 2", area:"Comunicaciones", title:"[TUYO] Revisar el perfil de Whatsapp (Foto, Descripcion, Mapa, Web, Apagar bienvenida).", owner:"TUYO" },
+  { n:111, week:"Semana 2", area:"Comunicaciones", title:"[TUYO] configurar whatsapp/ horarios.", owner:"TUYO" },
+  { n:112, week:"Semana 2", area:"Comunicaciones", title:"[TUYO] configurar whatsapp/ inf.", owner:"TUYO" },
+  { n:113, week:"Semana 2", area:"Comunicaciones", title:"[TUYO] configurar whatsapp/ direccion.", owner:"TUYO" },
+  { n:114, week:"Semana 2", area:"Comunicaciones", title:"[TUYO] configurar whatsapp/ descripcion de la empresa.", owner:"TUYO" },
+  { n:115, week:"Semana 2", area:"Comunicaciones", title:"[TUYO] configurar whatsapp/ vincular red social.", owner:"TUYO" },
+  { n:116, week:"Semana 2", area:"Gestión del Cliente", title:"[GEMA V4] Entrenamiento de la Unidad Autónoma (IA) con data financiera.", owner:"GEMA V4" },
+  { n:117, week:"Semana 2", area:"Gestión del Cliente", title:"[GEMA V4] Inyección de manejo de objeciones B2C específicas del nicho.", owner:"GEMA V4" },
+  { n:118, week:"Semana 2", area:"Gestión del Cliente", title:"[GEMA V4] Carga de testimonios y casos de éxito en secuencias de seguimiento.", owner:"GEMA V4" },
+  { n:119, week:"Semana 2", area:"Gestión del Cliente", title:"[TUYO] crear bot de bienvenida.", owner:"TUYO" },
+  { n:120, week:"Semana 2", area:"Gestión del Cliente", title:"[TUYO] Crear la automatizacion con estrategia - Ir a la pestaña AUTOMATIZACION.", owner:"TUYO" },
+  { n:121, week:"Semana 2", area:"Gestión del Cliente", title:"[TUYO] crear bot genera al bot de bienvenida.", owner:"TUYO" },
+  { n:122, week:"Semana 2", area:"Gestión del Cliente", title:"[TUYO] crear bot genera con 7 mensajes de seguimiento.", owner:"TUYO" },
+  { n:123, week:"Semana 2", area:"Gestión del Cliente", title:"[TUYO] crear respuestas rapida basicas: metodos de pago.", owner:"TUYO" },
+  { n:124, week:"Semana 2", area:"Gestión del Cliente", title:"[TUYO] crear respuestas rapida basicas: direccion.", owner:"TUYO" },
+  { n:125, week:"Semana 2", area:"Gestión del Cliente", title:"[TUYO] crear respuestas rapida basicas: horarios de atencion.", owner:"TUYO" },
+  { n:126, week:"Semana 2", area:"Gestión del Cliente", title:"[TUYO] crear respuestas rapida basicas: cita agendada.", owner:"TUYO" },
+  { n:127, week:"Semana 2", area:"Gestión del Cliente", title:"[TUYO] crear respuestas rapida basicas: recordar cita.", owner:"TUYO" },
+  { n:128, week:"Semana 2", area:"Gestión del Cliente", title:"[TUYO] crear respuestas rapida basicas: no asistio cita.", owner:"TUYO" },
+  { n:129, week:"Semana 2", area:"Gestión del Cliente", title:"[TUYO] crear respuestas rapida basicas: no contesta.", owner:"TUYO" },
+  { n:130, week:"Semana 2", area:"Gestión del Cliente", title:"[TUYO] crear respuestas rapida basicas: otra cuidad.", owner:"TUYO" },
+  { n:131, week:"Semana 2", area:"Gestión del Cliente", title:"[TUYO] crear calendly activando seguimiento de sms, correo electronico.", owner:"TUYO" },
+  { n:132, week:"Semana 2", area:"Gerencia", title:"[TUYO] pagar calendly desde la tarjeta que nos de la empresa.", owner:"TUYO" },
+  { n:133, week:"Semana 2", area:"Gestión del Cliente", title:"[GEMA V4] Seteo de automatizaciones de etiquetado por comportamiento.", owner:"GEMA V4" },
+  { n:134, week:"Semana 2", area:"Gestión del Cliente", title:"[GEMA V4] Seteo de Alertas de Soporte: Notificación si la IA falla > 5 mins.", owner:"GEMA V4" },
+  { n:135, week:"Semana 2", area:"Tráfico", title:"[GEMA V4] Exportación del flujo maestro en formato JSON.", owner:"GEMA V4" },
+  { n:136, week:"Semana 2", area:"Tráfico", title:"[GEMA V4] Importación del JSON al SaaS de Marca Blanca propio.", owner:"GEMA V4" },
+  { n:137, week:"Semana 2", area:"Tráfico", title:"[GEMA V4] Conexión del Token de WhatsApp al SaaS Marca Blanca.", owner:"GEMA V4" },
+  { n:138, week:"Semana 2", area:"Tráfico", title:"[GEMA V4] Integración del Loop de Email Marketing con el CRM.", owner:"GEMA V4" },
+  { n:139, week:"Semana 2", area:"Tráfico", title:"[GEMA V4] QA Técnico Nivel 1: Prueba de respuesta de la IA.", owner:"GEMA V4" },
+  { n:140, week:"Semana 2", area:"Tráfico", title:"[GEMA V4] QA Técnico Nivel 2: Prueba de saltos de etapa en Pipeline.", owner:"GEMA V4" },
+  { n:141, week:"Semana 2", area:"Tráfico", title:"[GEMA V4] QA Técnico Nivel 3: Prueba de disparos de correos automáticos.", owner:"GEMA V4" },
+  { n:142, week:"Semana 2", area:"Gestión del Cliente", title:"[GEMA V4] Creación de accesos de cliente para el Dashboard de Marca Blanca.", owner:"GEMA V4" },
+  { n:143, week:"Semana 3", area:"Gestión del Cliente", title:"[TUYO] Reunion estrategia de ventas.", owner:"TUYO" },
+  { n:144, week:"Semana 3", area:"Gestión del Cliente", title:"[TUYO] Presentacion de estrategia preliminar a la empresa.", owner:"TUYO" },
+  { n:145, week:"Semana 3", area:"Gerencia", title:"[TUYO] Buscar vacante comercial (Si es necesario pautar).", owner:"TUYO" },
+  { n:146, week:"Semana 3", area:"Gerencia", title:"[TUYO] Creacion de portales necesarios para la operacion (creditos, despachos) y tutoriales.", owner:"TUYO" },
+  { n:147, week:"Semana 3", area:"Gestión del Cliente", title:"[TUYO] Creacion de speech de venta con todas las variables.", owner:"TUYO" },
+  { n:148, week:"Semana 3", area:"Gestión del Cliente", title:"[TUYO] Creacion de speech presencial con objeciones.", owner:"TUYO" },
+  { n:149, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Creación de usuarios y permisos en CRM para vendedores.", owner:"GEMA V4" },
+  { n:150, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Entrega de manuales de atención 'Método de la Agencia'.", owner:"GEMA V4" },
+  { n:151, week:"Semana 3", area:"Gerencia", title:"[TUYO] crear archivo oficial de la empresa (metodologia+nombre de la empresa+genelypse).", owner:"TUYO" },
+  { n:152, week:"Semana 3", area:"Gerencia", title:"[TUYO] CREAR DENTRO DEL ARCHIVO METODOLOGIA UNA PESTAÑA DE know-how.", owner:"TUYO" },
+  { n:153, week:"Semana 3", area:"Gerencia", title:"[TUYO] manual de funciones.", owner:"TUYO" },
+  { n:154, week:"Semana 3", area:"Gerencia", title:"[TUYO] cronograma de funciones.", owner:"TUYO" },
+  { n:155, week:"Semana 3", area:"Gestión del Cliente", title:"[TUYO] estructura de bots.", owner:"TUYO" },
+  { n:156, week:"Semana 3", area:"Gerencia", title:"[TUYO] manual de herramientas y cómo usarlas.", owner:"TUYO" },
+  { n:157, week:"Semana 3", area:"Gestión del Cliente", title:"[TUYO] manual de servicio o producto.", owner:"TUYO" },
+  { n:158, week:"Semana 3", area:"Gestión del Cliente", title:"[TUYO] speech de venta (Documentación oficial).", owner:"TUYO" },
+  { n:159, week:"Semana 3", area:"Gerencia", title:"[TUYO] manual de financieras.", owner:"TUYO" },
+  { n:160, week:"Semana 3", area:"Gestión del Cliente", title:"[TUYO] paso a paso de cierre de venta.", owner:"TUYO" },
+  { n:161, week:"Semana 3", area:"Gestión del Cliente", title:"[TUYO] paso a paso post cierre de venta.", owner:"TUYO" },
+  { n:162, week:"Semana 3", area:"Gestión del Cliente", title:"[TUYO] manual de objeciones y cómo gestionarlos.", owner:"TUYO" },
+  { n:163, week:"Semana 3", area:"Comunicaciones", title:"[TUYO] Pasar por el grupo plantillas la informacion para creacion de archivo de ventas.", owner:"TUYO" },
+  { n:164, week:"Semana 3", area:"Gerencia", title:"[TUYO] Pasar la instruccion que se añada al archivo de consolidados esa empresa.", owner:"TUYO" },
+  { n:165, week:"Semana 3", area:"Gerencia", title:"[TUYO] Tener creado cronograma de funciones.", owner:"TUYO" },
+  { n:166, week:"Semana 3", area:"Gerencia", title:"[TUYO] Consolidados.", owner:"TUYO" },
+  { n:167, week:"Semana 3", area:"Gestión del Cliente", title:"[TUYO] Estrategia comercial: Crear grupo de difusiones (Solo si aplica).", owner:"TUYO" },
+  { n:168, week:"Semana 3", area:"Gestión del Cliente", title:"[TUYO] Estrategia comercial: Crear del archivo de seguimiento.", owner:"TUYO" },
+  { n:169, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Sesión 1: Psicología del lead digital vs lead tradicional.", owner:"GEMA V4" },
+  { n:170, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Sesión 2: El método de ventas (Diagnóstico -> Agitación -> Cierre).", owner:"GEMA V4" },
+  { n:171, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Entrega de Scripts de ventas por chat pre-perfilados.", owner:"GEMA V4" },
+  { n:172, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Capacitación en manejo de objeciones (Precio, Tiempo, Confianza).", owner:"GEMA V4" },
+  { n:173, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Entrenamiento en tipificación de leads (Etiquetas y Notas).", owner:"GEMA V4" },
+  { n:174, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Capacitación: Cómo leer el trabajo previo de la IA.", owner:"GEMA V4" },
+  { n:175, week:"Semana 3", area:"Gerencia", title:"[GEMA V4] Seteo del SLA Comercial: Regla innegociable de respuesta < 15 mins.", owner:"GEMA V4" },
+  { n:176, week:"Semana 3", area:"Gerencia", title:"[GEMA V4] Cláusula de la Guillotina: Notificación formal de métricas mínimas.", owner:"GEMA V4" },
+  { n:177, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Roleplay 1: Simulación de leads calificados.", owner:"GEMA V4" },
+  { n:178, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Roleplay 2: Simulación de leads difíciles/quemados.", owner:"GEMA V4" },
+  { n:179, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Capacitación en herramientas de seguimiento (Audio/Video).", owner:"GEMA V4" },
+  { n:180, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Estructuración de la agenda diaria del vendedor.", owner:"GEMA V4" },
+  { n:181, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Estrategia de recuperación de 'muertos' (Leads fríos).", owner:"GEMA V4" },
+  { n:182, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Definición de estructura de llamada de cierre/valoración.", owner:"GEMA V4" },
+  { n:183, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Capacitación en técnicas de urgencia y escasez real.", owner:"GEMA V4" },
+  { n:184, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Configuración de plantillas de respuesta rápida.", owner:"GEMA V4" },
+  { n:185, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Prueba técnica de conocimientos comerciales al equipo.", owner:"GEMA V4" },
+  { n:186, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Feedback individual de desempeño pre-lanzamiento.", owner:"GEMA V4" },
+  { n:187, week:"Semana 3", area:"Gerencia", title:"[GEMA V4] Alineación de metas de Tasa de Cierre vs Success Fee.", owner:"GEMA V4" },
+  { n:188, week:"Semana 3", area:"Gerencia", title:"[GEMA V4] Firma de compromiso de KPIs por parte del vendedor.", owner:"GEMA V4" },
+  { n:189, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Ejecución del Dry-Run: Prueba completa Meta -> IA -> Humano.", owner:"GEMA V4" },
+  { n:190, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Verificación Dry-Run: ¿La IA perfiló según el script?", owner:"GEMA V4" },
+  { n:191, week:"Semana 3", area:"Gestión del Cliente", title:"[GEMA V4] Verificación Dry-Run: ¿El humano respondió en < 15 mins?", owner:"GEMA V4" },
+  { n:192, week:"Semana 3", area:"Gerencia", title:"[GEMA V4] Certificación de 'Cerrador Autorizado' para el talento humano.", owner:"GEMA V4" },
+  { n:193, week:"Semana 3", area:"Gestión del Cliente", title:"[TUYO] Agendar presentacion PLAN TEORICO al cliente y al equipo del trabajo del cliente.", owner:"TUYO" },
+  { n:194, week:"Semana 3", area:"Gestión del Cliente", title:"[TUYO] Agendar presentacion PLAN PRACTICO al cliente y al equipo del trabajo del cliente.", owner:"TUYO" },
+  { n:195, week:"Semana 3", area:"Tráfico", title:"[TUYO] Creacion estrategia de trafico.", owner:"TUYO" },
+  { n:196, week:"Semana 3", area:"Tráfico", title:"[TUYO] Recepcion de estrategia de trafico.", owner:"TUYO" },
+  { n:197, week:"Semana 3", area:"Tráfico", title:"[GEMA V4] Conexión de Fanpage e IG al Business Manager verificado.", owner:"GEMA V4" },
+  { n:198, week:"Semana 3", area:"Tráfico", title:"[GEMA V4] Verificación de Cuenta Publicitaria y método de pago del cliente.", owner:"GEMA V4" },
+  { n:199, week:"Semana 3", area:"Tráfico", title:"[GEMA V4] Instalación de Píxel y CAPI en la Landing Page/VSL.", owner:"GEMA V4" },
+  { n:200, week:"Semana 3", area:"Tráfico", title:"[GEMA V4] Configuración de Eventos de Conversión (Prioridad: Agendamiento).", owner:"GEMA V4" },
+  { n:201, week:"Semana 3", area:"Tráfico", title:"[GEMA V4] Creación de Públicos de Intereses B2C específicos.", owner:"GEMA V4" },
+  { n:202, week:"Semana 3", area:"Tráfico", title:"[GEMA V4] Creación de Públicos Lookalike (1%, 3%, 5%).", owner:"GEMA V4" },
+  { n:203, week:"Semana 3", area:"Tráfico", title:"[GEMA V4] Creación de Públicos de Retargeting (Omnipresencia).", owner:"GEMA V4" },
+  { n:204, week:"Semana 3", area:"Tráfico", title:"[GEMA V4] Implementación de UTMs dinámicos para tracking en CRM.", owner:"GEMA V4" },
+  { n:205, week:"Semana 3", area:"Tráfico", title:"[GEMA V4] Carga de anuncios con variaciones de Hook (VSL y UGC).", owner:"GEMA V4" },
+  { n:206, week:"Semana 3", area:"Tráfico", title:"[GEMA V4] Configuración de presupuestos según Ingeniería Financiera.", owner:"GEMA V4" },
+  { n:207, week:"Semana 3", area:"Tráfico", title:"[GEMA V4] Validación final de configuración por Auditor de Tráfico.", owner:"GEMA V4" },
+  { n:208, week:"Semana 3", area:"Tráfico", title:"[GEMA V4] Montaje de Campaña 1: Fase de Volumen.", owner:"GEMA V4" },
+  { n:209, week:"Semana 3", area:"Tráfico", title:"[TUYO] Ejecucion de la estrategia de trafico.", owner:"TUYO" },
+  { n:210, week:"Semana 3", area:"Tráfico", title:"[TUYO] Lanzar campaña de trafico.", owner:"TUYO" },
+  { n:211, week:"Semana 3", area:"Comunicaciones", title:"[TUYO] Comunicar las salidas de las campañas a todos los equipo.", owner:"TUYO" },
+  { n:212, week:"Semana 4+", area:"Gerencia", title:"[GEMA V4] Reunión de Go-Live con el Founder (Encendido de pauta).", owner:"GEMA V4" },
+  { n:213, week:"Semana 4+", area:"Tráfico", title:"[GEMA V4] Encendido oficial de las campañas en Meta Ads.", owner:"GEMA V4" },
+  { n:214, week:"Semana 4+", area:"Tráfico", title:"[GEMA V4] Monitoreo intensivo de Ads Manager (Primeras 24h).", owner:"GEMA V4" },
+  { n:215, week:"Semana 4+", area:"Gerencia", title:"[TUYO] Agendar supervisiones.", owner:"TUYO" },
+  { n:216, week:"Semana 4+", area:"Tráfico", title:"[GEMA V4] Auditoría diaria de Gasto vs Presupuesto.", owner:"GEMA V4" },
+  { n:217, week:"Semana 4+", area:"Tráfico", title:"[GEMA V4] Auditoría de Adquisición: Revisión de CPL (Día 3) y CPA (Día 5).", owner:"GEMA V4" },
+  { n:218, week:"Semana 4+", area:"Tráfico", title:"[GEMA V4] Apagado de anuncios perdedores según CPA máximo.", owner:"GEMA V4" },
+  { n:219, week:"Semana 4+", area:"Tráfico", title:"[GEMA V4] Auditoría Loop 1: Tasa de conversión IA -> Humano.", owner:"GEMA V4" },
+  { n:220, week:"Semana 4+", area:"Tráfico", title:"[GEMA V4] Auditoría Loop 2: Open Rate de correos de bienvenida.", owner:"GEMA V4" },
+  { n:221, week:"Semana 4+", area:"Gestión del Cliente", title:"[GEMA V4] Auditoría SLA Comercial: Vigilancia de tiempos de respuesta.", owner:"GEMA V4" },
+  { n:222, week:"Semana 4+", area:"Gestión del Cliente", title:"[GEMA V4] Identificación de leads 'Estancados' y alerta roja.", owner:"GEMA V4" },
+  { n:223, week:"Semana 4+", area:"Gerencia", title:"[GEMA V4] Consolidación de datos para Reporte Semanal.", owner:"GEMA V4" },
+  { n:224, week:"Semana 4+", area:"Gestión del Cliente", title:"[GEMA V4] Envío de Reporte de Performance al Founder.", owner:"GEMA V4" },
+  { n:225, week:"Semana 4+", area:"Gerencia", title:"[GEMA V4] Conciliación de Ventas (Auditoría Pasarelas): CRM vs Dinero.", owner:"GEMA V4" },
+  { n:226, week:"Semana 4+", area:"Gerencia", title:"[GEMA V4] Ejecución de la Guillotina: Alerta de rescisión si falla cerrador.", owner:"GEMA V4" },
+  { n:227, week:"Semana 4+", area:"Gestión del Cliente", title:"[GEMA V4] Sesión de retroalimentación estratégica con el cliente.", owner:"GEMA V4" },
+  { n:228, week:"Semana 4+", area:"Tráfico", title:"[GEMA V4] Mantenimiento técnico mensual de la API y el SaaS.", owner:"GEMA V4" },
+  { n:229, week:"Semana 4+", area:"Gestión del Cliente", title:"[GEMA V4] Auditoría diaria de primer contacto (Velocity).", owner:"GEMA V4" },
+  { n:230, week:"Semana 4+", area:"Gestión del Cliente", title:"[GEMA V4] Clínica de ventas diaria (Revisión de chats grabados).", owner:"GEMA V4" },
+  { n:231, week:"Semana 4+", area:"Gestión del Cliente", title:"[GEMA V4] Clínica de ventas quincenal correctiva.", owner:"GEMA V4" },
+  { n:232, week:"Semana 4+", area:"Gestión del Cliente", title:"[GEMA V4] Supervisión de Pipeline: Limpieza de leads estancados.", owner:"GEMA V4" },
+  { n:233, week:"Semana 4+", area:"Gestión del Cliente", title:"[GEMA V4] Refuerzo de guiones según nuevas objeciones detectadas.", owner:"GEMA V4" },
+  { n:234, week:"Semana 4+", area:"Gestión del Cliente", title:"[GEMA V4] Seteo de recordatorios automáticos de citas.", owner:"GEMA V4" },
+  { n:235, week:"Semana 4+", area:"Gestión del Cliente", title:"[GEMA V4] Evaluación de calidad de notas de voz del vendedor.", owner:"GEMA V4" },
+  { n:236, week:"Semana 4+", area:"Gerencia", title:"[GEMA V4] Sesión de motivación y alineación de incentivos comerciales.", owner:"GEMA V4" },
+  { n:237, week:"Semana 4+", area:"Comunicaciones", title:"[GEMA V4] Solicitud de nuevos creativos (Evitar fatiga).", owner:"GEMA V4" },
+  { n:238, week:"Semana 4+", area:"Tráfico", title:"[GEMA V4] Actualización de públicos Lookalike (Data 15 días).", owner:"GEMA V4" },
+  { n:239, week:"Semana 4+", area:"Tráfico", title:"[GEMA V4] Escalamiento vertical de presupuesto (Aumento 20%).", owner:"GEMA V4" },
+  { n:240, week:"Semana 4+", area:"Tráfico", title:"[GEMA V4] Escalamiento horizontal (Nuevos intereses/ángulos).", owner:"GEMA V4" },
+  { n:241, week:"Semana 4+", area:"Tráfico", title:"[GEMA V4] Revisión de salud de la App en Meta Developers.", owner:"GEMA V4" },
+  { n:242, week:"Semana 4+", area:"Gerencia", title:"[GEMA V4] Auditoría mensual de rentabilidad (LTV real).", owner:"GEMA V4" },
+  { n:243, week:"Semana 4+", area:"Gerencia", title:"[GEMA V4] Presentación de Reporte Mensual de ROI.", owner:"GEMA V4" },
+  { n:244, week:"Semana 4+", area:"Gerencia", title:"[GEMA V4] Cobro de Success Fee / Equity basado en auditoría.", owner:"GEMA V4" },
+  { n:245, week:"Semana 4+", area:"Gerencia", title:"[GEMA V4] Loop Innovación: Sesión de nueva oferta Mes 2.", owner:"GEMA V4" },
+  { n:246, week:"Semana 4+", area:"Gestión del Cliente", title:"[GEMA V4] Actualización de base conocimiento IA según dudas.", owner:"GEMA V4" },
+  { n:247, week:"Semana 4+", area:"Comunicaciones", title:"[GEMA V4] Optimización de secuencias de Email Marketing.", owner:"GEMA V4" },
+  { n:248, week:"Semana 4+", area:"Gerencia", title:"[GEMA V4] Revisión de seguridad de activos (2FA, Accesos).", owner:"GEMA V4" },
+  { n:249, week:"Semana 4+", area:"Gestión del Cliente", title:"[GEMA V4] Limpieza de base de datos de leads no interesados.", owner:"GEMA V4" },
+  { n:250, week:"Semana 4+", area:"Tráfico", title:"[GEMA V4] Pase a etapa de 'Escala Agresiva' (Growth).", owner:"GEMA V4" },
+  { n:251, week:"Semana 4+", area:"Tráfico", title:"[GEMA V4] Implementación de catálogos dinámicos (si aplica).", owner:"GEMA V4" },
+  { n:252, week:"Semana 4+", area:"Gestión del Cliente", title:"[GEMA V4] Backup mensual de base de datos de leads en CRM.", owner:"GEMA V4" },
+  { n:253, week:"Semana 4+", area:"Gerencia", title:"[GEMA V4] Análisis de cohortes: Ventas Mes 1 vs Mes 2.", owner:"GEMA V4" },
+  { n:254, week:"Semana 4+", area:"Comunicaciones", title:"[GEMA V4] Auditoría de reputación: Reviews en Google/FB.", owner:"GEMA V4" },
+  { n:255, week:"Semana 4+", area:"Gestión del Cliente", title:"[GEMA V4] Seteo de CRM para automatización de referidos.", owner:"GEMA V4" },
+  { n:256, week:"Semana 4+", area:"Gerencia", title:"[GEMA V4] Revisión de contratos y renovaciones.", owner:"GEMA V4" },
+  { n:257, week:"Semana 4+", area:"Tráfico", title:"[GEMA V4] Test A/B de Landing Page (Copy vs Video).", owner:"GEMA V4" },
+  { n:258, week:"Semana 4+", area:"Comunicaciones", title:"[GEMA V4] Sesión de fotos/video presencial para refrescar branding.", owner:"GEMA V4" },
+  { n:259, week:"Semana 4+", area:"Gerencia", title:"[GEMA V4] Incentivo por metas trimestrales para equipo comercial.", owner:"GEMA V4" },
+  { n:260, week:"Semana 4+", area:"Gerencia", title:"[GEMA V4] Reporte trimestral de impacto y escalabilidad.", owner:"GEMA V4" },
+  { n:261, week:"Semana 4+", area:"Gerencia", title:"[GEMA V4] Evaluación de posibilidad de Venta de la Empresa (Exit strategy).", owner:"GEMA V4" },
+];
+
+const WEEKS = ["Semana 1","Semana 2","Semana 3","Semana 4+"];
+const AREAS = ["Gerencia","Tráfico","Comunicaciones","Gestión del Cliente"];
+const CHANNELS = ["Meta Ads","Referido","Orgánico","Otro"];
+
+const NODE_TYPES = {
+  inicio:   { label:"Inicio",            bg:"#D4AF37", color:"#141414", border:"#D4AF37" },
+  speech:   { label:"Speech / Mensaje",  bg:"#F0F0F0", color:"#1A1A1A", border:"#9B9B9F" },
+  decision: { label:"Decisión",          bg:"#FFFBEB", color:"#92660A", border:"#D4AF37" },
+  accion:   { label:"Acción",            bg:"#ECFDF5", color:"#1A7A4A", border:"#4CAF7D" },
+  alerta:   { label:"Alerta / Objeción", bg:"#FEF2F2", color:"#B91C1C", border:"#E06C6C" },
+};
+
+// ─── SEED DATA ────────────────────────────────────────────────────────────────
+function makeClient(name, channel) {
+  return {
+    id: uid(),
+    name,
+    createdAt: Date.now(),
+    profile: { phone:"", email:"", contractValue:"", channel: channel||"Meta Ads", startDate:null, nextMeeting:null, notes:"" },
+    tasks: GEMA_TASKS.map(t => ({ ...t, id: uid(), done: false, assigneeId: null, doneAt: null })),
+    flows: [{ id: uid(), name:"Proceso comercial v1", createdAt: Date.now(), nodes:[], edges:[] }],
+  };
+}
+
+function getInitialData() {
+  const saved = storageGet();
+  if (saved && saved.clients) return saved;
+  return {
+    roles: [{ id: uid(), name:"Estratega" }, { id: uid(), name:"Tráfico" }, { id: uid(), name:"Diseño" }],
+    team: [{ id: uid(), name:"Pena" }, { id: uid(), name:"JP" }],
+    clients: [],
+    settings: { apiKey:"" },
+  };
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function weekStats(tasks, week) {
+  const wt = tasks.filter(t => t.week === week);
+  return { done: wt.filter(t=>t.done).length, total: wt.length };
+}
+
+function overallPct(tasks) {
+  if (!tasks.length) return 0;
+  return Math.round((tasks.filter(t=>t.done).length / tasks.length) * 100);
+}
+
+// ─── SMALL UI COMPONENTS ──────────────────────────────────────────────────────
+function Pill({ active, onClick, children }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding:"4px 12px", borderRadius:20, fontSize:12, fontWeight:500, cursor:"pointer",
+        background: active ? GOLD : "transparent",
+        color: active ? "#141414" : GRAY,
+        border: `1px solid ${active ? GOLD : BORDER}`,
+        transition:"all 0.15s",
+      }}
+    >{children}</button>
+  );
+}
+
+function ProgressBar({ pct, color=GOLD, height=4 }) {
+  return (
+    <div style={{ background: BORDER, borderRadius:4, height, overflow:"hidden" }}>
+      <div style={{ width:`${pct}%`, height:"100%", background:color, borderRadius:4, transition:"width 0.3s" }} />
+    </div>
+  );
+}
+
+function Modal({ title, onClose, children }) {
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center" }}
+      onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
+      <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:24, minWidth:360, maxWidth:520, width:"90%" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+          <span style={{ color:WHITE, fontWeight:600, fontSize:16 }}>{title}</span>
+          <button onClick={onClose} style={{ background:"none", border:"none", color:GRAY, cursor:"pointer", fontSize:18 }}>×</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Input({ label, value, onChange, type="text", placeholder="" }) {
+  return (
+    <div style={{ marginBottom:12 }}>
+      {label && <label style={{ display:"block", color:GRAY, fontSize:12, marginBottom:4 }}>{label}</label>}
+      <input
+        type={type} value={value||""} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
+        style={{ width:"100%", background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"8px 10px", color:WHITE, fontSize:13, outline:"none", boxSizing:"border-box" }}
+      />
+    </div>
+  );
+}
+
+function Select({ label, value, onChange, options }) {
+  return (
+    <div style={{ marginBottom:12 }}>
+      {label && <label style={{ display:"block", color:GRAY, fontSize:12, marginBottom:4 }}>{label}</label>}
+      <select value={value||""} onChange={e=>onChange(e.target.value)}
+        style={{ width:"100%", background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"8px 10px", color:WHITE, fontSize:13, outline:"none" }}>
+        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </div>
+  );
+}
+
+// ─── PERFIL TAB ───────────────────────────────────────────────────────────────
+function PerfilTab({ client, onChange }) {
+  const p = client.profile;
+  const set = (key, val) => onChange({ ...client, profile: { ...p, [key]: val } });
+  return (
+    <div style={{ maxWidth:560 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+        <Input label="Teléfono" value={p.phone} onChange={v=>set("phone",v)} placeholder="+57 300 000 0000" />
+        <Input label="Email" value={p.email} onChange={v=>set("email",v)} placeholder="cliente@empresa.com" />
+        <Input label="Valor del contrato" value={p.contractValue} onChange={v=>set("contractValue",v)} placeholder="$0 COP/mes" />
+        <div style={{ marginBottom:12 }}>
+          <label style={{ display:"block", color:GRAY, fontSize:12, marginBottom:4 }}>Canal</label>
+          <select value={p.channel||"Meta Ads"} onChange={e=>set("channel",e.target.value)}
+            style={{ width:"100%", background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"8px 10px", color:WHITE, fontSize:13, outline:"none" }}>
+            {CHANNELS.map(c=><option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <Input label="Fecha inicio" value={p.startDate||""} onChange={v=>set("startDate",v)} type="date" />
+        <Input label="Próxima reunión" value={p.nextMeeting||""} onChange={v=>set("nextMeeting",v)} type="date" />
+      </div>
+      <div style={{ marginBottom:12 }}>
+        <label style={{ display:"block", color:GRAY, fontSize:12, marginBottom:4 }}>Notas</label>
+        <textarea value={p.notes||""} onChange={e=>set("notes",e.target.value)}
+          placeholder="Observaciones generales del cliente..."
+          style={{ width:"100%", background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"10px", color:WHITE, fontSize:13, outline:"none", minHeight:100, resize:"vertical", boxSizing:"border-box" }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─── EJECUCION TAB ────────────────────────────────────────────────────────────
+function EjecucionTab({ client, team, onChange }) {
+  const [weekFilter, setWeekFilter] = useState("Todas");
+  const [areaFilter, setAreaFilter] = useState("Todas");
+  const [ownerFilter, setOwnerFilter] = useState("Todos");
+  const [showEditor, setShowEditor] = useState(false);
+  const [editorSearch, setEditorSearch] = useState("");
+  const [customTitle, setCustomTitle] = useState("");
+  const [customWeek, setCustomWeek] = useState("Semana 1");
+  const [customArea, setCustomArea] = useState("Gerencia");
+  const [customOwner, setCustomOwner] = useState("GEMA V4");
+
+  const tasks = client.tasks;
+
+  const filtered = tasks.filter(t => {
+    if (weekFilter !== "Todas" && t.week !== weekFilter) return false;
+    if (areaFilter !== "Todas" && t.area !== areaFilter) return false;
+    if (ownerFilter !== "Todos" && t.owner !== ownerFilter) return false;
+    return true;
+  });
+
+  const toggleTask = (taskId) => {
+    const updated = tasks.map(t => t.id === taskId ? { ...t, done: !t.done, doneAt: !t.done ? Date.now() : null } : t);
+    onChange({ ...client, tasks: updated });
+  };
+
+  const assignTask = (taskId, assigneeId) => {
+    const updated = tasks.map(t => t.id === taskId ? { ...t, assigneeId: assigneeId||null } : t);
+    onChange({ ...client, tasks: updated });
+  };
+
+  const deleteTask = (taskId) => {
+    if (!confirm("¿Eliminar esta tarea?")) return;
+    onChange({ ...client, tasks: tasks.filter(t => t.id !== taskId) });
+  };
+
+  // Group by area when showing all weeks
+  const grouped = {};
+  if (weekFilter === "Todas") {
+    filtered.forEach(t => {
+      if (!grouped[t.area]) grouped[t.area] = [];
+      grouped[t.area].push(t);
+    });
+  }
+
+  return (
+    <div>
+      {/* Week stats */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:20 }}>
+        {WEEKS.map(w => {
+          const s = weekStats(tasks, w);
+          const pct = s.total ? Math.round(s.done/s.total*100) : 0;
+          return (
+            <div key={w} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:"12px 14px" }}>
+              <div style={{ fontSize:11, color:GRAY, marginBottom:4 }}>{w}</div>
+              <div style={{ fontSize:18, fontWeight:700, color:WHITE, marginBottom:6 }}>{s.done}<span style={{ color:GRAY, fontWeight:400, fontSize:13 }}>/{s.total}</span></div>
+              <ProgressBar pct={pct} />
+              <div style={{ fontSize:11, color:GOLD, marginTop:4 }}>{pct}%</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Filters */}
+      <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:10 }}>
+        {["Todas",...WEEKS].map(w=><Pill key={w} active={weekFilter===w} onClick={()=>setWeekFilter(w)}>{w}</Pill>)}
+      </div>
+      <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:10 }}>
+        {["Todas",...AREAS].map(a=><Pill key={a} active={areaFilter===a} onClick={()=>setAreaFilter(a)}>{a}</Pill>)}
+      </div>
+      <div style={{ display:"flex", gap:6, marginBottom:16, alignItems:"center", flexWrap:"wrap" }}>
+        {["Todos","GEMA V4","TUYO"].map(o=><Pill key={o} active={ownerFilter===o} onClick={()=>setOwnerFilter(o)}>{o}</Pill>)}
+        <div style={{ flex:1 }} />
+        <button onClick={()=>setShowEditor(s=>!s)}
+          style={{ padding:"4px 12px", borderRadius:6, fontSize:12, cursor:"pointer", background: showEditor ? GOLD : "#222225", color: showEditor ? "#141414" : WHITE, border:`1px solid ${showEditor ? GOLD : BORDER}`, fontWeight:600 }}>
+          {showEditor ? "✕ Cerrar editor" : "✎ Editar método"}
+        </button>
+      </div>
+
+      {/* Method editor panel */}
+      {showEditor && (() => {
+        const activeNums = new Set(tasks.map(t=>t.n).filter(Boolean));
+        const editorFiltered = GEMA_TASKS.filter(gt =>
+          !editorSearch || gt.title.toLowerCase().includes(editorSearch.toLowerCase()) || String(gt.n).includes(editorSearch)
+        );
+        const grouped = {};
+        editorFiltered.forEach(gt => {
+          if (!grouped[gt.week]) grouped[gt.week] = [];
+          grouped[gt.week].push(gt);
+        });
+        return (
+          <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16, marginBottom:16, maxHeight:400, overflowY:"auto" }}>
+            <input
+              value={editorSearch} onChange={e=>setEditorSearch(e.target.value)}
+              placeholder="Buscar tarea por texto o número..."
+              style={{ width:"100%", background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"7px 10px", color:WHITE, fontSize:12, outline:"none", marginBottom:12, boxSizing:"border-box" }}
+            />
+            {WEEKS.map(w => {
+              const wTasks = (grouped[w]||[]);
+              if (!wTasks.length) return null;
+              return (
+                <div key={w} style={{ marginBottom:12 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:GOLD, textTransform:"uppercase", letterSpacing:1, marginBottom:6 }}>{w}</div>
+                  {wTasks.map(gt => {
+                    const isActive = activeNums.has(gt.n);
+                    const isGema = gt.owner === "GEMA V4";
+                    return (
+                      <div key={gt.n} style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 8px", borderRadius:6, marginBottom:3, background:"rgba(255,255,255,0.02)" }}>
+                        <button
+                          onClick={() => {
+                            if (isActive) {
+                              onChange({...client, tasks: tasks.filter(t=>t.n!==gt.n)});
+                            } else {
+                              onChange({...client, tasks: [...tasks, {id:uid(), n:gt.n, week:gt.week, area:gt.area, title:gt.title, owner:gt.owner, done:false, assigneeId:null, doneAt:null}]});
+                            }
+                          }}
+                          style={{ width:22, height:22, borderRadius:4, cursor:"pointer", border:"none", background: isActive ? GREEN : "#444", color:"#fff", fontSize:11, fontWeight:700, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                          {isActive ? "✓" : "+"}
+                        </button>
+                        <span style={{ fontFamily:"monospace", fontSize:10, color:GRAY, minWidth:22, flexShrink:0 }}>#{gt.n}</span>
+                        <span style={{ flex:1, fontSize:11, color: isActive ? WHITE : GRAY, lineHeight:1.4 }}>{gt.title}</span>
+                        <span style={{ fontSize:9, padding:"1px 5px", borderRadius:3, flexShrink:0, border:`1px solid ${isGema ? GOLD_DIM : BORDER}`, color: isGema ? GOLD : GRAY }}>
+                          {gt.owner}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+
+            {/* Custom task section */}
+            <div style={{ borderTop:`1px solid ${BORDER}`, paddingTop:12, marginTop:8 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:WHITE, marginBottom:8 }}>Añadir tarea personalizada</div>
+              <input
+                value={customTitle} onChange={e=>setCustomTitle(e.target.value)}
+                placeholder="Título de la tarea..."
+                style={{ width:"100%", background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"6px 8px", color:WHITE, fontSize:12, outline:"none", marginBottom:8, boxSizing:"border-box" }}
+              />
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
+                <select value={customWeek} onChange={e=>setCustomWeek(e.target.value)}
+                  style={{ flex:1, minWidth:100, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 8px", color:WHITE, fontSize:11, outline:"none" }}>
+                  {WEEKS.map(w=><option key={w} value={w}>{w}</option>)}
+                </select>
+                <select value={customArea} onChange={e=>setCustomArea(e.target.value)}
+                  style={{ flex:1, minWidth:120, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 8px", color:WHITE, fontSize:11, outline:"none" }}>
+                  {AREAS.map(a=><option key={a} value={a}>{a}</option>)}
+                </select>
+                <select value={customOwner} onChange={e=>setCustomOwner(e.target.value)}
+                  style={{ flex:1, minWidth:90, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 8px", color:WHITE, fontSize:11, outline:"none" }}>
+                  <option value="GEMA V4">GEMA V4</option>
+                  <option value="TUYO">TUYO</option>
+                </select>
+              </div>
+              <button
+                onClick={() => {
+                  if (!customTitle.trim()) return;
+                  onChange({...client, tasks: [...tasks, {id:uid(), n:null, week:customWeek, area:customArea, title:customTitle.trim(), owner:customOwner, done:false, assigneeId:null, doneAt:null}]});
+                  setCustomTitle("");
+                }}
+                style={{ padding:"6px 16px", background:GREEN, color:"#141414", border:"none", borderRadius:6, cursor:"pointer", fontWeight:700, fontSize:12 }}>
+                + Añadir tarea
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Task list */}
+      {weekFilter === "Todas" ? (
+        Object.entries(grouped).map(([area, areaTask]) => (
+          <div key={area} style={{ marginBottom:20 }}>
+            <div style={{ fontSize:12, fontWeight:600, color:GOLD, textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>{area}</div>
+            {areaTask.map(t => <TaskRow key={t.id} task={t} team={team} onToggle={toggleTask} onAssign={assignTask} onDelete={deleteTask} />)}
+          </div>
+        ))
+      ) : (
+        filtered.map(t => <TaskRow key={t.id} task={t} team={team} onToggle={toggleTask} onAssign={assignTask} onDelete={deleteTask} />)
+      )}
+
+      {filtered.length === 0 && (
+        <div style={{ color:GRAY, textAlign:"center", padding:"40px 0" }}>No hay tareas con estos filtros.</div>
+      )}
+    </div>
+  );
+}
+
+function TaskRow({ task, team, onToggle, onAssign, onDelete }) {
+  const isGema = task.owner === "GEMA V4";
+  return (
+    <div style={{
+      display:"flex", alignItems:"center", gap:8, padding:"8px 10px", borderRadius:8, marginBottom:4,
+      background: task.done ? "rgba(76,175,125,0.05)" : "transparent",
+      border:`1px solid ${task.done ? "rgba(76,175,125,0.2)" : BORDER}`,
+      opacity: task.done ? 0.6 : 1,
+      transition:"all 0.15s",
+    }}>
+      <input type="checkbox" checked={task.done} onChange={()=>onToggle(task.id)}
+        style={{ accentColor:GOLD, width:15, height:15, cursor:"pointer", flexShrink:0 }} />
+      <span style={{ fontFamily:"monospace", fontSize:10, color:GRAY, minWidth:24, flexShrink:0 }}>#{task.n}</span>
+      <span style={{ flex:1, fontSize:12, color:WHITE, textDecoration:task.done?"line-through":"none", lineHeight:1.4 }}>{task.title}</span>
+      <span style={{
+        fontSize:10, padding:"2px 6px", borderRadius:4, flexShrink:0,
+        border:`1px solid ${isGema ? GOLD_DIM : BORDER}`,
+        color: isGema ? GOLD : WHITE,
+        background: isGema ? "rgba(212,175,55,0.08)" : "rgba(255,255,255,0.04)",
+      }}>{task.owner}</span>
+      <select value={task.assigneeId||""} onChange={e=>onAssign(task.id, e.target.value)}
+        style={{ background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"3px 6px", color:GRAY, fontSize:11, outline:"none", maxWidth:90 }}>
+        <option value="">--</option>
+        {team.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}
+      </select>
+      <button onClick={()=>onDelete(task.id)}
+        style={{ background:"none", border:"none", color:GRAY, cursor:"pointer", fontSize:14, padding:"0 2px", flexShrink:0 }}>×</button>
+    </div>
+  );
+}
+
+// ─── FLOW CANVAS ──────────────────────────────────────────────────────────────
+function FlowCanvas({ flow, clientName, clientProfile, clientTasks, onUpdate, apiKey }) {
+  const outerRef = useRef(null);
+  const [pan, setPan] = useState({ x:0, y:0 });
+  const [zoom, setZoom] = useState(1);
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState(null);
+  const [dragState, setDragState] = useState(null);
+  const [connectMode, setConnectMode] = useState(false);
+  const [connectFrom, setConnectFrom] = useState(null);
+  const [editingNodeId, setEditingNodeId] = useState(null);
+  const [editingEdgeId, setEditingEdgeId] = useState(null);
+  const [snapGrid, setSnapGrid] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [aiResult, setAiResult] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const NODE_COLORS = [
+    { label:"Default", bg:null },
+    { label:"Blanco", bg:"#FFFFFF" },
+    { label:"Amarillo", bg:"#FFFBEB" },
+    { label:"Azul", bg:"#EFF6FF" },
+    { label:"Verde", bg:"#ECFDF5" },
+    { label:"Rosa", bg:"#FFF1F2" },
+    { label:"Morado", bg:"#F5F3FF" },
+    { label:"Naranja", bg:"#FFF7ED" },
+    { label:"Gris", bg:"#F3F4F6" },
+  ];
+
+  const nodes = flow.nodes || [];
+  const edges = flow.edges || [];
+
+  const snap = (v) => snapGrid ? Math.round(v/20)*20 : v;
+
+  const canvasPoint = (e) => {
+    const rect = outerRef.current.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left - pan.x) / zoom,
+      y: (e.clientY - rect.top - pan.y) / zoom,
+    };
+  };
+
+  const saveHistory = useCallback((f) => {
+    setHistory(h => [...h.slice(-20), JSON.stringify(f)]);
+  }, []);
+
+  const update = (f) => { saveHistory(flow); onUpdate(f); };
+
+  // Wheel zoom
+  useEffect(() => {
+    const el = outerRef.current;
+    if (!el) return;
+    const handler = (e) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      setZoom(z => Math.min(2, Math.max(0.3, +(z + delta).toFixed(1))));
+    };
+    el.addEventListener("wheel", handler, { passive: false });
+    return () => el.removeEventListener("wheel", handler);
+  }, []);
+
+  const onOuterPointerDown = (e) => {
+    setSelectedNodeId(null);
+    if (e.button === 0 || e.button === 1) {
+      e.preventDefault();
+      setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+      setIsPanning(true);
+    }
+  };
+  const onOuterPointerMove = (e) => {
+    if (isPanning && panStart) {
+      setPan({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
+    }
+    if (dragState) {
+      const pt = canvasPoint(e);
+      const nx = snap(pt.x - dragState.ox);
+      const ny = snap(pt.y - dragState.oy);
+      onUpdate({ ...flow, nodes: nodes.map(n => n.id === dragState.id ? { ...n, x:nx, y:ny } : n) });
+    }
+  };
+  const onOuterPointerUp = () => { setIsPanning(false); setDragState(null); };
+
+  const addNode = (type) => {
+    const newNode = {
+      id: uid(), type, text: NODE_TYPES[type].label,
+      x: snap(200 - pan.x/zoom + Math.random()*40),
+      y: snap(120 - pan.y/zoom + Math.random()*40),
+    };
+    update({ ...flow, nodes: [...nodes, newNode] });
+  };
+
+  const onNodePointerDown = (e, nodeId) => {
+    e.stopPropagation();
+    if (connectMode) {
+      if (!connectFrom) { setConnectFrom(nodeId); return; }
+      if (connectFrom !== nodeId) {
+        const label = window.prompt("Etiqueta de conexión (opcional):", "") || "";
+        update({ ...flow, edges: [...edges, { id:uid(), from:connectFrom, to:nodeId, label }] });
+      }
+      setConnectFrom(null);
+      setConnectMode(false);
+      return;
+    }
+    setSelectedNodeId(nodeId);
+    const pt = canvasPoint(e);
+    const node = nodes.find(n=>n.id===nodeId);
+    setDragState({ id: nodeId, ox: pt.x - node.x, oy: pt.y - node.y });
+  };
+
+  const updateNodeProp = (id, patch) => {
+    update({ ...flow, nodes: nodes.map(n => n.id===id ? {...n,...patch} : n) });
+  };
+
+  const deleteNode = (id) => {
+    update({ ...flow, nodes: nodes.filter(n=>n.id!==id), edges: edges.filter(e=>e.from!==id&&e.to!==id) });
+  };
+
+  const deleteEdge = (id) => { update({ ...flow, edges: edges.filter(e=>e.id!==id) }); };
+
+  const undo = () => {
+    if (!history.length) return;
+    const prev = JSON.parse(history[history.length-1]);
+    setHistory(h => h.slice(0,-1));
+    onUpdate(prev);
+  };
+
+  // Edge midpoints for labels
+  const getNodeCenter = (id) => {
+    const n = nodes.find(x=>x.id===id);
+    if (!n) return null;
+    return { x: n.x + 90, y: n.y + 28 };
+  };
+
+  // Analysis block
+  const buildAnalysis = () => {
+    const lines = [];
+    lines.push(`═══════════════════════════════════════════`);
+    lines.push(`ANÁLISIS DE PROCESO COMERCIAL — ${clientName}`);
+    lines.push(`═══════════════════════════════════════════`);
+    lines.push(``);
+    lines.push(`DATOS DEL CLIENTE:`);
+    lines.push(`  Canal de adquisición: ${clientProfile.channel||"—"}`);
+    lines.push(`  Valor de contrato: ${clientProfile.contractValue||"—"}`);
+    lines.push(`  Fecha inicio: ${clientProfile.startDate||"—"}`);
+    if (clientProfile.notes) lines.push(`  Notas: ${clientProfile.notes}`);
+    lines.push(``);
+    lines.push(`PROGRESO MÉTODO GEMA V4:`);
+    WEEKS.forEach(w => {
+      const s = weekStats(clientTasks, w);
+      lines.push(`  ${w}: ${s.done}/${s.total} tareas completadas (${s.total ? Math.round(s.done/s.total*100) : 0}%)`);
+    });
+    lines.push(``);
+    lines.push(`PROCESO: ${flow.name}`);
+    lines.push(`  Nodos: ${nodes.length}  |  Conexiones: ${edges.length}`);
+    lines.push(``);
+    if (!nodes.length) { lines.push("  (Canvas vacío — aún no se han definido pasos)"); }
+    else {
+      lines.push(`NODOS:`);
+      nodes.forEach((n,i) => {
+        lines.push(`  ${i+1}. [${NODE_TYPES[n.type]?.label||n.type}] ${n.text}`);
+      });
+      lines.push(``);
+      lines.push(`CONEXIONES:`);
+      if (!edges.length) { lines.push("  (Sin conexiones definidas)"); }
+      else {
+        edges.forEach(e => {
+          const f = nodes.find(n=>n.id===e.from);
+          const t = nodes.find(n=>n.id===e.to);
+          lines.push(`  ${f?.text||"?"} --> ${t?.text||"?"} ${e.label ? `[${e.label}]` : ""}`);
+        });
+      }
+      // Flag orphans
+      const connected = new Set([...edges.map(e=>e.from), ...edges.map(e=>e.to)]);
+      const orphans = nodes.filter(n=>!connected.has(n.id));
+      if (orphans.length) {
+        lines.push(``);
+        lines.push(`ALERTAS:`);
+        orphans.forEach(n => lines.push(`  ⚠ Nodo huérfano (sin conexiones): "${n.text}"`));
+      }
+      const decisions = nodes.filter(n=>n.type==="decision");
+      decisions.forEach(d => {
+        const outgoing = edges.filter(e=>e.from===d.id);
+        if (outgoing.some(e=>!e.label)) lines.push(`  ⚠ Decisión sin etiqueta en ramas: "${d.text}"`);
+      });
+    }
+    lines.push(``);
+    lines.push(`═══════════════════════════════════════════`);
+    lines.push(`Pega este bloque en Claude para obtener retroalimentación`);
+    lines.push(`detallada del proceso comercial.`);
+    lines.push(`═══════════════════════════════════════════`);
+    return lines.join("\n");
+  };
+
+  const analysisText = showAnalysis ? buildAnalysis() : "";
+
+  const runAiAnalysis = async () => {
+    if (!apiKey) return;
+    setAiLoading(true);
+    setAiError(null);
+    setAiResult(null);
+    setShowAnalysis(true);
+    const text = buildAnalysis();
+    const prompt = `Eres un consultor senior en procesos comerciales para agencias de adquisición de clientes (Meta Ads + CRM + agentes IA, mercado LATAM). Analiza el siguiente proceso comercial del cliente y devuelve un análisis en español colombiano directo, sin rodeos, estructurado exactamente así:
+
+FORTALEZAS: (máx 2, una línea cada una)
+CUELLOS DE BOTELLA: (dónde se muere la conversión y por qué)
+LO QUE FALTA: (pasos, objeciones no cubiertas, seguimientos ausentes, ramas de decisión incompletas)
+CAMBIO DE MAYOR IMPACTO: (una sola acción concreta, la más importante)
+
+Sé específico con los textos reales de los nodos. Máximo 250 palabras.
+
+${text}`;
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "x-api-key": apiKey,
+          "anthropic-version":"2023-06-01",
+          "anthropic-dangerous-direct-browser-access":"true",
+        },
+        body: JSON.stringify({
+          model:"claude-sonnet-4-6",
+          max_tokens:1024,
+          messages:[{ role:"user", content: prompt }]
+        }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error.message);
+      const content = (json.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+      setAiResult(content);
+    } catch(e) {
+      setAiError("Error al conectar con Claude: " + (e.message || "verifica tu API key en Configuración."));
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const wrapperStyle = isFullscreen ? {
+    position:"fixed", inset:0, zIndex:9999, background:BG,
+    display:"flex", flexDirection:"column", padding:12,
+  } : { display:"flex", flexDirection:"column", height:"100%" };
+
+  return (
+    <div style={wrapperStyle}>
+      {/* Toolbar */}
+      <div style={{ display:"flex", flexWrap:"wrap", gap:6, padding:"8px 0", borderBottom:`1px solid ${BORDER}`, marginBottom:8 }}>
+        {Object.entries(NODE_TYPES).map(([type, cfg]) => (
+          <button key={type} onClick={()=>addNode(type)}
+            style={{ padding:"4px 10px", borderRadius:6, fontSize:11, cursor:"pointer", background:cfg.bg, color:cfg.color, border:`1px solid ${cfg.border}`, fontWeight:500 }}>
+            + {cfg.label}
+          </button>
+        ))}
+        <div style={{ width:1, background:BORDER, margin:"0 4px" }} />
+        <button onClick={()=>{ setConnectMode(c=>!c); setConnectFrom(null); }}
+          style={{ padding:"4px 10px", borderRadius:6, fontSize:11, cursor:"pointer", background: connectMode ? GOLD : "#222225", color: connectMode ? "#141414" : WHITE, border:`1px solid ${connectMode ? GOLD : BORDER}` }}>
+          {connectFrom ? "Selecciona destino..." : "Conectar"}
+        </button>
+        <button onClick={undo} style={{ padding:"4px 10px", borderRadius:6, fontSize:11, cursor:"pointer", background:"#222225", color:WHITE, border:`1px solid ${BORDER}` }}>Deshacer</button>
+        <button onClick={()=>setSnapGrid(s=>!s)}
+          style={{ padding:"4px 10px", borderRadius:6, fontSize:11, cursor:"pointer", background: snapGrid ? GOLD_DIM : "#222225", color: snapGrid ? WHITE : GRAY, border:`1px solid ${BORDER}` }}>
+          Grid {snapGrid?"ON":"OFF"}
+        </button>
+        <div style={{ width:1, background:BORDER, margin:"0 4px" }} />
+        <button onClick={()=>setZoom(z=>Math.min(2,+(z+0.1).toFixed(1)))} style={{ padding:"4px 8px", borderRadius:6, fontSize:11, cursor:"pointer", background:"#222225", color:WHITE, border:`1px solid ${BORDER}` }}>+</button>
+        <span style={{ fontSize:11, color:GRAY, alignSelf:"center", minWidth:36, textAlign:"center" }}>{Math.round(zoom*100)}%</span>
+        <button onClick={()=>setZoom(z=>Math.max(0.3,+(z-0.1).toFixed(1)))} style={{ padding:"4px 8px", borderRadius:6, fontSize:11, cursor:"pointer", background:"#222225", color:WHITE, border:`1px solid ${BORDER}` }}>−</button>
+        <button onClick={()=>{ setZoom(1); setPan({x:0,y:0}); }}
+          style={{ padding:"4px 10px", borderRadius:6, fontSize:11, cursor:"pointer", background:"#222225", color:WHITE, border:`1px solid ${BORDER}` }}>Reset</button>
+        <button onClick={()=>setIsFullscreen(f=>!f)}
+          style={{ padding:"4px 10px", borderRadius:6, fontSize:11, cursor:"pointer", background: isFullscreen ? GOLD : "#222225", color: isFullscreen ? "#141414" : WHITE, border:`1px solid ${isFullscreen ? GOLD : BORDER}` }}>
+          {isFullscreen ? "⊠ Salir" : "⛶ Pantalla completa"}
+        </button>
+        <div style={{ flex:1 }} />
+        <button
+          onClick={apiKey ? runAiAnalysis : ()=>setShowAnalysis(s=>!s)}
+          disabled={aiLoading}
+          style={{ padding:"4px 14px", borderRadius:6, fontSize:12, cursor: aiLoading ? "wait" : "pointer", background: showAnalysis ? GOLD : "rgba(212,175,55,0.12)", color: showAnalysis ? "#141414" : GOLD, border:`1px solid ${GOLD_DIM}`, fontWeight:600, opacity: aiLoading ? 0.7 : 1 }}>
+          {aiLoading ? "Analizando…" : "✦ Analizar con IA"}
+        </button>
+      </div>
+
+      {/* Node properties panel */}
+      {selectedNodeId && (() => {
+        const sn = nodes.find(n=>n.id===selectedNodeId);
+        if (!sn) return null;
+        const cfg = NODE_TYPES[sn.type] || NODE_TYPES.speech;
+        return (
+          <div style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:"#1A1A1D", border:`1px solid ${BORDER}`, borderRadius:8, marginBottom:6, flexWrap:"wrap" }}>
+            <span style={{ color:GRAY, fontSize:11, fontWeight:600, minWidth:60 }}>Nodo:</span>
+            {/* Color swatches */}
+            <div style={{ display:"flex", gap:4, alignItems:"center" }}>
+              {NODE_COLORS.map(c => (
+                <button key={c.label} title={c.label}
+                  onClick={()=>updateNodeProp(sn.id, { customBg: c.bg })}
+                  style={{
+                    width:18, height:18, borderRadius:4, cursor:"pointer",
+                    background: c.bg || cfg.bg,
+                    border: (sn.customBg===c.bg) ? `2px solid ${GOLD}` : `1px solid ${BORDER}`,
+                    padding:0,
+                  }}
+                />
+              ))}
+            </div>
+            <div style={{ width:1, background:BORDER, alignSelf:"stretch" }} />
+            {/* Bold toggle */}
+            <button
+              onClick={()=>updateNodeProp(sn.id, { bold: !sn.bold })}
+              style={{ padding:"2px 10px", borderRadius:6, border:`1px solid ${sn.bold ? GOLD : BORDER}`, background: sn.bold ? "rgba(212,175,55,0.15)" : "transparent", color: sn.bold ? GOLD : GRAY, fontWeight:700, fontSize:13, cursor:"pointer" }}>
+              B
+            </button>
+            {/* Delete */}
+            <button
+              onClick={()=>{ deleteNode(sn.id); setSelectedNodeId(null); }}
+              style={{ padding:"2px 10px", borderRadius:6, border:`1px solid ${RED}`, background:"transparent", color:RED, fontSize:11, cursor:"pointer", marginLeft:"auto" }}>
+              Eliminar
+            </button>
+            <button onClick={()=>setSelectedNodeId(null)} style={{ padding:"2px 8px", borderRadius:6, border:`1px solid ${BORDER}`, background:"transparent", color:GRAY, fontSize:11, cursor:"pointer" }}>✕</button>
+          </div>
+        );
+      })()}
+
+      {/* Canvas */}
+      <div ref={outerRef}
+        style={{ flex:1, position:"relative", overflow:"hidden", borderRadius:10, border:`1px solid ${BORDER}`, background:CANVAS_BG, cursor: isPanning ? "grabbing" : "grab", minHeight:isFullscreen ? "calc(100vh - 120px)" : 420, userSelect:"none" }}
+        onPointerDown={onOuterPointerDown}
+        onPointerMove={onOuterPointerMove}
+        onPointerUp={onOuterPointerUp}
+        onPointerLeave={onOuterPointerUp}
+      >
+        {/* Dot grid */}
+        <div style={{ position:"absolute", inset:0, backgroundImage:`radial-gradient(${CANVAS_DOT} 1px, transparent 1px)`, backgroundSize:"20px 20px", pointerEvents:"none" }} />
+
+        <div style={{ position:"absolute", width:3200, height:2400, transform:`translate(${pan.x}px,${pan.y}px) scale(${zoom})`, transformOrigin:"0 0" }}>
+          {/* Edges */}
+          <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", overflow:"visible", pointerEvents:"none" }}>
+            <defs>
+              <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                <polygon points="0 0, 8 3, 0 6" fill="#9B9B9F" />
+              </marker>
+            </defs>
+            {edges.map(edge => {
+              const fc = getNodeCenter(edge.from);
+              const tc = getNodeCenter(edge.to);
+              if (!fc || !tc) return null;
+              const mx = (fc.x+tc.x)/2, my = (fc.y+tc.y)/2;
+              return (
+                <g key={edge.id}>
+                  <line x1={fc.x} y1={fc.y} x2={tc.x} y2={tc.y} stroke="#9B9B9F" strokeWidth={1.5} markerEnd="url(#arrowhead)" />
+                  {edge.label && (
+                    <text x={mx} y={my-6} textAnchor="middle" fill="#555" fontSize={11} style={{ pointerEvents:"auto", cursor:"pointer" }}
+                      onDoubleClick={()=>{ const l=window.prompt("Etiqueta:",edge.label); if(l!==null) update({...flow, edges: edges.map(e=>e.id===edge.id?{...e,label:l}:e)}); }}>
+                      {edge.label}
+                    </text>
+                  )}
+                  {/* Invisible wider hit target to delete */}
+                  <line x1={fc.x} y1={fc.y} x2={tc.x} y2={tc.y} stroke="transparent" strokeWidth={12} style={{ pointerEvents:"auto", cursor:"pointer" }}
+                    onDoubleClick={()=>{ if(confirm("¿Eliminar conexión?")) deleteEdge(edge.id); }} />
+                </g>
+              );
+            })}
+          </svg>
+
+          {/* Nodes */}
+          {nodes.map(node => {
+            const cfg = NODE_TYPES[node.type] || NODE_TYPES.speech;
+            const isConnSrc = connectFrom === node.id;
+            const isSelected = selectedNodeId === node.id;
+            const nodeBg = node.customBg !== undefined ? (node.customBg || cfg.bg) : cfg.bg;
+            return (
+              <div key={node.id}
+                style={{
+                  position:"absolute", left:node.x, top:node.y, width:180, minHeight:56,
+                  background:nodeBg,
+                  border:`2px solid ${isSelected ? GOLD : isConnSrc ? "#60A5FA" : cfg.border}`,
+                  borderRadius:10, padding:"8px 10px", cursor:"move",
+                  boxShadow: isSelected ? `0 0 0 3px ${GOLD}44` : "0 2px 8px rgba(0,0,0,0.12)",
+                  userSelect:"none",
+                }}
+                onPointerDown={e=>onNodePointerDown(e,node.id)}
+              >
+                <div style={{ fontSize:9, fontWeight:700, color:cfg.color, opacity:0.55, textTransform:"uppercase", letterSpacing:0.5, marginBottom:3 }}>{cfg.label}</div>
+                {editingNodeId === node.id ? (
+                  <textarea autoFocus defaultValue={node.text}
+                    onBlur={e=>{ update({...flow,nodes:nodes.map(n=>n.id===node.id?{...n,text:e.target.value}:n)}); setEditingNodeId(null); }}
+                    style={{ width:"100%", background:"transparent", border:"none", outline:"none", color:cfg.color, fontSize:12, resize:"none", fontFamily:"inherit", fontWeight: node.bold ? 700 : 400 }}
+                    rows={3}
+                    onPointerDown={e=>e.stopPropagation()}
+                  />
+                ) : (
+                  <div style={{ fontSize:12, color:cfg.color, lineHeight:1.4, fontWeight: node.bold ? 700 : 400 }}
+                    onDoubleClick={e=>{ e.stopPropagation(); setEditingNodeId(node.id); }}>
+                    {node.text}
+                  </div>
+                )}
+                <button onClick={e=>{ e.stopPropagation(); deleteNode(node.id); setSelectedNodeId(null); }}
+                  style={{ position:"absolute", top:3, right:4, background:"none", border:"none", color:cfg.color, opacity:0.4, cursor:"pointer", fontSize:13, padding:0, lineHeight:1 }}>×</button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Hint */}
+        {nodes.length === 0 && (
+          <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", pointerEvents:"none" }}>
+            <div style={{ textAlign:"center", color:"#999" }}>
+              <div style={{ fontSize:28, marginBottom:8 }}>+</div>
+              <div style={{ fontSize:13 }}>Agrega nodos con la barra de herramientas</div>
+              <div style={{ fontSize:11, marginTop:4 }}>Arrastrar canvas para mover · Scroll para zoom · Doble clic en nodo para editar</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Analysis panel */}
+      {showAnalysis && (
+        <div style={{ marginTop:12, background:CARD, border:`1px solid ${GOLD_DIM}`, borderRadius:10, padding:16 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+            <span style={{ color:GOLD, fontWeight:600, fontSize:13 }}>
+              {aiResult ? `✦ Análisis · ${clientName}` : "Datos del proceso para análisis"}
+            </span>
+            <div style={{ display:"flex", gap:8 }}>
+              {aiResult && (
+                <button onClick={()=>{ setAiResult(null); setAiError(null); }}
+                  style={{ padding:"5px 12px", background:"transparent", color:GRAY, border:`1px solid ${BORDER}`, borderRadius:6, cursor:"pointer", fontSize:12 }}>
+                  Limpiar
+                </button>
+              )}
+              <button onClick={()=>navigator.clipboard.writeText(aiResult || analysisText).then(()=>alert("¡Copiado!"))}
+                style={{ padding:"5px 14px", background:GOLD, color:"#141414", border:"none", borderRadius:6, cursor:"pointer", fontSize:12, fontWeight:700 }}>
+                Copiar
+              </button>
+            </div>
+          </div>
+
+          {aiLoading && (
+            <div style={{ color:GOLD, fontSize:13, padding:"16px 0", textAlign:"center" }}>Consultando a Claude…</div>
+          )}
+
+          {aiError && (
+            <div style={{ color:RED, fontSize:12, marginBottom:8, padding:"8px 12px", background:"rgba(224,108,108,0.08)", borderRadius:6 }}>
+              {aiError}
+              {!apiKey && <span> — <strong>Configura tu API key en la pestaña Configuración.</strong></span>}
+            </div>
+          )}
+
+          {aiResult ? (
+            <pre style={{ background:"#0a0a0b", border:`1px solid ${BORDER}`, borderRadius:8, padding:14, fontSize:12, color:WHITE, whiteSpace:"pre-wrap", lineHeight:1.6, overflowY:"auto", maxHeight:360 }}>
+              {aiResult}
+            </pre>
+          ) : !aiLoading && (
+            <>
+              {!apiKey && (
+                <p style={{ color:GOLD, fontSize:11, marginBottom:8 }}>
+                  Sin API key activa — copia el bloque y pégalo en Claude, o configura tu key en Configuración para análisis directo.
+                </p>
+              )}
+              <pre style={{ background:"#0a0a0b", border:`1px solid ${BORDER}`, borderRadius:8, padding:12, fontSize:11, color:WHITE, overflowX:"auto", whiteSpace:"pre-wrap", maxHeight:300, overflowY:"auto" }}>
+                {analysisText}
+              </pre>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PROCESO COMERCIAL TAB ────────────────────────────────────────────────────
+function ProcesoComercialTab({ client, onChange, apiKey }) {
+  const [activeFlowId, setActiveFlowId] = useState(client.flows[0]?.id || null);
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameVal, setRenameVal] = useState("");
+
+  const flows = client.flows || [];
+  const activeFlow = flows.find(f=>f.id===activeFlowId) || flows[0];
+
+  const addFlow = () => {
+    const name = window.prompt("Nombre del proceso:", "Proceso comercial v" + (flows.length+1));
+    if (!name) return;
+    const nf = { id:uid(), name, createdAt:Date.now(), nodes:[], edges:[] };
+    const updated = { ...client, flows: [...flows, nf] };
+    onChange(updated);
+    setActiveFlowId(nf.id);
+  };
+
+  const deleteFlow = (id) => {
+    if (flows.length === 1) { alert("Debe quedar al menos un proceso."); return; }
+    if (!confirm("¿Eliminar este proceso?")) return;
+    const updated = { ...client, flows: flows.filter(f=>f.id!==id) };
+    onChange(updated);
+    if (activeFlowId === id) setActiveFlowId(updated.flows[0]?.id);
+  };
+
+  const updateFlow = (updatedFlow) => {
+    onChange({ ...client, flows: flows.map(f=>f.id===updatedFlow.id ? updatedFlow : f) });
+  };
+
+  const startRename = (f) => { setRenamingId(f.id); setRenameVal(f.name); };
+  const commitRename = () => {
+    if (renameVal.trim()) onChange({ ...client, flows: flows.map(f=>f.id===renamingId ? {...f,name:renameVal.trim()} : f) });
+    setRenamingId(null);
+  };
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100%", minHeight:600 }}>
+      {/* Flow selector */}
+      <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:12 }}>
+        {flows.map(f => (
+          <div key={f.id} style={{ display:"flex", alignItems:"center", gap:2 }}>
+            {renamingId === f.id ? (
+              <input autoFocus value={renameVal} onChange={e=>setRenameVal(e.target.value)}
+                onBlur={commitRename} onKeyDown={e=>{ if(e.key==="Enter") commitRename(); if(e.key==="Escape") setRenamingId(null); }}
+                style={{ padding:"3px 8px", borderRadius:6, border:`1px solid ${GOLD}`, background:"#111113", color:WHITE, fontSize:12, outline:"none", minWidth:120 }} />
+            ) : (
+              <button onClick={()=>setActiveFlowId(f.id)} onDoubleClick={()=>startRename(f)}
+                style={{ padding:"4px 12px", borderRadius:6, fontSize:12, cursor:"pointer", fontWeight:500,
+                  background: activeFlowId===f.id ? GOLD : "#222225", color: activeFlowId===f.id ? "#141414" : GRAY,
+                  border:`1px solid ${activeFlowId===f.id ? GOLD : BORDER}` }}>
+                {f.name}
+              </button>
+            )}
+            <button onClick={()=>deleteFlow(f.id)}
+              style={{ background:"none", border:"none", color:GRAY, cursor:"pointer", fontSize:12, padding:"2px 3px" }}>×</button>
+          </div>
+        ))}
+        <button onClick={addFlow}
+          style={{ padding:"4px 12px", borderRadius:6, fontSize:12, cursor:"pointer", background:"transparent", color:GOLD, border:`1px dashed ${GOLD_DIM}` }}>
+          + Nuevo proceso
+        </button>
+      </div>
+
+      {activeFlow && (
+        <FlowCanvas
+          flow={activeFlow}
+          clientName={client.name}
+          clientProfile={client.profile}
+          clientTasks={client.tasks}
+          onUpdate={updateFlow}
+          apiKey={apiKey}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── CLIENT DETAIL ────────────────────────────────────────────────────────────
+function ClientDetail({ client, team, onBack, onChange, apiKey }) {
+  const [subTab, setSubTab] = useState("perfil");
+  const pct = overallPct(client.tasks);
+  const done = client.tasks.filter(t=>t.done).length;
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
+        <button onClick={onBack} style={{ background:"none", border:`1px solid ${BORDER}`, borderRadius:8, padding:"6px 12px", color:GRAY, cursor:"pointer", fontSize:12 }}>← Clientes</button>
+        <div style={{ flex:1 }}>
+          <h2 style={{ margin:0, color:WHITE, fontSize:20, fontWeight:700 }}>{client.name}</h2>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:4 }}>
+            <div style={{ flex:1, maxWidth:200 }}><ProgressBar pct={pct} /></div>
+            <span style={{ fontSize:12, color:GOLD }}>{done}/{client.tasks.length} — {pct}%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Sub tabs */}
+      <div style={{ display:"flex", gap:2, marginBottom:20, borderBottom:`1px solid ${BORDER}` }}>
+        {[["perfil","Perfil"],["ejecucion","Ejecución"],["proceso","Proceso Comercial"]].map(([id,label]) => (
+          <button key={id} onClick={()=>setSubTab(id)}
+            style={{ padding:"8px 16px", background:"none", border:"none", borderBottom:`2px solid ${subTab===id ? GOLD : "transparent"}`, color: subTab===id ? GOLD : GRAY, cursor:"pointer", fontSize:13, fontWeight: subTab===id ? 600 : 400, transition:"all 0.15s" }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {subTab === "perfil" && <PerfilTab client={client} onChange={onChange} />}
+      {subTab === "ejecucion" && <EjecucionTab client={client} team={team} onChange={onChange} />}
+      {subTab === "proceso" && <ProcesoComercialTab client={client} onChange={onChange} apiKey={apiKey} />}
+    </div>
+  );
+}
+
+// ─── CLIENTS LIST ─────────────────────────────────────────────────────────────
+function ClientsList({ clients, onSelect, onCreate }) {
+  const [search, setSearch] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newChannel, setNewChannel] = useState("Meta Ads");
+
+  const filtered = clients.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+
+  const handleCreate = () => {
+    if (!newName.trim()) return;
+    onCreate(newName.trim(), newChannel);
+    setNewName(""); setNewChannel("Meta Ads"); setShowModal(false);
+  };
+
+  return (
+    <div>
+      <div style={{ display:"flex", gap:10, marginBottom:20 }}>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar cliente..."
+          style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"9px 12px", color:WHITE, fontSize:13, outline:"none" }} />
+        <button onClick={()=>setShowModal(true)}
+          style={{ padding:"9px 18px", background:GOLD, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:13 }}>
+          + Nuevo cliente
+        </button>
+      </div>
+
+      {filtered.length === 0 && (
+        <div style={{ textAlign:"center", padding:"60px 0", color:GRAY }}>
+          {clients.length === 0 ? "No hay clientes. Crea el primero." : "Sin resultados."}
+        </div>
+      )}
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:14 }}>
+        {filtered.map(c => {
+          const pct = overallPct(c.tasks);
+          const isDone = pct === 100;
+          return (
+            <div key={c.id} onClick={()=>onSelect(c.id)}
+              style={{ background:CARD, border:`1px solid ${isDone ? GREEN : BORDER}`, borderRadius:12, padding:16, cursor:"pointer", transition:"all 0.15s" }}
+              onMouseEnter={e=>e.currentTarget.style.borderColor=GOLD}
+              onMouseLeave={e=>e.currentTarget.style.borderColor=isDone?GREEN:BORDER}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                <div>
+                  <div style={{ color:WHITE, fontWeight:600, fontSize:15 }}>{c.name}</div>
+                  <div style={{ color:GRAY, fontSize:11, marginTop:2 }}>{c.profile.channel||"Meta Ads"}</div>
+                </div>
+                <span style={{ fontSize:14, fontWeight:700, color: isDone ? GREEN : GOLD }}>{pct}%</span>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:6 }}>
+                {WEEKS.map(w => {
+                  const s = weekStats(c.tasks, w);
+                  const wp = s.total ? Math.round(s.done/s.total*100) : 0;
+                  return (
+                    <div key={w}>
+                      <div style={{ fontSize:9, color:GRAY, marginBottom:3 }}>{w.replace("Semana ","S")}</div>
+                      <ProgressBar pct={wp} height={3} />
+                      <div style={{ fontSize:9, color:GRAY, marginTop:2 }}>{s.done}/{s.total}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {showModal && (
+        <Modal title="Nuevo cliente" onClose={()=>setShowModal(false)}>
+          <Input label="Nombre del cliente / empresa" value={newName} onChange={setNewName} placeholder="Empresa S.A.S." />
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", color:GRAY, fontSize:12, marginBottom:4 }}>Canal de adquisición</label>
+            <select value={newChannel} onChange={e=>setNewChannel(e.target.value)}
+              style={{ width:"100%", background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"8px 10px", color:WHITE, fontSize:13, outline:"none" }}>
+              {CHANNELS.map(c=><option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <button onClick={handleCreate} style={{ width:"100%", padding:"10px", background:GOLD, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:14 }}>
+            Crear cliente
+          </button>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ─── TEAM TAB ─────────────────────────────────────────────────────────────────
+function TeamTab({ data, onChange }) {
+  const [newMember, setNewMember] = useState("");
+  const [newRole, setNewRole] = useState("");
+
+  const addMember = () => {
+    if (!newMember.trim()) return;
+    onChange({ ...data, team: [...data.team, { id:uid(), name:newMember.trim() }] });
+    setNewMember("");
+  };
+  const removeMember = (id) => onChange({ ...data, team: data.team.filter(m=>m.id!==id) });
+
+  const addRole = () => {
+    if (!newRole.trim()) return;
+    onChange({ ...data, roles: [...data.roles, { id:uid(), name:newRole.trim() }] });
+    setNewRole("");
+  };
+  const removeRole = (id) => onChange({ ...data, roles: data.roles.filter(r=>r.id!==id) });
+
+  return (
+    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24, maxWidth:700 }}>
+      <div>
+        <h3 style={{ color:WHITE, fontSize:15, fontWeight:600, marginBottom:14 }}>Equipo</h3>
+        <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+          <input value={newMember} onChange={e=>setNewMember(e.target.value)} placeholder="Nombre"
+            onKeyDown={e=>e.key==="Enter"&&addMember()}
+            style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"7px 10px", color:WHITE, fontSize:13, outline:"none" }} />
+          <button onClick={addMember} style={{ padding:"7px 14px", background:GOLD, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700 }}>+</button>
+        </div>
+        {data.team.map(m => (
+          <div key={m.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 10px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, marginBottom:6 }}>
+            <span style={{ color:WHITE, fontSize:13 }}>{m.name}</span>
+            <button onClick={()=>removeMember(m.id)} style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:13 }}>×</button>
+          </div>
+        ))}
+      </div>
+      <div>
+        <h3 style={{ color:WHITE, fontSize:15, fontWeight:600, marginBottom:14 }}>Roles</h3>
+        <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+          <input value={newRole} onChange={e=>setNewRole(e.target.value)} placeholder="Rol"
+            onKeyDown={e=>e.key==="Enter"&&addRole()}
+            style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"7px 10px", color:WHITE, fontSize:13, outline:"none" }} />
+          <button onClick={addRole} style={{ padding:"7px 14px", background:GOLD, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700 }}>+</button>
+        </div>
+        {data.roles.map(r => (
+          <div key={r.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 10px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, marginBottom:6 }}>
+            <span style={{ color:WHITE, fontSize:13 }}>{r.name}</span>
+            <button onClick={()=>removeRole(r.id)} style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:13 }}>×</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── SETTINGS TAB ─────────────────────────────────────────────────────────────
+function SettingsTab({ data, onChange }) {
+  const [key, setKey] = useState(data.settings?.apiKey || "");
+  const [saved, setSaved] = useState(false);
+  const [importMsg, setImportMsg] = useState("");
+
+  const saveKey = () => {
+    onChange({ ...data, settings: { ...(data.settings||{}), apiKey: key.trim() } });
+    setSaved(true);
+    setTimeout(()=>setSaved(false), 2000);
+  };
+
+  const handleExport = () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type:"application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `gp_backup_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        if (!parsed.clients) throw new Error("Archivo inválido");
+        onChange(parsed);
+        setImportMsg("✓ Datos importados correctamente.");
+        setTimeout(()=>setImportMsg(""), 4000);
+      } catch {
+        setImportMsg("Error: archivo no válido.");
+        setTimeout(()=>setImportMsg(""), 4000);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  return (
+    <div style={{ maxWidth:600 }}>
+      <TeamTab data={data} onChange={onChange} />
+
+      <div style={{ marginTop:28, padding:16, background:"rgba(212,175,55,0.06)", border:`1px solid ${GOLD_DIM}`, borderRadius:10 }}>
+        <div style={{ color:GOLD, fontWeight:600, fontSize:13, marginBottom:6 }}>✦ Conexión con Claude IA</div>
+        <div style={{ color:GRAY, fontSize:12, lineHeight:1.6, marginBottom:12 }}>
+          Pega tu API key de Anthropic para que el botón "Analizar con IA" en el canvas llame directamente a Claude y muestre el análisis en el dashboard. La key se guarda localmente, nunca sale de tu dispositivo.
+        </div>
+        <div style={{ display:"flex", gap:8 }}>
+          <input
+            type="password"
+            value={key}
+            onChange={e=>setKey(e.target.value)}
+            placeholder="sk-ant-api03-..."
+            style={{ flex:1, background:BG, border:`1px solid ${BORDER}`, borderRadius:8, padding:"8px 12px", color:WHITE, fontSize:13, outline:"none" }}
+          />
+          <button onClick={saveKey}
+            style={{ padding:"8px 18px", background:GOLD, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:13 }}>
+            {saved ? "✓ Guardado" : "Guardar"}
+          </button>
+        </div>
+        {data.settings?.apiKey && (
+          <div style={{ marginTop:8, color:GREEN, fontSize:11 }}>✓ API key activa — el análisis de IA está habilitado en los procesos comerciales.</div>
+        )}
+      </div>
+
+      <div style={{ marginTop:20, padding:16, background:"rgba(76,175,125,0.06)", border:`1px solid ${GREEN}44`, borderRadius:10 }}>
+        <div style={{ color:GREEN, fontWeight:600, fontSize:13, marginBottom:6 }}>Backup de datos</div>
+        <div style={{ color:GRAY, fontSize:12, lineHeight:1.6, marginBottom:12 }}>
+          Exportá todos tus clientes, tareas y procesos como archivo JSON. Antes de cualquier actualización del dashboard, hacé un backup.
+        </div>
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+          <button onClick={handleExport}
+            style={{ padding:"8px 18px", background:GREEN, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:13 }}>
+            ↓ Exportar datos
+          </button>
+          <label style={{ padding:"8px 18px", background:"transparent", color:WHITE, border:`1px solid ${BORDER}`, borderRadius:8, cursor:"pointer", fontWeight:600, fontSize:13 }}>
+            ↑ Importar datos
+            <input type="file" accept=".json" onChange={handleImport} style={{ display:"none" }} />
+          </label>
+        </div>
+        {importMsg && <div style={{ marginTop:8, color:GREEN, fontSize:11 }}>{importMsg}</div>}
+      </div>
+    </div>
+  );
+}
+
+// ─── ROOT COMPONENT ───────────────────────────────────────────────────────────
+function MetodoGrowthPartner() {
+  const [data, setData] = useState(getInitialData);
+  const [tab, setTab] = useState("clientes");
+  const [selectedClientId, setSelectedClientId] = useState(null);
+  const [saved, setSaved] = useState(true);
+  const saveTimer = useRef(null);
+
+  // Auto-save
+  useEffect(() => {
+    clearTimeout(saveTimer.current);
+    setSaved(false);
+    saveTimer.current = setTimeout(() => { storageSet(data); setSaved(true); }, 800);
+    return () => clearTimeout(saveTimer.current);
+  }, [data]);
+
+  const updateData = (newData) => setData(newData);
+
+  const createClient = (name, channel) => {
+    const c = makeClient(name, channel);
+    setData(d => ({ ...d, clients: [...d.clients, c] }));
+    setSelectedClientId(c.id);
+  };
+
+  const updateClient = (updatedClient) => {
+    setData(d => ({ ...d, clients: d.clients.map(c => c.id === updatedClient.id ? updatedClient : c) }));
+  };
+
+  const selectedClient = data.clients.find(c=>c.id===selectedClientId);
+
+  return (
+    <div style={{ minHeight:"100vh", background:BG, color:WHITE, fontFamily:"-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+      {/* Header */}
+      <div style={{ background:CARD, borderBottom:`1px solid ${BORDER}`, padding:"0 24px", position:"sticky", top:0, zIndex:100 }}>
+        <div style={{ maxWidth:1200, margin:"0 auto", display:"flex", alignItems:"center", gap:0 }}>
+          <div style={{ padding:"14px 0", marginRight:24 }}>
+            <span style={{ color:GOLD, fontWeight:800, fontSize:16, letterSpacing:0.5 }}>GP</span>
+            <span style={{ color:GRAY, fontWeight:400, fontSize:13, marginLeft:8 }}>Método GEMA V4</span>
+          </div>
+          <div style={{ display:"flex", gap:0 }}>
+            {[["clientes","Clientes"],["equipo","Equipo y roles"],["configuracion","Configuración"]].map(([id,label]) => (
+              <button key={id} onClick={()=>{ setTab(id); setSelectedClientId(null); }}
+                style={{ padding:"16px 16px", background:"none", border:"none", borderBottom:`2px solid ${tab===id&&!selectedClientId ? GOLD : "transparent"}`, color: tab===id&&!selectedClientId ? GOLD : GRAY, cursor:"pointer", fontSize:13, fontWeight: tab===id ? 600 : 400, transition:"all 0.15s" }}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div style={{ flex:1 }} />
+          <div style={{ fontSize:11, color: saved ? GREEN : GOLD_DIM }}>
+            {saved ? "Guardado" : "Guardando..."}
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ maxWidth:1200, margin:"0 auto", padding:"28px 24px" }}>
+        {/* Client detail takes precedence */}
+        {selectedClientId && selectedClient ? (
+          <ClientDetail client={selectedClient} team={data.team} onBack={()=>setSelectedClientId(null)} onChange={updateClient} apiKey={data.settings?.apiKey || ""} />
+        ) : (
+          <>
+            {tab === "clientes" && (
+              <ClientsList clients={data.clients} onSelect={setSelectedClientId} onCreate={createClient} />
+            )}
+            {tab === "equipo" && (
+              <TeamTab data={data} onChange={updateData} />
+            )}
+            {tab === "configuracion" && (
+              <SettingsTab data={data} onChange={updateData} />
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<MetodoGrowthPartner />);
+  </script>
+</body>
+</html>
