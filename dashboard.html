@@ -342,11 +342,15 @@ const AREA_AGENT = {
 };
 
 const NODE_TYPES = {
-  inicio:   { label:"Inicio",            bg:"#D4AF37", color:"#141414", border:"#D4AF37" },
-  speech:   { label:"Speech / Mensaje",  bg:"#F0F0F0", color:"#1A1A1A", border:"#9B9B9F" },
-  decision: { label:"Decisión",          bg:"#FFFBEB", color:"#92660A", border:"#D4AF37" },
-  accion:   { label:"Acción",            bg:"#ECFDF5", color:"#1A7A4A", border:"#4CAF7D" },
-  alerta:   { label:"Alerta / Objeción", bg:"#FEF2F2", color:"#B91C1C", border:"#E06C6C" },
+  inicio:      { label:"Inicio",            bg:"#D4AF37", color:"#141414", border:"#D4AF37" },
+  speech:      { label:"Speech / Mensaje",  bg:"#F0F0F0", color:"#1A1A1A", border:"#9B9B9F" },
+  decision:    { label:"Decisión",          bg:"#FFFBEB", color:"#92660A", border:"#D4AF37" },
+  accion:      { label:"Acción",            bg:"#ECFDF5", color:"#1A7A4A", border:"#4CAF7D" },
+  alerta:      { label:"Alerta / Objeción", bg:"#FEF2F2", color:"#B91C1C", border:"#E06C6C" },
+  bpmn_start:  { label:"Evento inicio",     bg:"#16A34A", color:"#FFFFFF", border:"#15803D", defaultShape:"circle", bpmn:true },
+  bpmn_end:    { label:"Evento fin",        bg:"#DC2626", color:"#FFFFFF", border:"#B91C1C", defaultShape:"circle", bpmn:true, thick:true },
+  bpmn_note:   { label:"Anotación",         bg:"#FEFCE8", color:"#713F12", border:"#CA8A04", bpmn:true, note:true },
+  swimlane:    { label:"Carril",            bg:"rgba(96,165,250,0.05)", color:"#1D4ED8", border:"#93C5FD", swimlane:true, defaultW:680, defaultH:200 },
 };
 
 // ─── LAUNCH STEPS ─────────────────────────────────────────────────────────────
@@ -372,31 +376,63 @@ const FULL_STEPS = [
 ];
 
 // ─── SEED DATA ────────────────────────────────────────────────────────────────
-function makeClient(name, channel) {
+function makeClient(name, channel, globalTasks) {
+  const gTasks = globalTasks || GEMA_TASKS.map(t => ({...t, id:"gt_"+t.n}));
   return {
     id: uid(),
     name,
     createdAt: Date.now(),
     profile: { phone:"", email:"", contractValue:"", channel: channel||"Meta Ads", startDate:null, nextMeeting:null, notes:"" },
-    tasks: GEMA_TASKS.map(t => ({ ...t, id: uid(), done: false, assigneeId: null, doneAt: null })),
+    tasks: gTasks.map(gt => ({ ...gt, id: uid(), globalId: gt.id, done: false, assigneeId: null, doneAt: null })),
     flows: [{ id: uid(), name:"Proceso comercial v1", createdAt: Date.now(), nodes:[], edges:[] }],
     mvpChecks: {},
     fullChecks: {},
-    customMvpSteps: null,   // null = use global MVP_STEPS defaults
-    customFullSteps: null,  // null = use global FULL_STEPS defaults
+    meetings: [],
   };
 }
 
 function getInitialData() {
-  const saved = storageGet();
-  if (saved && saved.clients) return saved;
-  return {
+  const defaults = {
     roles: [{ id: uid(), name:"Estratega" }, { id: uid(), name:"Tráfico" }, { id: uid(), name:"Diseño" }],
     team: [{ id: uid(), name:"Pena" }, { id: uid(), name:"JP" }],
     clients: [],
     settings: { apiKey:"" },
-    flowTemplates: [],  // { id, name, createdAt, nodes, edges }
+    flowTemplates: [],
+    globalTasks: GEMA_TASKS.map(t => ({...t, id:"gt_"+t.n})),
+    globalMvpSteps: MVP_STEPS.map(s => ({...s, id:"mvp_"+s.n})),
+    globalFullSteps: FULL_STEPS.map(s => ({...s, id:"full_"+s.n})),
+    teamFlow: { id: "team_flow", name: "Organigrama del equipo", nodes: [], edges: [] },
   };
+  const saved = storageGet();
+  if (saved && saved.clients) {
+    return {
+      ...defaults,
+      ...saved,
+      globalTasks: saved.globalTasks || defaults.globalTasks,
+      globalMvpSteps: saved.globalMvpSteps || defaults.globalMvpSteps,
+      globalFullSteps: saved.globalFullSteps || defaults.globalFullSteps,
+      teamFlow: saved.teamFlow || defaults.teamFlow,
+    };
+  }
+  return defaults;
+}
+
+function syncTasksToClients(clients, globalTasks) {
+  return clients.map(client => {
+    const byGlobalId = {}, byN = {};
+    client.tasks.forEach(t => {
+      if (t.globalId) byGlobalId[t.globalId] = t;
+      if (t.n != null) byN[t.n] = t;
+    });
+    const globalSet = new Set(globalTasks.map(gt => gt.id));
+    const customTasks = client.tasks.filter(t => !t.n && !t.globalId); // keep custom one-off tasks
+    const newTasks = globalTasks.map(gt => {
+      const existing = byGlobalId[gt.id] || byN[gt.n];
+      if (existing) return { ...existing, globalId: gt.id, area: gt.area, week: gt.week, title: gt.title, owner: gt.owner };
+      return { ...gt, id: uid(), globalId: gt.id, done: false, assigneeId: null, doneAt: null };
+    });
+    return { ...client, tasks: [...newTasks, ...customTasks] };
+  });
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -509,12 +545,11 @@ function EjecucionTab({ client, team, onChange }) {
   const [weekFilter, setWeekFilter] = useState("Todas");
   const [areaFilter, setAreaFilter] = useState("Todas");
   const [ownerFilter, setOwnerFilter] = useState("Todos");
-  const [showEditor, setShowEditor] = useState(false);
-  const [editorSearch, setEditorSearch] = useState("");
+  const [showAdd, setShowAdd] = useState(false);
   const [customTitle, setCustomTitle] = useState("");
   const [customWeek, setCustomWeek] = useState("Semana 1");
   const [customArea, setCustomArea] = useState("Gerencia");
-  const [customOwner, setCustomOwner] = useState("GEMA V4");
+  const [customOwner, setCustomOwner] = useState("TUYO");
 
   const tasks = client.tasks;
 
@@ -549,8 +584,111 @@ function EjecucionTab({ client, team, onChange }) {
     });
   }
 
+  const meetings = client.meetings || [];
+  const [showMeetingForm, setShowMeetingForm] = useState(false);
+  const [mDate, setMDate] = useState("");
+  const [mTitle, setMTitle] = useState("");
+  const [mDesc, setMDesc] = useState("");
+  const [mTaskId, setMTaskId] = useState("");
+
+  const saveMeeting = () => {
+    if (!mDate) return;
+    const newM = { id: uid(), date: mDate, title: mTitle.trim() || "Reunión", desc: mDesc.trim(), taskId: mTaskId || null };
+    onChange({ ...client, meetings: [...meetings, newM].sort((a,b)=>a.date.localeCompare(b.date)) });
+    setMDate(""); setMTitle(""); setMDesc(""); setMTaskId(""); setShowMeetingForm(false);
+  };
+  const deleteMeeting = (id) => onChange({ ...client, meetings: meetings.filter(m=>m.id!==id) });
+
+  const upcomingMeetings = meetings.filter(m => new Date(m.date) >= new Date()).sort((a,b)=>a.date.localeCompare(b.date));
+  const pastMeetings = meetings.filter(m => new Date(m.date) < new Date()).sort((a,b)=>b.date.localeCompare(a.date));
+  const fmtMeeting = d => new Date(d).toLocaleDateString("es-CO", { weekday:"short", day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" });
+
   return (
     <div>
+      {/* Reuniones */}
+      <div style={{ padding:"14px 16px", background:"#FFFFFF", border:`1px solid #E5E7EB`, borderRadius:10, marginBottom:20 }}>
+        {meetings.length === 0 && !showMeetingForm ? (
+          <button onClick={()=>setShowMeetingForm(true)}
+            style={{ width:"100%", padding:"14px", background:"#F9FAFB", border:"1px dashed #D1D5DB", borderRadius:8, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+            <span style={{ fontSize:14 }}>📅</span>
+            <span style={{ color:"#6B7280", fontSize:13 }}>Agendar reuniones</span>
+          </button>
+        ) : (
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: (upcomingMeetings.length > 0 || showMeetingForm) ? 12 : 0, gap:8 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ fontSize:15 }}>📅</span>
+              <span style={{ color:"#111827", fontWeight:600, fontSize:13 }}>Reuniones</span>
+              {upcomingMeetings.length > 0 && (
+                <span style={{ background:"rgba(212,175,55,0.15)", color:GOLD, fontSize:10, fontWeight:700, padding:"1px 7px", borderRadius:20 }}>
+                  {upcomingMeetings.length} próxima{upcomingMeetings.length>1?"s":""}
+                </span>
+              )}
+            </div>
+            <button onClick={()=>setShowMeetingForm(s=>!s)}
+              style={{ padding:"5px 12px", borderRadius:7, fontSize:12, cursor:"pointer", border:`1px solid ${showMeetingForm?GOLD:BORDER}`, background:showMeetingForm?"rgba(212,175,55,0.1)":"transparent", color:showMeetingForm?GOLD:GRAY, fontWeight:600 }}>
+              {showMeetingForm ? "✕ Cancelar" : "+ Agendar"}
+            </button>
+          </div>
+        )}
+
+        {showMeetingForm && (
+          <div style={{ padding:"12px 14px", background:"#111113", borderRadius:8, marginBottom:12, display:"flex", flexDirection:"column", gap:8 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+              <div>
+                <div style={{ color:GRAY, fontSize:10, marginBottom:3 }}>Fecha y hora *</div>
+                <input type="datetime-local" value={mDate} onChange={e=>setMDate(e.target.value)}
+                  style={{ width:"100%", background:BG, border:`1px solid ${mDate?GOLD:BORDER}`, borderRadius:7, padding:"6px 10px", color:WHITE, fontSize:12, outline:"none", colorScheme:"dark" }} />
+              </div>
+              <div>
+                <div style={{ color:GRAY, fontSize:10, marginBottom:3 }}>Título</div>
+                <input value={mTitle} onChange={e=>setMTitle(e.target.value)} placeholder="Ej: Reunión de seguimiento"
+                  style={{ width:"100%", background:BG, border:`1px solid ${BORDER}`, borderRadius:7, padding:"6px 10px", color:WHITE, fontSize:12, outline:"none" }} />
+              </div>
+            </div>
+            <div>
+              <div style={{ color:GRAY, fontSize:10, marginBottom:3 }}>Descripción / agenda</div>
+              <textarea value={mDesc} onChange={e=>setMDesc(e.target.value)} rows={2} placeholder="Temas a tratar, objetivos de la reunión..."
+                style={{ width:"100%", background:BG, border:`1px solid ${BORDER}`, borderRadius:7, padding:"6px 10px", color:WHITE, fontSize:12, outline:"none", resize:"vertical" }} />
+            </div>
+            <div>
+              <div style={{ color:GRAY, fontSize:10, marginBottom:3 }}>Vincular a tarea (opcional)</div>
+              <select value={mTaskId} onChange={e=>setMTaskId(e.target.value)}
+                style={{ width:"100%", background:BG, border:`1px solid ${BORDER}`, borderRadius:7, padding:"6px 10px", color:WHITE, fontSize:12, outline:"none" }}>
+                <option value="">— Sin tarea vinculada —</option>
+                {client.tasks.filter(t=>!t.done).map(t => (
+                  <option key={t.id} value={t.id}>#{t.n} {t.title}</option>
+                ))}
+              </select>
+            </div>
+            <button onClick={saveMeeting} disabled={!mDate}
+              style={{ padding:"7px 18px", background:mDate?GOLD:"#333", color:mDate?"#141414":GRAY, border:"none", borderRadius:7, cursor:mDate?"pointer":"not-allowed", fontWeight:700, fontSize:12, alignSelf:"flex-end" }}>
+              Guardar reunión
+            </button>
+          </div>
+        )}
+
+        {upcomingMeetings.map(m => {
+          const linked = m.taskId ? client.tasks.find(t=>t.id===m.taskId) : null;
+          return (
+            <div key={m.id} style={{ display:"flex", gap:12, alignItems:"flex-start", padding:"9px 0", borderBottom:"1px solid #F3F4F6" }}>
+              <div style={{ minWidth:90, color:GOLD, fontSize:11, fontWeight:600, paddingTop:1 }}>{fmtMeeting(m.date)}</div>
+              <div style={{ flex:1 }}>
+                <div style={{ color:"#111827", fontSize:13, fontWeight:600 }}>{m.title}</div>
+                {m.desc && <div style={{ color:"#6B7280", fontSize:11, marginTop:2, lineHeight:1.4 }}>{m.desc}</div>}
+                {linked && <div style={{ color:"#92722A", fontSize:10, marginTop:3 }}>↳ #{linked.n} {linked.title}</div>}
+              </div>
+              <button onClick={()=>deleteMeeting(m.id)} style={{ background:"none", border:"none", color:"#9CA3AF", cursor:"pointer", fontSize:13, flexShrink:0 }}>×</button>
+            </div>
+          );
+        })}
+
+        {pastMeetings.length > 0 && upcomingMeetings.length === 0 && (
+          <div style={{ color:GRAY, fontSize:11, marginTop:4 }}>
+            Última: {pastMeetings[0].title} — {fmtMeeting(pastMeetings[0].date)}
+          </div>
+        )}
+      </div>
+
       {/* Week stats */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:20 }}>
         {WEEKS.map(w => {
@@ -618,100 +756,47 @@ function EjecucionTab({ client, team, onChange }) {
       <div style={{ display:"flex", gap:6, marginBottom:16, alignItems:"center", flexWrap:"wrap" }}>
         {["Todos","GEMA V4","TUYO"].map(o=><Pill key={o} active={ownerFilter===o} onClick={()=>setOwnerFilter(o)}>{o}</Pill>)}
         <div style={{ flex:1 }} />
-        <button onClick={()=>setShowEditor(s=>!s)}
-          style={{ padding:"4px 12px", borderRadius:6, fontSize:12, cursor:"pointer", background: showEditor ? GOLD : "#222225", color: showEditor ? "#141414" : WHITE, border:`1px solid ${showEditor ? GOLD : BORDER}`, fontWeight:600 }}>
-          {showEditor ? "✕ Cerrar editor" : "✎ Editar método"}
+        <button onClick={()=>setShowAdd(s=>!s)}
+          style={{ padding:"4px 12px", borderRadius:6, fontSize:12, cursor:"pointer", background: showAdd ? GREEN : "#222225", color: showAdd ? "#141414" : WHITE, border:`1px solid ${showAdd ? GREEN : BORDER}`, fontWeight:600 }}>
+          {showAdd ? "✕ Cerrar" : "+ Tarea extra"}
         </button>
       </div>
 
-      {/* Method editor panel */}
-      {showEditor && (() => {
-        const activeNums = new Set(tasks.map(t=>t.n).filter(Boolean));
-        const editorFiltered = GEMA_TASKS.filter(gt =>
-          !editorSearch || gt.title.toLowerCase().includes(editorSearch.toLowerCase()) || String(gt.n).includes(editorSearch)
-        );
-        const grouped = {};
-        editorFiltered.forEach(gt => {
-          if (!grouped[gt.week]) grouped[gt.week] = [];
-          grouped[gt.week].push(gt);
-        });
-        return (
-          <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:16, marginBottom:16, maxHeight:400, overflowY:"auto" }}>
-            <input
-              value={editorSearch} onChange={e=>setEditorSearch(e.target.value)}
-              placeholder="Buscar tarea por texto o número..."
-              style={{ width:"100%", background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"7px 10px", color:WHITE, fontSize:12, outline:"none", marginBottom:12, boxSizing:"border-box" }}
-            />
-            {WEEKS.map(w => {
-              const wTasks = (grouped[w]||[]);
-              if (!wTasks.length) return null;
-              return (
-                <div key={w} style={{ marginBottom:12 }}>
-                  <div style={{ fontSize:11, fontWeight:700, color:GOLD, textTransform:"uppercase", letterSpacing:1, marginBottom:6 }}>{w}</div>
-                  {wTasks.map(gt => {
-                    const isActive = activeNums.has(gt.n);
-                    const isGema = gt.owner === "GEMA V4";
-                    return (
-                      <div key={gt.n} style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 8px", borderRadius:6, marginBottom:3, background:"rgba(255,255,255,0.02)" }}>
-                        <button
-                          onClick={() => {
-                            if (isActive) {
-                              onChange({...client, tasks: tasks.filter(t=>t.n!==gt.n)});
-                            } else {
-                              onChange({...client, tasks: [...tasks, {id:uid(), n:gt.n, week:gt.week, area:gt.area, title:gt.title, owner:gt.owner, done:false, assigneeId:null, doneAt:null}]});
-                            }
-                          }}
-                          style={{ width:22, height:22, borderRadius:4, cursor:"pointer", border:"none", background: isActive ? GREEN : "#444", color:"#fff", fontSize:11, fontWeight:700, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
-                          {isActive ? "✓" : "+"}
-                        </button>
-                        <span style={{ fontFamily:"monospace", fontSize:10, color:GRAY, minWidth:22, flexShrink:0 }}>#{gt.n}</span>
-                        <span style={{ flex:1, fontSize:11, color: isActive ? WHITE : GRAY, lineHeight:1.4 }}>{gt.title}</span>
-                        <span style={{ fontSize:9, padding:"1px 5px", borderRadius:3, flexShrink:0, border:`1px solid ${isGema ? GOLD_DIM : BORDER}`, color: isGema ? GOLD : GRAY }}>
-                          {gt.owner}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-
-            {/* Custom task section */}
-            <div style={{ borderTop:`1px solid ${BORDER}`, paddingTop:12, marginTop:8 }}>
-              <div style={{ fontSize:11, fontWeight:700, color:WHITE, marginBottom:8 }}>Añadir tarea personalizada</div>
-              <input
-                value={customTitle} onChange={e=>setCustomTitle(e.target.value)}
-                placeholder="Título de la tarea..."
-                style={{ width:"100%", background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"6px 8px", color:WHITE, fontSize:12, outline:"none", marginBottom:8, boxSizing:"border-box" }}
-              />
-              <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-                <select value={customWeek} onChange={e=>setCustomWeek(e.target.value)}
-                  style={{ flex:1, minWidth:100, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 8px", color:WHITE, fontSize:11, outline:"none" }}>
-                  {WEEKS.map(w=><option key={w} value={w}>{w}</option>)}
-                </select>
-                <select value={customArea} onChange={e=>setCustomArea(e.target.value)}
-                  style={{ flex:1, minWidth:120, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 8px", color:WHITE, fontSize:11, outline:"none" }}>
-                  {AREAS.map(a=><option key={a} value={a}>{a}</option>)}
-                </select>
-                <select value={customOwner} onChange={e=>setCustomOwner(e.target.value)}
-                  style={{ flex:1, minWidth:90, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 8px", color:WHITE, fontSize:11, outline:"none" }}>
-                  <option value="GEMA V4">GEMA V4</option>
-                  <option value="TUYO">TUYO</option>
-                </select>
-              </div>
-              <button
-                onClick={() => {
-                  if (!customTitle.trim()) return;
-                  onChange({...client, tasks: [...tasks, {id:uid(), n:null, week:customWeek, area:customArea, title:customTitle.trim(), owner:customOwner, done:false, assigneeId:null, doneAt:null}]});
-                  setCustomTitle("");
-                }}
-                style={{ padding:"6px 16px", background:GREEN, color:"#141414", border:"none", borderRadius:6, cursor:"pointer", fontWeight:700, fontSize:12 }}>
-                + Añadir tarea
-              </button>
-            </div>
+      {/* Add custom task panel */}
+      {showAdd && (
+        <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, padding:14, marginBottom:16 }}>
+          <div style={{ fontSize:12, color:GRAY, marginBottom:10 }}>Tarea adicional para este cliente (no afecta el método global)</div>
+          <input
+            value={customTitle} onChange={e=>setCustomTitle(e.target.value)}
+            placeholder="Título de la tarea..."
+            style={{ width:"100%", background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"6px 8px", color:WHITE, fontSize:12, outline:"none", marginBottom:8, boxSizing:"border-box" }}
+          />
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
+            <select value={customWeek} onChange={e=>setCustomWeek(e.target.value)}
+              style={{ flex:1, minWidth:100, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 8px", color:WHITE, fontSize:11, outline:"none" }}>
+              {WEEKS.map(w=><option key={w} value={w}>{w}</option>)}
+            </select>
+            <select value={customArea} onChange={e=>setCustomArea(e.target.value)}
+              style={{ flex:1, minWidth:120, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 8px", color:WHITE, fontSize:11, outline:"none" }}>
+              {AREAS.map(a=><option key={a} value={a}>{a}</option>)}
+            </select>
+            <select value={customOwner} onChange={e=>setCustomOwner(e.target.value)}
+              style={{ flex:1, minWidth:90, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 8px", color:WHITE, fontSize:11, outline:"none" }}>
+              <option value="TUYO">TUYO</option>
+              <option value="GEMA V4">GEMA V4</option>
+            </select>
           </div>
-        );
-      })()}
+          <button
+            onClick={() => {
+              if (!customTitle.trim()) return;
+              onChange({...client, tasks: [...tasks, {id:uid(), n:null, week:customWeek, area:customArea, title:customTitle.trim(), owner:customOwner, done:false, assigneeId:null, doneAt:null}]});
+              setCustomTitle(""); setShowAdd(false);
+            }}
+            style={{ padding:"6px 16px", background:GREEN, color:"#141414", border:"none", borderRadius:6, cursor:"pointer", fontWeight:700, fontSize:12 }}>
+            + Añadir tarea
+          </button>
+        </div>
+      )}
 
       {/* Task list */}
       {weekFilter === "Todas" ? (
@@ -920,10 +1005,12 @@ function FlowCanvas({ flow, clientName, clientProfile, clientTasks, onUpdate, ap
   };
 
   const addNode = (type) => {
+    const cfg = NODE_TYPES[type] || NODE_TYPES.speech;
     const newNode = {
-      id: uid(), type, text: NODE_TYPES[type].label,
+      id: uid(), type, text: cfg.label,
       x: snap(200 - pan.x/zoom + Math.random()*40),
       y: snap(120 - pan.y/zoom + Math.random()*40),
+      ...(cfg.defaultShape ? { shape: cfg.defaultShape } : {}),
     };
     update({ ...flow, nodes: [...nodes, newNode] });
   };
@@ -984,6 +1071,8 @@ function FlowCanvas({ flow, clientName, clientProfile, clientTasks, onUpdate, ap
   const getNodeCenter = (id) => {
     const n = nodes.find(x=>x.id===id);
     if (!n) return null;
+    const cfg = NODE_TYPES[n.type] || NODE_TYPES.speech;
+    if (cfg.swimlane) return { x: n.x + (n.w||cfg.defaultW||680)/2, y: n.y + (n.h||cfg.defaultH||200)/2 };
     if (n.shape === "circle") return { x: n.x + 60, y: n.y + 60 };
     return { x: n.x + 90, y: n.y + 28 };
   };
@@ -1200,9 +1289,17 @@ ${text}`;
     <div style={wrapperStyle}>
       {/* Toolbar */}
       <div style={{ display:"flex", flexWrap:"wrap", gap:6, padding:"8px 0", borderBottom:`1px solid ${BORDER}`, marginBottom:8 }}>
-        {Object.entries(NODE_TYPES).map(([type, cfg]) => (
+        {Object.entries(NODE_TYPES).filter(([,cfg])=>!cfg.bpmn).map(([type, cfg]) => (
           <button key={type} onClick={()=>addNode(type)}
             style={{ padding:"4px 10px", borderRadius:6, fontSize:11, cursor:"pointer", background:cfg.bg, color:cfg.color, border:`1px solid ${cfg.border}`, fontWeight:500 }}>
+            + {cfg.label}
+          </button>
+        ))}
+        <div style={{ width:1, background:BORDER, margin:"0 4px" }} />
+        <span style={{ fontSize:10, color:GOLD_DIM, fontWeight:700, alignSelf:"center", letterSpacing:0.5 }}>BPMN</span>
+        {Object.entries(NODE_TYPES).filter(([,cfg])=>cfg.bpmn||cfg.swimlane).map(([type, cfg]) => (
+          <button key={type} onClick={()=>addNode(type)}
+            style={{ padding:"4px 10px", borderRadius: cfg.defaultShape==="circle"?20:6, fontSize:11, cursor:"pointer", background:cfg.bg, color:cfg.color, border:`${cfg.thick?2:1}px solid ${cfg.border}`, fontWeight:600 }}>
             + {cfg.label}
           </button>
         ))}
@@ -1323,6 +1420,43 @@ ${text}`;
               ))}
             </div>
           </div>
+          {/* Swimlane size controls */}
+          {_pc.swimlane && (
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:8 }}>
+              <span style={{ color:GRAY, fontSize:11, fontWeight:600, minWidth:50 }}>Tamaño:</span>
+              <span style={{ color:GRAY, fontSize:10 }}>Ancho</span>
+              <input type="number" min={200} max={2000} step={20}
+                value={_pn.w || _pc.defaultW || 680}
+                onChange={e=>updateNodeProp(_pn.id,{w:Number(e.target.value)})}
+                onPointerDown={e=>e.stopPropagation()}
+                style={{ width:70, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"3px 6px", color:WHITE, fontSize:11, outline:"none" }} />
+              <span style={{ color:GRAY, fontSize:10 }}>Alto</span>
+              <input type="number" min={80} max={800} step={20}
+                value={_pn.h || _pc.defaultH || 200}
+                onChange={e=>updateNodeProp(_pn.id,{h:Number(e.target.value)})}
+                onPointerDown={e=>e.stopPropagation()}
+                style={{ width:70, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"3px 6px", color:WHITE, fontSize:11, outline:"none" }} />
+            </div>
+          )}
+          {/* Badge tipo */}
+          {!_pc.swimlane && (
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
+              <span style={{ color:GRAY, fontSize:11, fontWeight:600, minWidth:50 }}>Tipo:</span>
+              {[
+                { id:"manual",   label:"✋ Manual",   color:"#60A5FA" },
+                { id:"auto",     label:"⚡ Auto",     color:"#A78BFA" },
+                { id:"critical", label:"🔴 Crítico",  color:"#EF4444" },
+              ].map(b => (
+                <button key={b.id} onClick={()=>updateNodeProp(_pn.id,{badge: _pn.badge===b.id ? null : b.id})}
+                  style={{ padding:"2px 9px", borderRadius:10, fontSize:10, cursor:"pointer", fontWeight:600,
+                    background: _pn.badge===b.id ? b.color+"22" : "#222225",
+                    color: _pn.badge===b.id ? b.color : GRAY,
+                    border:`1px solid ${_pn.badge===b.id ? b.color : BORDER}` }}>
+                  {b.label}
+                </button>
+              ))}
+            </div>
+          )}
           {/* Text field */}
           <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
             <span style={{ color:GRAY, fontSize:11, fontWeight:600, minWidth:50 }}>Texto:</span>
@@ -1387,8 +1521,17 @@ ${text}`;
               <div style={{ width:1, background:BORDER, height:20 }} />
               <input type="color" value={edge.edgeColor||"#9B9B9F"} onChange={e=>updateEdge({edgeColor:e.target.value})}
                 style={{ width:24, height:24, borderRadius:4, border:`1px solid ${BORDER}`, padding:0, cursor:"pointer" }} />
+              <div style={{ width:1, background:BORDER, height:20 }} />
+              {["Sí","No","Aprobado","Rechazado"].map(p=>(
+                <button key={p} onClick={()=>updateEdge({label:p})}
+                  style={{ padding:"2px 8px", borderRadius:10, fontSize:10, cursor:"pointer",
+                    background: edge.label===p ? (p==="Sí"||p==="Aprobado") ? "rgba(76,175,125,0.2)" : "rgba(224,108,108,0.2)" : "#222225",
+                    color: edge.label===p ? (p==="Sí"||p==="Aprobado") ? GREEN : RED : GRAY,
+                    border:`1px solid ${edge.label===p ? (p==="Sí"||p==="Aprobado") ? GREEN : RED : BORDER}`,
+                    fontWeight: edge.label===p ? 700 : 400 }}>{p}</button>
+              ))}
               <input value={edge.label||""} onChange={e=>updateEdge({label:e.target.value})}
-                placeholder="Etiqueta..."
+                placeholder="Etiqueta libre..."
                 style={{ flex:1, minWidth:80, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"3px 8px", color:WHITE, fontSize:11, outline:"none" }} />
               <button onClick={()=>{ update({...flow, edges:flow.edges.filter(e=>e.id!==selectedEdgeId)}); setSelectedEdgeId(null); }}
                 style={{ padding:"2px 8px", borderRadius:5, fontSize:10, cursor:"pointer", border:`1px solid ${RED}`, color:RED, background:"transparent" }}>✕</button>
@@ -1445,12 +1588,24 @@ ${text}`;
                   <path d={d} stroke={isSelEdge ? GOLD : col} strokeWidth={isSelEdge ? width+1 : width}
                     fill="none" strokeDasharray={dash}
                     markerEnd={`url(#arrow-${edge.id})`} />
-                  {edge.label && (
-                    <text x={mx} y={my-8} textAnchor="middle" fill={col} fontSize={11}
-                      style={{ cursor:"pointer", userSelect:"none" }}>
-                      {edge.label}
-                    </text>
-                  )}
+                  {edge.label && (() => {
+                    const pad = 10, fSize = 11;
+                    const approxW = edge.label.length * (fSize * 0.62) + pad * 2;
+                    const bh = 20, bw = Math.max(approxW, 28);
+                    return (
+                      <g style={{ cursor:"pointer", userSelect:"none" }}
+                        onClick={e=>{ e.stopPropagation(); setSelectedEdgeId(edge.id); setSelectedIds(new Set()); }}>
+                        <rect x={mx - bw/2} y={my - bh - 2} width={bw} height={bh}
+                          rx={bh/2} fill="#FFFFFF" stroke={isSelEdge ? GOLD : col} strokeWidth={isSelEdge ? 2 : 1.5}
+                          filter="drop-shadow(0 1px 2px rgba(0,0,0,0.18))" />
+                        <text x={mx} y={my - 7} textAnchor="middle"
+                          fill={isSelEdge ? GOLD : col} fontSize={fSize} fontWeight="700"
+                          style={{ userSelect:"none" }}>
+                          {edge.label}
+                        </text>
+                      </g>
+                    );
+                  })()}
                 </g>
               );
             })}
@@ -1466,8 +1621,8 @@ ${text}`;
             })()}
           </svg>
 
-          {/* Nodes */}
-          {nodes.map(node => {
+          {/* Nodes — swimlanes rendered first so they sit behind */}
+          {[...nodes].sort((a,b)=>(NODE_TYPES[a.type]?.swimlane?-1:0)-(NODE_TYPES[b.type]?.swimlane?-1:0)).map(node => {
             const cfg = NODE_TYPES[node.type] || NODE_TYPES.speech;
             const isConnSrc = connectFrom === node.id;
             const isSelected = selectedIds.has(node.id);
@@ -1476,9 +1631,48 @@ ${text}`;
             const nodeTextColor = node.customBg ? (contrastColor(node.customBg) || cfg.color) : cfg.color;
             const shapeStyle = getShapeStyle(node.shape);
             const isClipped = ["diamond","hexagon","parallelogram"].includes(node.shape);
+            const bw = cfg.thick ? 5 : 2;
             const borderStyle = isClipped
               ? { border:"none", boxShadow: matchesSearch ? `0 0 0 3px #60A5FA, 0 0 12px #60A5FA66` : (isSelected ? `0 0 0 3px ${GOLD}88` : `0 0 0 2px ${cfg.border}`) }
-              : { border:`2px solid ${matchesSearch ? "#60A5FA" : isSelected ? GOLD : isConnSrc ? "#60A5FA" : cfg.border}`, boxShadow: matchesSearch ? `0 0 0 3px #60A5FA, 0 0 12px #60A5FA66` : (isSelected ? `0 0 0 3px ${GOLD}44` : "0 2px 8px rgba(0,0,0,0.12)") };
+              : cfg.note
+                ? { borderTop:"none", borderRight:"none", borderBottom:"none", borderLeft:`3px solid ${isSelected?GOLD:cfg.border}`, borderRadius:0, boxShadow: isSelected?`0 0 0 2px ${GOLD}44`:"none" }
+                : { border:`${bw}px solid ${matchesSearch ? "#60A5FA" : isSelected ? GOLD : isConnSrc ? "#60A5FA" : cfg.border}`, boxShadow: matchesSearch ? `0 0 0 3px #60A5FA, 0 0 12px #60A5FA66` : (isSelected ? `0 0 0 3px ${GOLD}44` : "0 2px 8px rgba(0,0,0,0.12)") };
+            if (cfg.swimlane) {
+              const sw = node.w || cfg.defaultW || 680;
+              const sh = node.h || cfg.defaultH || 200;
+              return (
+                <div key={node.id}
+                  style={{ position:"absolute", left:node.x, top:node.y, width:sw, height:sh,
+                    background:nodeBg, border:`2px solid ${isSelected?GOLD:cfg.border}`,
+                    borderRadius:8, cursor:"move", userSelect:"none",
+                    boxShadow: isSelected?`0 0 0 3px ${GOLD}44`:"0 2px 12px rgba(0,0,0,0.08)" }}
+                  onPointerDown={e=>onNodePointerDown(e,node.id)}>
+                  {/* Label bar */}
+                  <div style={{ position:"absolute", left:0, top:0, bottom:0, width:34,
+                    background:`${cfg.border}22`, borderRight:`2px solid ${cfg.border}`,
+                    borderRadius:"6px 0 0 6px", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    {editingNodeId===node.id ? (
+                      <input autoFocus defaultValue={node.text}
+                        onBlur={e=>{ update({...flow,nodes:nodes.map(n=>n.id===node.id?{...n,text:e.target.value}:n)}); setEditingNodeId(null); }}
+                        style={{ writingMode:"vertical-rl", transform:"rotate(180deg)", background:"transparent", border:"none", outline:"none", color:cfg.color, fontSize:12, fontWeight:700, width:160, textAlign:"center" }}
+                        onPointerDown={e=>e.stopPropagation()} />
+                    ) : (
+                      <span style={{ writingMode:"vertical-rl", transform:"rotate(180deg)", color:cfg.color, fontSize:12, fontWeight:700, letterSpacing:0.5 }}
+                        onDoubleClick={e=>{ e.stopPropagation(); setEditingNodeId(node.id); }}>
+                        {node.text}
+                      </span>
+                    )}
+                  </div>
+                  {/* Content hint */}
+                  <div style={{ position:"absolute", left:42, top:8, color:cfg.border, fontSize:10, opacity:0.5, fontStyle:"italic" }}>
+                    arrastrar nodos aquí
+                  </div>
+                  <button onClick={e=>{ e.stopPropagation(); deleteNode(node.id); }}
+                    style={{ position:"absolute", top:4, right:6, background:"none", border:"none", color:cfg.color, opacity:0.4, cursor:"pointer", fontSize:13, padding:0 }}>×</button>
+                </div>
+              );
+            }
+
             return (
               <div key={node.id}
                 style={{
@@ -1491,7 +1685,14 @@ ${text}`;
                 }}
                 onPointerDown={e=>onNodePointerDown(e,node.id)}
               >
-                <div style={{ fontSize:9, fontWeight:700, color:nodeTextColor, opacity:0.6, textTransform:"uppercase", letterSpacing:0.5, marginBottom:3 }}>{cfg.label}</div>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:3 }}>
+                  <span style={{ fontSize:9, fontWeight:700, color:nodeTextColor, opacity:0.6, textTransform:"uppercase", letterSpacing:0.5 }}>{cfg.label}</span>
+                  {node.badge && (() => {
+                    const BADGES = { manual:{ icon:"✋", color:"#60A5FA" }, auto:{ icon:"⚡", color:"#A78BFA" }, critical:{ icon:"🔴", color:"#EF4444" } };
+                    const b = BADGES[node.badge];
+                    return b ? <span style={{ fontSize:10, background:b.color+"22", color:b.color, border:`1px solid ${b.color}55`, borderRadius:8, padding:"0px 5px", fontWeight:700, lineHeight:1.6 }}>{b.icon}</span> : null;
+                  })()}
+                </div>
                 {editingNodeId === node.id ? (
                   <textarea autoFocus defaultValue={node.text}
                     onBlur={e=>{ update({...flow,nodes:nodes.map(n=>n.id===node.id?{...n,text:e.target.value}:n)}); setEditingNodeId(null); }}
@@ -1717,9 +1918,9 @@ function ProcesoComercialTab({ client, onChange, apiKey, flowTemplates, onSaveTe
 
 // ─── CLIENT DETAIL ────────────────────────────────────────────────────────────
 // ─── LAUNCH TAB ──────────────────────────────────────────────────────────────
-function LaunchTab({ client, onChange }) {
-  const mvpSteps = client.customMvpSteps || MVP_STEPS;
-  const fullSteps = client.customFullSteps || FULL_STEPS;
+function LaunchTab({ client, onChange, globalMvpSteps, globalFullSteps }) {
+  const mvpSteps = client.customMvpSteps || globalMvpSteps || MVP_STEPS;
+  const fullSteps = client.customFullSteps || globalFullSteps || FULL_STEPS;
   const [showMvpEditor, setShowMvpEditor] = useState(false);
   const [showFullEditor, setShowFullEditor] = useState(false);
 
@@ -1903,7 +2104,7 @@ function LaunchTab({ client, onChange }) {
   );
 }
 
-function ClientDetail({ client, team, onBack, onChange, apiKey, flowTemplates, onSaveTemplate, onDeleteTemplate }) {
+function ClientDetail({ client, team, onBack, onChange, apiKey, flowTemplates, onSaveTemplate, onDeleteTemplate, globalMvpSteps, globalFullSteps }) {
   const [subTab, setSubTab] = useState("perfil");
   const pct = overallPct(client.tasks);
   const done = client.tasks.filter(t=>t.done).length;
@@ -1933,7 +2134,7 @@ function ClientDetail({ client, team, onBack, onChange, apiKey, flowTemplates, o
       </div>
 
       {subTab === "perfil" && <PerfilTab client={client} onChange={onChange} />}
-      {subTab === "lanzamiento" && <LaunchTab client={client} onChange={onChange} />}
+      {subTab === "lanzamiento" && <LaunchTab client={client} onChange={onChange} globalMvpSteps={globalMvpSteps} globalFullSteps={globalFullSteps} />}
       {subTab === "ejecucion" && <EjecucionTab client={client} team={team} onChange={onChange} />}
       {subTab === "proceso" && <ProcesoComercialTab client={client} onChange={onChange} apiKey={apiKey} flowTemplates={flowTemplates} onSaveTemplate={onSaveTemplate} onDeleteTemplate={onDeleteTemplate} />}
     </div>
@@ -1946,6 +2147,7 @@ function ClientsList({ clients, onSelect, onCreate }) {
   const [showModal, setShowModal] = useState(false);
   const [newName, setNewName] = useState("");
   const [newChannel, setNewChannel] = useState("Meta Ads");
+  const [view, setView] = useState("cards");
 
   const filtered = clients.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -1955,11 +2157,36 @@ function ClientsList({ clients, onSelect, onCreate }) {
     setNewName(""); setNewChannel("Meta Ads"); setShowModal(false);
   };
 
+  const getStage = (pct) => {
+    if (pct === 0)   return { label:"Por iniciar", color:"#60A5FA" };
+    if (pct < 50)    return { label:"En proceso",  color:GOLD };
+    if (pct < 100)   return { label:"En cierre",   color:"#A78BFA" };
+    return               { label:"Completado",  color:GREEN };
+  };
+
+  const nextMeeting = (c) => {
+    const now = new Date();
+    const m = (c.meetings||[]).filter(m=>new Date(m.date)>=now).sort((a,b)=>a.date.localeCompare(b.date))[0];
+    return m ? new Date(m.date).toLocaleDateString("es-CO",{day:"2-digit",month:"short"}) : "—";
+  };
+
+  const KANBAN_STAGES = ["Por iniciar","En proceso","En cierre","Completado"];
+
   return (
     <div>
-      <div style={{ display:"flex", gap:10, marginBottom:20 }}>
+      <div style={{ display:"flex", gap:10, marginBottom:20, alignItems:"center" }}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar cliente..."
           style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"9px 12px", color:WHITE, fontSize:13, outline:"none" }} />
+        {/* View toggle */}
+        <div style={{ display:"flex", gap:2, background:"#111113", borderRadius:8, padding:3, border:`1px solid ${BORDER}` }}>
+          {[["cards","▦ Cards"],["tabla","≡ Tabla"],["kanban","⬜ Kanban"]].map(([v,l])=>(
+            <button key={v} onClick={()=>setView(v)}
+              style={{ padding:"5px 12px", borderRadius:6, fontSize:12, cursor:"pointer", fontWeight:600,
+                background:view===v?GOLD:"transparent", color:view===v?"#141414":GRAY, border:"none" }}>
+              {l}
+            </button>
+          ))}
+        </div>
         <button onClick={()=>setShowModal(true)}
           style={{ padding:"9px 18px", background:GOLD, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:13 }}>
           + Nuevo cliente
@@ -1972,39 +2199,132 @@ function ClientsList({ clients, onSelect, onCreate }) {
         </div>
       )}
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:14 }}>
-        {filtered.map(c => {
-          const pct = overallPct(c.tasks);
-          const isDone = pct === 100;
-          return (
-            <div key={c.id} onClick={()=>onSelect(c.id)}
-              style={{ background:CARD, border:`1px solid ${isDone ? GREEN : BORDER}`, borderRadius:12, padding:16, cursor:"pointer", transition:"all 0.15s" }}
-              onMouseEnter={e=>e.currentTarget.style.borderColor=GOLD}
-              onMouseLeave={e=>e.currentTarget.style.borderColor=isDone?GREEN:BORDER}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
-                <div>
-                  <div style={{ color:WHITE, fontWeight:600, fontSize:15 }}>{c.name}</div>
-                  <div style={{ color:GRAY, fontSize:11, marginTop:2 }}>{c.profile.channel||"Meta Ads"}</div>
+      {/* ── CARDS VIEW ── */}
+      {view === "cards" && (
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:14 }}>
+          {filtered.map(c => {
+            const pct = overallPct(c.tasks);
+            const isDone = pct === 100;
+            const stage = getStage(pct);
+            return (
+              <div key={c.id} onClick={()=>onSelect(c.id)}
+                style={{ background:CARD, border:`1px solid ${isDone?GREEN:BORDER}`, borderRadius:12, padding:16, cursor:"pointer", transition:"all 0.15s" }}
+                onMouseEnter={e=>e.currentTarget.style.borderColor=GOLD}
+                onMouseLeave={e=>e.currentTarget.style.borderColor=isDone?GREEN:BORDER}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+                  <div>
+                    <div style={{ color:WHITE, fontWeight:600, fontSize:15 }}>{c.name}</div>
+                    <div style={{ color:GRAY, fontSize:11, marginTop:2 }}>{c.profile.channel||"Meta Ads"}</div>
+                  </div>
+                  <span style={{ fontSize:11, fontWeight:700, color:stage.color, background:stage.color+"18", padding:"2px 8px", borderRadius:10 }}>{stage.label}</span>
                 </div>
-                <span style={{ fontSize:14, fontWeight:700, color: isDone ? GREEN : GOLD }}>{pct}%</span>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:6 }}>
+                  {WEEKS.map(w => {
+                    const s = weekStats(c.tasks, w);
+                    const wp = s.total ? Math.round(s.done/s.total*100) : 0;
+                    return (
+                      <div key={w}>
+                        <div style={{ fontSize:9, color:GRAY, marginBottom:3 }}>{w.replace("Semana ","S")}</div>
+                        <ProgressBar pct={wp} height={3} />
+                        <div style={{ fontSize:9, color:GRAY, marginTop:2 }}>{s.done}/{s.total}</div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:6 }}>
-                {WEEKS.map(w => {
-                  const s = weekStats(c.tasks, w);
-                  const wp = s.total ? Math.round(s.done/s.total*100) : 0;
-                  return (
-                    <div key={w}>
-                      <div style={{ fontSize:9, color:GRAY, marginBottom:3 }}>{w.replace("Semana ","S")}</div>
-                      <ProgressBar pct={wp} height={3} />
-                      <div style={{ fontSize:9, color:GRAY, marginTop:2 }}>{s.done}/{s.total}</div>
-                    </div>
-                  );
-                })}
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── TABLA VIEW ── */}
+      {view === "tabla" && filtered.length > 0 && (
+        <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, overflow:"hidden" }}>
+          <table style={{ width:"100%", borderCollapse:"collapse" }}>
+            <thead>
+              <tr style={{ borderBottom:`1px solid ${BORDER}` }}>
+                {["Cliente","Canal","Contrato","Inicio","Progreso","Etapa","Próx. reunión"].map(h=>(
+                  <th key={h} style={{ padding:"10px 14px", textAlign:"left", fontSize:11, color:GRAY, fontWeight:600, whiteSpace:"nowrap" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((c,i) => {
+                const pct = overallPct(c.tasks);
+                const stage = getStage(pct);
+                return (
+                  <tr key={c.id} onClick={()=>onSelect(c.id)}
+                    style={{ borderBottom:`1px solid ${BORDER}`, cursor:"pointer", transition:"background 0.1s" }}
+                    onMouseEnter={e=>e.currentTarget.style.background="#1E1E22"}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    <td style={{ padding:"10px 14px", color:WHITE, fontWeight:600, fontSize:13 }}>{c.name}</td>
+                    <td style={{ padding:"10px 14px", color:GRAY, fontSize:12 }}>{c.profile.channel||"Meta Ads"}</td>
+                    <td style={{ padding:"10px 14px", color:GRAY, fontSize:12 }}>{c.profile.contractValue ? `$${Number(c.profile.contractValue).toLocaleString("es-CO")}` : "—"}</td>
+                    <td style={{ padding:"10px 14px", color:GRAY, fontSize:12 }}>{c.profile.startDate ? new Date(c.profile.startDate).toLocaleDateString("es-CO",{day:"2-digit",month:"short"}) : "—"}</td>
+                    <td style={{ padding:"10px 14px" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <div style={{ flex:1, height:6, background:BORDER, borderRadius:3 }}>
+                          <div style={{ height:6, width:`${pct}%`, background:stage.color, borderRadius:3 }} />
+                        </div>
+                        <span style={{ fontSize:11, color:stage.color, fontWeight:700, minWidth:32 }}>{pct}%</span>
+                      </div>
+                    </td>
+                    <td style={{ padding:"10px 14px" }}>
+                      <span style={{ fontSize:11, color:stage.color, background:stage.color+"18", padding:"2px 8px", borderRadius:10, fontWeight:600 }}>{stage.label}</span>
+                    </td>
+                    <td style={{ padding:"10px 14px", color:GRAY, fontSize:12 }}>{nextMeeting(c)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── KANBAN VIEW ── */}
+      {view === "kanban" && (
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, alignItems:"start" }}>
+          {KANBAN_STAGES.map(stage => {
+            const stagePcts = { "Por iniciar":[0,0], "En proceso":[1,49], "En cierre":[50,99], "Completado":[100,100] };
+            const [min,max] = stagePcts[stage];
+            const stageClients = filtered.filter(c=>{ const p=overallPct(c.tasks); return p>=min&&p<=max; });
+            const stageColor = getStage(min===0&&max===0?0:min===1?1:min===50?50:100).color;
+            return (
+              <div key={stage}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+                  <span style={{ width:8, height:8, borderRadius:"50%", background:stageColor, display:"inline-block" }} />
+                  <span style={{ color:WHITE, fontWeight:600, fontSize:13 }}>{stage}</span>
+                  <span style={{ color:GRAY, fontSize:11, marginLeft:"auto" }}>{stageClients.length}</span>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {stageClients.map(c => {
+                    const pct = overallPct(c.tasks);
+                    return (
+                      <div key={c.id} onClick={()=>onSelect(c.id)}
+                        style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:"12px 14px", cursor:"pointer", transition:"border-color 0.15s" }}
+                        onMouseEnter={e=>e.currentTarget.style.borderColor=stageColor}
+                        onMouseLeave={e=>e.currentTarget.style.borderColor=BORDER}>
+                        <div style={{ color:WHITE, fontWeight:600, fontSize:13, marginBottom:4 }}>{c.name}</div>
+                        <div style={{ color:GRAY, fontSize:11, marginBottom:8 }}>{c.profile.channel||"Meta Ads"}</div>
+                        <div style={{ height:4, background:BORDER, borderRadius:2 }}>
+                          <div style={{ height:4, width:`${pct}%`, background:stageColor, borderRadius:2 }} />
+                        </div>
+                        <div style={{ display:"flex", justifyContent:"space-between", marginTop:4 }}>
+                          <span style={{ fontSize:10, color:GRAY }}>{nextMeeting(c)}</span>
+                          <span style={{ fontSize:10, color:stageColor, fontWeight:700 }}>{pct}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {stageClients.length === 0 && (
+                    <div style={{ border:`1px dashed ${BORDER}`, borderRadius:10, padding:"20px 0", textAlign:"center", color:GRAY, fontSize:11 }}>Sin clientes</div>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {showModal && (
         <Modal title="Nuevo cliente" onClose={()=>setShowModal(false)}>
@@ -2029,6 +2349,7 @@ function ClientsList({ clients, onSelect, onCreate }) {
 function TeamTab({ data, onChange }) {
   const [newMember, setNewMember] = useState("");
   const [newRole, setNewRole] = useState("");
+  const [showDiagram, setShowDiagram] = useState(false);
 
   const addMember = () => {
     if (!newMember.trim()) return;
@@ -2044,37 +2365,69 @@ function TeamTab({ data, onChange }) {
   };
   const removeRole = (id) => onChange({ ...data, roles: data.roles.filter(r=>r.id!==id) });
 
+  const teamFlow = data.teamFlow || { id: "team_flow", name: "Organigrama del equipo", nodes: [], edges: [] };
+  const updateTeamFlow = (updated) => onChange({ ...data, teamFlow: updated });
+  const apiKey = data.settings?.apiKey || "";
+
   return (
-    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24, maxWidth:700 }}>
-      <div>
-        <h3 style={{ color:WHITE, fontSize:15, fontWeight:600, marginBottom:14 }}>Equipo</h3>
-        <div style={{ display:"flex", gap:8, marginBottom:12 }}>
-          <input value={newMember} onChange={e=>setNewMember(e.target.value)} placeholder="Nombre"
-            onKeyDown={e=>e.key==="Enter"&&addMember()}
-            style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"7px 10px", color:WHITE, fontSize:13, outline:"none" }} />
-          <button onClick={addMember} style={{ padding:"7px 14px", background:GOLD, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700 }}>+</button>
-        </div>
-        {data.team.map(m => (
-          <div key={m.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 10px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, marginBottom:6 }}>
-            <span style={{ color:WHITE, fontSize:13 }}>{m.name}</span>
-            <button onClick={()=>removeMember(m.id)} style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:13 }}>×</button>
+    <div style={{ maxWidth:900 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24, maxWidth:700, marginBottom:28 }}>
+        <div>
+          <h3 style={{ color:WHITE, fontSize:15, fontWeight:600, marginBottom:14 }}>Equipo</h3>
+          <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+            <input value={newMember} onChange={e=>setNewMember(e.target.value)} placeholder="Nombre"
+              onKeyDown={e=>e.key==="Enter"&&addMember()}
+              style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"7px 10px", color:WHITE, fontSize:13, outline:"none" }} />
+            <button onClick={addMember} style={{ padding:"7px 14px", background:GOLD, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700 }}>+</button>
           </div>
-        ))}
+          {data.team.map(m => (
+            <div key={m.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 10px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, marginBottom:6 }}>
+              <span style={{ color:WHITE, fontSize:13 }}>{m.name}</span>
+              <button onClick={()=>removeMember(m.id)} style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:13 }}>×</button>
+            </div>
+          ))}
+        </div>
+        <div>
+          <h3 style={{ color:WHITE, fontSize:15, fontWeight:600, marginBottom:14 }}>Roles</h3>
+          <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+            <input value={newRole} onChange={e=>setNewRole(e.target.value)} placeholder="Rol"
+              onKeyDown={e=>e.key==="Enter"&&addRole()}
+              style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"7px 10px", color:WHITE, fontSize:13, outline:"none" }} />
+            <button onClick={addRole} style={{ padding:"7px 14px", background:GOLD, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700 }}>+</button>
+          </div>
+          {data.roles.map(r => (
+            <div key={r.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 10px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, marginBottom:6 }}>
+              <span style={{ color:WHITE, fontSize:13 }}>{r.name}</span>
+              <button onClick={()=>removeRole(r.id)} style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:13 }}>×</button>
+            </div>
+          ))}
+        </div>
       </div>
-      <div>
-        <h3 style={{ color:WHITE, fontSize:15, fontWeight:600, marginBottom:14 }}>Roles</h3>
-        <div style={{ display:"flex", gap:8, marginBottom:12 }}>
-          <input value={newRole} onChange={e=>setNewRole(e.target.value)} placeholder="Rol"
-            onKeyDown={e=>e.key==="Enter"&&addRole()}
-            style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"7px 10px", color:WHITE, fontSize:13, outline:"none" }} />
-          <button onClick={addRole} style={{ padding:"7px 14px", background:GOLD, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700 }}>+</button>
-        </div>
-        {data.roles.map(r => (
-          <div key={r.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 10px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, marginBottom:6 }}>
-            <span style={{ color:WHITE, fontSize:13 }}>{r.name}</span>
-            <button onClick={()=>removeRole(r.id)} style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:13 }}>×</button>
+
+      {/* Internal diagram */}
+      <div style={{ borderTop:`1px solid ${BORDER}`, paddingTop:20 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+          <div>
+            <h3 style={{ color:WHITE, fontSize:15, fontWeight:600, margin:0 }}>Diagrama interno</h3>
+            <div style={{ color:GRAY, fontSize:12, marginTop:3 }}>Organigrama, flujos de operación, estructura del equipo</div>
           </div>
-        ))}
+          <button onClick={()=>setShowDiagram(s=>!s)}
+            style={{ padding:"7px 16px", borderRadius:8, fontSize:12, cursor:"pointer", border:`1px solid ${showDiagram ? GOLD : BORDER}`, background:showDiagram?"rgba(212,175,55,0.1)":"transparent", color:showDiagram?GOLD:GRAY, fontWeight:600 }}>
+            {showDiagram ? "✕ Cerrar" : "🗂 Abrir diagrama"}
+          </button>
+        </div>
+        {showDiagram && (
+          <div style={{ border:`1px solid ${BORDER}`, borderRadius:10, overflow:"hidden", height:520 }}>
+            <FlowCanvas
+              flow={teamFlow}
+              clientName="Equipo GP"
+              clientProfile={{}}
+              clientTasks={[]}
+              onUpdate={updateTeamFlow}
+              apiKey={apiKey}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2085,6 +2438,33 @@ function SettingsTab({ data, onChange }) {
   const [key, setKey] = useState(data.settings?.apiKey || "");
   const [saved, setSaved] = useState(false);
   const [importMsg, setImportMsg] = useState("");
+  const [pinInput, setPinInput] = useState("");
+  const [pinCurrent, setPinCurrent] = useState("");
+  const [pinSaved, setPinSaved] = useState(false);
+  const [pinError, setPinError] = useState(false);
+  const hasPin = !!data.settings?.teamPin;
+
+  const savePin = () => {
+    if (hasPin && pinCurrent !== data.settings.teamPin) {
+      setPinError(true);
+      setTimeout(()=>setPinError(false), 2000);
+      return;
+    }
+    onChange({ ...data, settings: { ...(data.settings||{}), teamPin: pinInput.trim() } });
+    setPinInput(""); setPinCurrent("");
+    setPinSaved(true);
+    setTimeout(()=>setPinSaved(false), 2000);
+  };
+
+  const removePin = () => {
+    if (pinCurrent !== data.settings.teamPin) {
+      setPinError(true);
+      setTimeout(()=>setPinError(false), 2000);
+      return;
+    }
+    onChange({ ...data, settings: { ...(data.settings||{}), teamPin: "" } });
+    setPinInput(""); setPinCurrent("");
+  };
 
   const saveKey = () => {
     onChange({ ...data, settings: { ...(data.settings||{}), apiKey: key.trim() } });
@@ -2124,9 +2504,7 @@ function SettingsTab({ data, onChange }) {
 
   return (
     <div style={{ maxWidth:600 }}>
-      <TeamTab data={data} onChange={onChange} />
-
-      <div style={{ marginTop:28, padding:16, background:"rgba(212,175,55,0.06)", border:`1px solid ${GOLD_DIM}`, borderRadius:10 }}>
+      <div style={{ marginTop:0, padding:16, background:"rgba(212,175,55,0.06)", border:`1px solid ${GOLD_DIM}`, borderRadius:10 }}>
         <div style={{ color:GOLD, fontWeight:600, fontSize:13, marginBottom:6 }}>✦ Conexión con Claude IA</div>
         <div style={{ color:GRAY, fontSize:12, lineHeight:1.6, marginBottom:12 }}>
           Pega tu API key de Anthropic para que el botón "Analizar con IA" en el canvas llame directamente a Claude y muestre el análisis en el dashboard. La key se guarda localmente, nunca sale de tu dispositivo.
@@ -2166,6 +2544,387 @@ function SettingsTab({ data, onChange }) {
         </div>
         {importMsg && <div style={{ marginTop:8, color:GREEN, fontSize:11 }}>{importMsg}</div>}
       </div>
+
+      <div style={{ marginTop:20, padding:16, background:"rgba(239,68,68,0.05)", border:`1px solid rgba(239,68,68,0.25)`, borderRadius:10 }}>
+        <div style={{ color:"#EF4444", fontWeight:600, fontSize:13, marginBottom:6 }}>🔒 PIN — Equipo y Roles</div>
+        <div style={{ color:GRAY, fontSize:12, lineHeight:1.6, marginBottom:12 }}>
+          {hasPin ? "Para cambiar o quitar el PIN debés ingresar el PIN actual primero." : "Configurá un PIN para proteger la pestaña Equipo y Roles. Solo quien lo conozca puede acceder."}
+        </div>
+        {pinError && <div style={{ color:"#EF4444", fontSize:12, marginBottom:8, fontWeight:600 }}>PIN actual incorrecto.</div>}
+        {hasPin && (
+          <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+            <input type="password" value={pinCurrent} onChange={e=>setPinCurrent(e.target.value)}
+              placeholder="PIN actual"
+              style={{ width:140, background:BG, border:`1px solid ${pinError?"#EF4444":BORDER}`, borderRadius:8, padding:"8px 12px", color:WHITE, fontSize:13, outline:"none", letterSpacing:4 }} />
+            <span style={{ color:GRAY, fontSize:12, alignSelf:"center" }}>→ ingresá el PIN actual para continuar</span>
+          </div>
+        )}
+        <div style={{ display:"flex", gap:8 }}>
+          <input type="password" value={pinInput} onChange={e=>setPinInput(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&savePin()}
+            placeholder={hasPin ? "Nuevo PIN" : "Nuevo PIN (ej: 1234)"}
+            style={{ flex:1, background:BG, border:`1px solid ${BORDER}`, borderRadius:8, padding:"8px 12px", color:WHITE, fontSize:13, outline:"none", letterSpacing:4 }} />
+          <button onClick={savePin}
+            style={{ padding:"8px 18px", background:"#EF4444", color:"#fff", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:13 }}>
+            {pinSaved ? "✓ Guardado" : hasPin ? "Cambiar PIN" : "Activar PIN"}
+          </button>
+          {hasPin && (
+            <button onClick={removePin}
+              style={{ padding:"8px 14px", background:"transparent", color:GRAY, border:`1px solid ${BORDER}`, borderRadius:8, cursor:"pointer", fontSize:13 }}>
+              Quitar PIN
+            </button>
+          )}
+        </div>
+        {hasPin && !pinError && !pinSaved && (
+          <div style={{ marginTop:8, color:"#EF4444", fontSize:11 }}>✓ Equipo y Roles está protegido con PIN.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── MÉTODO TAB (GLOBAL) ──────────────────────────────────────────────────────
+function StepsEditor({ steps, color, onUpdate, onDelete, onAdd, onReset }) {
+  return (
+    <div>
+      {steps.map((step, idx) => (
+        <div key={step.id || step.n || idx} style={{ display:"flex", gap:8, alignItems:"flex-start", marginBottom:8, padding:"10px 12px", background:CARD, borderRadius:8, border:`1px solid ${BORDER}` }}>
+          <span style={{ color:GOLD_DIM, fontSize:12, minWidth:26, paddingTop:8, fontWeight:700 }}>#{step.n||idx+1}</span>
+          <div style={{ flex:1, display:"flex", flexDirection:"column", gap:4 }}>
+            <input value={step.title} onChange={e=>onUpdate(idx,{title:e.target.value})}
+              style={{ background:"transparent", border:"none", borderBottom:`1px solid ${BORDER}`, color:WHITE, fontSize:13, fontWeight:600, outline:"none", padding:"3px 0", width:"100%" }} />
+            <input value={step.desc||""} onChange={e=>onUpdate(idx,{desc:e.target.value})}
+              placeholder="Descripción del paso..."
+              style={{ background:"transparent", border:"none", color:GRAY, fontSize:11, outline:"none", padding:"2px 0", width:"100%" }} />
+          </div>
+          <button onClick={()=>onDelete(idx)} style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:16, padding:"4px 6px", opacity:0.7, flexShrink:0, marginTop:4 }}>×</button>
+        </div>
+      ))}
+      <div style={{ display:"flex", gap:8, marginTop:8 }}>
+        <button onClick={onAdd}
+          style={{ padding:"7px 16px", background:"#222225", color:WHITE, border:`1px dashed ${BORDER}`, borderRadius:8, cursor:"pointer", fontSize:12 }}>
+          + Agregar paso
+        </button>
+        {onReset && (
+          <button onClick={onReset}
+            style={{ padding:"7px 14px", background:"transparent", color:GRAY, border:`1px solid ${BORDER}`, borderRadius:8, cursor:"pointer", fontSize:12 }}>
+            ↺ Restaurar defaults
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MetodoTab({ data, onChange }) {
+  const gMvp  = data.globalMvpSteps  || MVP_STEPS.map(s=>({...s, id:"mvp_"+s.n}));
+  const gFull = data.globalFullSteps || FULL_STEPS.map(s=>({...s, id:"full_"+s.n}));
+  const gTasks = data.globalTasks    || GEMA_TASKS.map(t=>({...t, id:"gt_"+t.n}));
+
+  const [localMvp,   setLocalMvp]   = useState(() => gMvp);
+  const [localFull,  setLocalFull]  = useState(() => gFull);
+  const [localTasks, setLocalTasks] = useState(() => gTasks);
+  const [section, setSection] = useState("launch");
+  const [dirty, setDirty] = useState(false);
+  const [taskSearch, setTaskSearch] = useState("");
+
+  const mark = fn => (...args) => { fn(...args); setDirty(true); };
+
+  const applyChanges = () => {
+    const syncedClients = syncTasksToClients(data.clients, localTasks);
+    onChange({ ...data, globalTasks: localTasks, globalMvpSteps: localMvp, globalFullSteps: localFull, clients: syncedClients });
+    setDirty(false);
+  };
+
+  // MVP steps handlers
+  const mvpUpdate = mark((idx, patch) => setLocalMvp(s => s.map((x,i)=>i===idx?{...x,...patch}:x)));
+  const mvpDelete = mark((idx)        => setLocalMvp(s => s.filter((_,i)=>i!==idx)));
+  const mvpAdd    = mark(()           => { const n=Math.max(...localMvp.map(s=>s.n||0),0)+1; setLocalMvp(s=>[...s,{n,id:uid(),title:"Nuevo paso MVP",desc:""}]); });
+  const mvpReset  = ()                => { setLocalMvp(MVP_STEPS.map(s=>({...s,id:"mvp_"+s.n}))); setDirty(true); };
+
+  // Full steps handlers
+  const fullUpdate = mark((idx, patch) => setLocalFull(s => s.map((x,i)=>i===idx?{...x,...patch}:x)));
+  const fullDelete = mark((idx)        => setLocalFull(s => s.filter((_,i)=>i!==idx)));
+  const fullAdd    = mark(()           => { const n=Math.max(...localFull.map(s=>s.n||0),0)+1; setLocalFull(s=>[...s,{n,id:uid(),title:"Nuevo paso Full",desc:""}]); });
+  const fullReset  = ()                => { setLocalFull(FULL_STEPS.map(s=>({...s,id:"full_"+s.n}))); setDirty(true); };
+
+  // Task handlers
+  const taskAdd    = mark((area, week) => { const n=Math.max(...localTasks.map(t=>t.n||0),0)+1; setLocalTasks(ts=>[...ts,{n,id:uid(),area,week,title:"Nueva tarea",owner:"TUYO"}]); });
+  const taskDelete = mark((id)         => setLocalTasks(ts=>ts.filter(t=>t.id!==id)));
+  const taskUpdate = mark((id, patch)  => setLocalTasks(ts=>ts.map(t=>t.id===id?{...t,...patch}:t)));
+  const taskReset  = ()                => { setLocalTasks(GEMA_TASKS.map(t=>({...t,id:"gt_"+t.n}))); setDirty(true); };
+
+  const filteredTasks = taskSearch
+    ? localTasks.filter(t => t.title?.toLowerCase().includes(taskSearch.toLowerCase()) || String(t.n).includes(taskSearch))
+    : localTasks;
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:24, flexWrap:"wrap", gap:12 }}>
+        <div>
+          <h2 style={{ color:WHITE, fontSize:20, fontWeight:700, margin:0 }}>Método Growth Partner AI</h2>
+          <div style={{ color:GRAY, fontSize:12, marginTop:4 }}>
+            Cambios aquí se aplican a todos los clientes · {data.clients.length} cliente(s) activo(s)
+          </div>
+        </div>
+        <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+          {dirty && (
+            <span style={{ fontSize:11, color:GOLD, opacity:0.8 }}>Cambios sin aplicar</span>
+          )}
+          <button onClick={applyChanges}
+            style={{ padding:"10px 20px", background: dirty ? GOLD : "#222225", color: dirty ? "#141414" : GRAY, border:`1px solid ${dirty ? GOLD : BORDER}`, borderRadius:8, cursor: dirty ? "pointer" : "default", fontWeight:700, fontSize:13, transition:"all 0.2s" }}>
+            ⚡ Aplicar a todos los clientes
+          </button>
+        </div>
+      </div>
+
+      {/* Section tabs */}
+      <div style={{ display:"flex", gap:2, marginBottom:24, borderBottom:`1px solid ${BORDER}` }}>
+        {[["launch","🎯 Lanzamiento (15 pasos)"],["tasks","📋 Tareas del Método ("+localTasks.length+")"]].map(([id,label]) => (
+          <button key={id} onClick={()=>setSection(id)}
+            style={{ padding:"8px 18px", background:"none", border:"none", borderBottom:`2px solid ${section===id ? GOLD : "transparent"}`, color: section===id ? GOLD : GRAY, cursor:"pointer", fontSize:13, fontWeight: section===id ? 600 : 400 }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {section === "launch" && (
+        <div style={{ maxWidth:720 }}>
+          <div style={{ marginBottom:28 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+              <span style={{ color:GOLD, fontWeight:700, fontSize:15 }}>🎯 Mínimo Viable</span>
+              <span style={{ fontSize:11, color:GRAY }}>{localMvp.length} pasos · Semana 2</span>
+            </div>
+            <StepsEditor steps={localMvp} onUpdate={mvpUpdate} onDelete={mvpDelete} onAdd={mvpAdd} onReset={mvpReset} />
+          </div>
+          <div style={{ borderTop:`1px solid ${BORDER}`, paddingTop:24 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+              <span style={{ color:GREEN, fontWeight:700, fontSize:15 }}>🚀 Full Launch</span>
+              <span style={{ fontSize:11, color:GRAY }}>{localFull.length} pasos · Semana 3</span>
+            </div>
+            <StepsEditor steps={localFull} onUpdate={fullUpdate} onDelete={fullDelete} onAdd={fullAdd} onReset={fullReset} />
+          </div>
+        </div>
+      )}
+
+      {section === "tasks" && (
+        <div>
+          <div style={{ display:"flex", gap:10, alignItems:"center", marginBottom:16, flexWrap:"wrap" }}>
+            <input value={taskSearch} onChange={e=>setTaskSearch(e.target.value)}
+              placeholder="Buscar tarea..."
+              style={{ flex:1, minWidth:180, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"7px 12px", color:WHITE, fontSize:12, outline:"none" }} />
+            <button onClick={taskReset}
+              style={{ padding:"7px 14px", background:"transparent", color:GRAY, border:`1px solid ${BORDER}`, borderRadius:8, cursor:"pointer", fontSize:12 }}>
+              ↺ Restaurar defaults ({GEMA_TASKS.length} tareas)
+            </button>
+          </div>
+          {AREAS.map(area => {
+            const areaTasks = filteredTasks.filter(t=>t.area===area);
+            return (
+              <div key={area} style={{ marginBottom:24 }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ color:GOLD, fontWeight:700, fontSize:13, textTransform:"uppercase", letterSpacing:1 }}>{area}</span>
+                    <span style={{ fontSize:11, color:GRAY }}>({areaTasks.length} tareas)</span>
+                    {AREA_AGENT[area] && (
+                      <span style={{ fontSize:10, padding:"2px 7px", borderRadius:4, background:`${AREA_AGENT[area].color}20`, color:AREA_AGENT[area].color, border:`1px solid ${AREA_AGENT[area].color}55`, fontWeight:600 }}>
+                        🤖 {AREA_AGENT[area].label}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display:"flex", gap:6 }}>
+                    {WEEKS.map(w => (
+                      <button key={w} onClick={()=>taskAdd(area, w)}
+                        style={{ padding:"3px 8px", borderRadius:5, fontSize:10, cursor:"pointer", background:"transparent", color:GOLD, border:`1px dashed ${GOLD_DIM}` }}>
+                        + {w.replace("Semana ","")}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {WEEKS.map(week => {
+                  const wt = areaTasks.filter(t=>t.week===week);
+                  if (!wt.length) return null;
+                  return (
+                    <div key={week} style={{ marginBottom:10 }}>
+                      <div style={{ fontSize:10, color:GOLD_DIM, fontWeight:700, marginBottom:6, textTransform:"uppercase", letterSpacing:0.5 }}>{week}</div>
+                      {wt.map(task => (
+                        <div key={task.id} style={{ display:"flex", gap:8, alignItems:"center", marginBottom:3, padding:"6px 10px", background:CARD, borderRadius:6, border:`1px solid ${BORDER}` }}>
+                          <span style={{ fontSize:10, color:GRAY, minWidth:26, fontFamily:"monospace" }}>#{task.n}</span>
+                          <input value={task.title} onChange={e=>taskUpdate(task.id,{title:e.target.value})}
+                            style={{ flex:1, background:"transparent", border:"none", color:WHITE, fontSize:12, outline:"none" }} />
+                          <select value={task.owner||"TUYO"} onChange={e=>taskUpdate(task.id,{owner:e.target.value})}
+                            style={{ background:"#222225", border:`1px solid ${BORDER}`, color:GRAY, fontSize:10, borderRadius:4, padding:"2px 6px" }}>
+                            <option value="TUYO">TUYO</option>
+                            <option value="GEMA V4">GEMA V4</option>
+                          </select>
+                          <button onClick={()=>taskDelete(task.id)}
+                            style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:14, padding:"0 3px", opacity:0.6 }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── HOME TAB ─────────────────────────────────────────────────────────────────
+function HomeTab({ data, onGoToClients, onSelectClient }) {
+  const allTasks = data.clients.flatMap(c => c.tasks || []);
+  const doneTasks = allTasks.filter(t => t.done);
+  const pct = allTasks.length ? Math.round(doneTasks.length / allTasks.length * 100) : 0;
+
+  const now = new Date();
+  const upcoming = data.clients.flatMap(c =>
+    (c.meetings || [])
+      .filter(m => m.date && new Date(m.date) >= now)
+      .map(m => ({ client: c, meeting: m, date: new Date(m.date) }))
+  ).sort((a, b) => a.date - b.date).slice(0, 6);
+
+  const byOwner = {};
+  data.clients.forEach(c => {
+    (c.tasks || []).filter(t => !t.done).forEach(t => {
+      const key = t.owner || "Sin asignar";
+      if (!byOwner[key]) byOwner[key] = { pending: 0, clients: new Set() };
+      byOwner[key].pending++;
+      byOwner[key].clients.add(c.name);
+    });
+  });
+
+  const recentlyDone = data.clients.flatMap(c =>
+    (c.tasks || [])
+      .filter(t => t.done && t.doneAt && (Date.now() - t.doneAt) < 7 * 24 * 60 * 60 * 1000)
+      .map(t => ({ ...t, clientName: c.name }))
+  ).sort((a, b) => b.doneAt - a.doneAt).slice(0, 8);
+
+  const fmtDate = d => d.toLocaleDateString("es-CO", { weekday:"short", day:"2-digit", month:"short" });
+  const today = new Date().toLocaleDateString("es-CO", { weekday:"long", day:"2-digit", month:"long", year:"numeric" });
+
+  const statCards = [
+    { label:"Clientes activos",    value: data.clients.length,              color: GOLD,      icon:"👥", action: onGoToClients },
+    { label:"Tareas completadas",  value: `${doneTasks.length}/${allTasks.length}`, color: GREEN, icon:"✓" },
+    { label:"Progreso global",     value: `${pct}%`,                        color: pct>70?GREEN:pct>40?GOLD:RED, icon:"📈" },
+    { label:"Próximas reuniones",  value: upcoming.length,                  color: "#60A5FA", icon:"📅" },
+  ];
+
+  return (
+    <div style={{ maxWidth:1100 }}>
+      <div style={{ marginBottom:28 }}>
+        <h2 style={{ color:WHITE, fontSize:22, fontWeight:700 }}>Centro de comando</h2>
+        <div style={{ color:GRAY, fontSize:12, marginTop:4, textTransform:"capitalize" }}>{today}</div>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:28 }}>
+        {statCards.map(card => (
+          <div key={card.label} onClick={card.action}
+            style={{ padding:"18px 20px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:12,
+              cursor:card.action?"pointer":"default", transition:"border-color 0.15s" }}
+            onMouseEnter={e=>{ if(card.action) e.currentTarget.style.borderColor=GOLD; }}
+            onMouseLeave={e=>{ e.currentTarget.style.borderColor=BORDER; }}>
+            <div style={{ fontSize:18, marginBottom:8 }}>{card.icon}</div>
+            <div style={{ fontSize:28, fontWeight:800, color:card.color, lineHeight:1 }}>{card.value}</div>
+            <div style={{ fontSize:11, color:GRAY, marginTop:6 }}>{card.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+          <div style={{ padding:18, background:CARD, border:`1px solid ${BORDER}`, borderRadius:12 }}>
+            <div style={{ color:WHITE, fontWeight:600, fontSize:13, marginBottom:14 }}>📅 Próximas reuniones</div>
+            {upcoming.length === 0
+              ? <div style={{ color:GRAY, fontSize:12 }}>No hay reuniones agendadas próximas.</div>
+              : upcoming.map(({ client, meeting, date }) => (
+                <div key={meeting.id} onClick={()=>onSelectClient(client.id)}
+                  style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start",
+                    padding:"9px 0", borderBottom:`1px solid ${BORDER}`, cursor:"pointer" }}
+                  onMouseEnter={e=>e.currentTarget.style.opacity="0.7"}
+                  onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+                  <div>
+                    <div style={{ color:WHITE, fontSize:13 }}>{meeting.title}</div>
+                    <div style={{ color:GRAY, fontSize:10, marginTop:2 }}>{client.name}</div>
+                  </div>
+                  <span style={{ color:"#60A5FA", fontSize:11, fontWeight:600, whiteSpace:"nowrap", marginLeft:12 }}>{fmtDate(date)}</span>
+                </div>
+              ))
+            }
+          </div>
+
+          <div style={{ padding:18, background:CARD, border:`1px solid ${BORDER}`, borderRadius:12 }}>
+            <div style={{ color:WHITE, fontWeight:600, fontSize:13, marginBottom:14 }}>✓ Completado últimos 7 días</div>
+            {recentlyDone.length === 0
+              ? <div style={{ color:GRAY, fontSize:12 }}>No hay tareas completadas esta semana.</div>
+              : recentlyDone.map(t => (
+                <div key={t.id} style={{ padding:"6px 0", borderBottom:`1px solid ${BORDER}` }}>
+                  <div style={{ color:WHITE, fontSize:12, lineHeight:1.4 }}>{t.title}</div>
+                  <div style={{ color:GRAY, fontSize:10, marginTop:2 }}>{t.clientName} · {t.week}</div>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+          <div style={{ padding:18, background:CARD, border:`1px solid ${BORDER}`, borderRadius:12 }}>
+            <div style={{ color:WHITE, fontWeight:600, fontSize:13, marginBottom:14 }}>👤 Pendientes por responsable</div>
+            {Object.keys(byOwner).length === 0
+              ? <div style={{ color:GREEN, fontSize:12 }}>Todo al día — no hay tareas pendientes.</div>
+              : Object.entries(byOwner).sort((a,b)=>b[1].pending-a[1].pending).map(([owner, info]) => (
+                <div key={owner} style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
+                  padding:"9px 0", borderBottom:`1px solid ${BORDER}` }}>
+                  <div>
+                    <span style={{ color:WHITE, fontSize:13 }}>{owner}</span>
+                    <span style={{ color:GRAY, fontSize:10, marginLeft:8 }}>
+                      {[...info.clients].slice(0,2).join(", ")}{info.clients.size>2?` +${info.clients.size-2}`:""}
+                    </span>
+                  </div>
+                  <span style={{ background:"rgba(212,175,55,0.12)", color:GOLD, fontSize:11, fontWeight:700,
+                    padding:"2px 10px", borderRadius:20 }}>{info.pending}</span>
+                </div>
+              ))
+            }
+          </div>
+
+          <div style={{ padding:18, background:CARD, border:`1px solid ${BORDER}`, borderRadius:12 }}>
+            <div style={{ color:WHITE, fontWeight:600, fontSize:13, marginBottom:14 }}>📊 Progreso por cliente</div>
+            {data.clients.length === 0
+              ? <div style={{ color:GRAY, fontSize:12 }}>
+                  No hay clientes.{" "}
+                  <button onClick={onGoToClients}
+                    style={{ background:"none", border:"none", color:GOLD, cursor:"pointer", fontSize:12, textDecoration:"underline" }}>
+                    Crear primer cliente
+                  </button>
+                </div>
+              : data.clients.map(c => {
+                const ct = c.tasks || [];
+                const cd = ct.filter(t => t.done).length;
+                const cp = ct.length ? Math.round(cd / ct.length * 100) : 0;
+                return (
+                  <div key={c.id} onClick={()=>onSelectClient(c.id)}
+                    style={{ padding:"9px 0", borderBottom:`1px solid ${BORDER}`, cursor:"pointer" }}
+                    onMouseEnter={e=>e.currentTarget.style.opacity="0.7"}
+                    onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
+                      <span style={{ color:WHITE, fontSize:12 }}>{c.name}</span>
+                      <span style={{ color:GRAY, fontSize:11 }}>{cd}/{ct.length} · {cp}%</span>
+                    </div>
+                    <div style={{ height:4, background:BORDER, borderRadius:2 }}>
+                      <div style={{ height:4, width:`${cp}%`, background:cp>70?GREEN:cp>40?GOLD:RED,
+                        borderRadius:2, transition:"width 0.3s" }} />
+                    </div>
+                  </div>
+                );
+              })
+            }
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -2173,10 +2932,13 @@ function SettingsTab({ data, onChange }) {
 // ─── ROOT COMPONENT ───────────────────────────────────────────────────────────
 function MetodoGrowthPartner() {
   const [data, setData] = useState(getInitialData);
-  const [tab, setTab] = useState("clientes");
+  const [tab, setTab] = useState("inicio");
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [saved, setSaved] = useState(true);
   const saveTimer = useRef(null);
+  const [teamUnlocked, setTeamUnlocked] = useState(false);
+  const [teamPinInput, setTeamPinInput] = useState("");
+  const [teamPinError, setTeamPinError] = useState(false);
 
   // Auto-save
   useEffect(() => {
@@ -2189,7 +2951,7 @@ function MetodoGrowthPartner() {
   const updateData = (newData) => setData(newData);
 
   const createClient = (name, channel) => {
-    const c = makeClient(name, channel);
+    const c = makeClient(name, channel, data.globalTasks);
     setData(d => ({ ...d, clients: [...d.clients, c] }));
     setSelectedClientId(c.id);
   };
@@ -2217,7 +2979,7 @@ function MetodoGrowthPartner() {
             <span style={{ color:GRAY, fontWeight:400, fontSize:13, marginLeft:8 }}>GROWTH PARTNER AI</span>
           </div>
           <div style={{ display:"flex", gap:0 }}>
-            {[["clientes","Clientes"],["equipo","Equipo y roles"],["configuracion","Configuración"]].map(([id,label]) => (
+            {[["inicio","Inicio"],["clientes","Clientes"],["metodo","Método"],["equipo","Equipo y roles"],["configuracion","Configuración"]].map(([id,label]) => (
               <button key={id} onClick={()=>{ setTab(id); setSelectedClientId(null); }}
                 style={{ padding:"16px 16px", background:"none", border:"none", borderBottom:`2px solid ${tab===id&&!selectedClientId ? GOLD : "transparent"}`, color: tab===id&&!selectedClientId ? GOLD : GRAY, cursor:"pointer", fontSize:13, fontWeight: tab===id ? 600 : 400, transition:"all 0.15s" }}>
                 {label}
@@ -2235,14 +2997,61 @@ function MetodoGrowthPartner() {
       <div style={{ maxWidth:1200, margin:"0 auto", padding:"28px 24px" }}>
         {/* Client detail takes precedence */}
         {selectedClientId && selectedClient ? (
-          <ClientDetail client={selectedClient} team={data.team} onBack={()=>setSelectedClientId(null)} onChange={updateClient} apiKey={data.settings?.apiKey || ""} flowTemplates={data.flowTemplates||[]} onSaveTemplate={saveTemplate} onDeleteTemplate={deleteTemplate} />
+          <ClientDetail
+            client={selectedClient} team={data.team}
+            onBack={()=>setSelectedClientId(null)} onChange={updateClient}
+            apiKey={data.settings?.apiKey || ""}
+            flowTemplates={data.flowTemplates||[]}
+            onSaveTemplate={saveTemplate} onDeleteTemplate={deleteTemplate}
+            globalMvpSteps={data.globalMvpSteps} globalFullSteps={data.globalFullSteps}
+          />
         ) : (
           <>
+            {tab === "inicio" && (
+              <HomeTab
+                data={data}
+                onGoToClients={()=>setTab("clientes")}
+                onSelectClient={(id)=>{ setSelectedClientId(id); setTab("clientes"); }}
+              />
+            )}
             {tab === "clientes" && (
               <ClientsList clients={data.clients} onSelect={setSelectedClientId} onCreate={createClient} />
             )}
+            {tab === "metodo" && (
+              <MetodoTab data={data} onChange={updateData} />
+            )}
             {tab === "equipo" && (
-              <TeamTab data={data} onChange={updateData} />
+              (!data.settings?.teamPin || teamUnlocked) ? (
+                <TeamTab data={data} onChange={updateData} />
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:340, gap:14 }}>
+                  <div style={{ fontSize:32 }}>🔒</div>
+                  <div style={{ color:WHITE, fontSize:16, fontWeight:700 }}>Área privada</div>
+                  <div style={{ color:GRAY, fontSize:13 }}>Ingresá el PIN para acceder a Equipo y Roles</div>
+                  <input
+                    type="password"
+                    value={teamPinInput}
+                    onChange={e=>{ setTeamPinInput(e.target.value); setTeamPinError(false); }}
+                    onKeyDown={e=>{
+                      if (e.key==="Enter") {
+                        if (teamPinInput === data.settings.teamPin) { setTeamUnlocked(true); setTeamPinInput(""); }
+                        else { setTeamPinError(true); setTeamPinInput(""); }
+                      }
+                    }}
+                    placeholder="PIN"
+                    style={{ background:"#111113", border:`2px solid ${teamPinError?"#EF4444":BORDER}`, borderRadius:10, padding:"12px 20px", color:WHITE, fontSize:18, textAlign:"center", outline:"none", width:180, letterSpacing:8 }}
+                  />
+                  {teamPinError && <div style={{ color:"#EF4444", fontSize:12 }}>PIN incorrecto</div>}
+                  <button
+                    onClick={()=>{
+                      if (teamPinInput === data.settings.teamPin) { setTeamUnlocked(true); setTeamPinInput(""); }
+                      else { setTeamPinError(true); setTeamPinInput(""); }
+                    }}
+                    style={{ padding:"10px 32px", background:GOLD, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:14 }}>
+                    Acceder
+                  </button>
+                </div>
+              )
             )}
             {tab === "configuracion" && (
               <SettingsTab data={data} onChange={updateData} />
