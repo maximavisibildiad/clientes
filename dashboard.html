@@ -1193,6 +1193,9 @@ ${text}`;
     display:"flex", flexDirection:"column", padding:12,
   } : { display:"flex", flexDirection:"column", height:"100%" };
 
+  const _pn = selectedIds.size === 1 ? (nodes.find(n => n.id === [...selectedIds][0]) || null) : null;
+  const _pc = _pn ? (NODE_TYPES[_pn.type] || NODE_TYPES.speech) : null;
+
   return (
     <div style={wrapperStyle}>
       {/* Toolbar */}
@@ -1257,102 +1260,97 @@ ${text}`;
       </div>
 
       {/* Node properties panel */}
-      {selectedIds.size === 1 && (() => {
-        const sn = nodes.find(n=>n.id===[...selectedIds][0]);
-        if (!sn) return null;
-        const cfg = NODE_TYPES[sn.type] || NODE_TYPES.speech;
-        return (
-          <div style={{ padding:"10px 14px", background:"#1A1A1D", border:`1px solid ${BORDER}`, borderRadius:8, marginBottom:6 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+      {_pn && _pc && (
+        <div style={{ padding:"10px 14px", background:"#1A1A1D", border:`1px solid ${BORDER}`, borderRadius:8, marginBottom:6 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
             <span style={{ color:GRAY, fontSize:11, fontWeight:600, minWidth:50 }}>Color:</span>
             {/* Color swatches grid */}
             <div style={{ display:"flex", gap:4, alignItems:"center", flexWrap:"wrap", flex:1 }}>
               {NODE_COLORS.map(c => (
                 <button key={c.label} title={c.label}
-                  onClick={()=>updateNodeProp(sn.id, { customBg: c.bg })}
+                  onClick={()=>updateNodeProp(_pn.id, { customBg: c.bg })}
                   style={{
                     width:20, height:20, borderRadius:4, cursor:"pointer",
-                    background: c.bg || cfg.bg,
-                    border: (sn.customBg===c.bg) ? `2px solid ${GOLD}` : `1px solid rgba(0,0,0,0.3)`,
+                    background: c.bg || _pc.bg,
+                    border: (_pn.customBg===c.bg) ? `2px solid ${GOLD}` : `1px solid rgba(0,0,0,0.3)`,
                     padding:0, flexShrink:0,
                   }}
                 />
               ))}
               {/* Custom hex */}
               <input type="color" title="Color personalizado"
-                value={sn.customBg || "#ffffff"}
-                onChange={e=>updateNodeProp(sn.id, { customBg: e.target.value })}
+                value={_pn.customBg || "#ffffff"}
+                onChange={e=>updateNodeProp(_pn.id, { customBg: e.target.value })}
                 style={{ width:20, height:20, borderRadius:4, border:`1px solid ${BORDER}`, padding:0, cursor:"pointer", background:"none" }}
               />
             </div>
-              <div style={{ width:1, background:BORDER, height:20 }} />
-              {/* Bold toggle */}
-              <button
-                onClick={()=>updateNodeProp(sn.id, { bold: !sn.bold })}
-                style={{ padding:"2px 10px", borderRadius:6, border:`1px solid ${sn.bold ? GOLD : BORDER}`, background: sn.bold ? "rgba(212,175,55,0.15)" : "transparent", color: sn.bold ? GOLD : GRAY, fontWeight:700, fontSize:13, cursor:"pointer" }}>
-                B
-              </button>
-              {/* Delete */}
-              <button
-                onClick={()=>{ deleteNode(sn.id); setSelectedIds(new Set()); }}
-                style={{ padding:"2px 10px", borderRadius:6, border:`1px solid ${RED}`, background:"transparent", color:RED, fontSize:11, cursor:"pointer", marginLeft:"auto" }}>
-                Eliminar
-              </button>
-              <button onClick={()=>setSelectedIds(new Set())} style={{ padding:"2px 8px", borderRadius:6, border:`1px solid ${BORDER}`, background:"transparent", color:GRAY, fontSize:11, cursor:"pointer" }}>✕</button>
-            </div>
-            {/* Shape row */}
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
-              <span style={{ color:GRAY, fontSize:11, fontWeight:600, minWidth:50 }}>Forma:</span>
-              <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                {[
-                  { id:"rectangle", label:"▭ Rect" },
-                  { id:"rounded",   label:"⬭ Redond" },
-                  { id:"pill",      label:"⬯ Pill" },
-                  { id:"circle",    label:"⬤ Círculo" },
-                  { id:"diamond",   label:"◆ Rombo" },
-                  { id:"hexagon",   label:"⬡ Hexag" },
-                  { id:"parallelogram", label:"▱ Paral" },
-                ].map(sh => (
-                  <button key={sh.id}
-                    onClick={()=>updateNodeProp(sn.id, { shape: sh.id })}
-                    style={{ padding:"2px 8px", borderRadius:5, fontSize:10, cursor:"pointer",
-                      background: (sn.shape||"rectangle")===sh.id ? GOLD : "#222225",
-                      color: (sn.shape||"rectangle")===sh.id ? "#141414" : GRAY,
-                      border:`1px solid ${(sn.shape||"rectangle")===sh.id ? GOLD : BORDER}` }}>
-                    {sh.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {/* Text field */}
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
-              <span style={{ color:GRAY, fontSize:11, fontWeight:600, minWidth:50 }}>Texto:</span>
-              <textarea
-                value={sn.text || ""}
-                onChange={e=>updateNodeProp(sn.id, { text: e.target.value })}
-                placeholder="Texto del nodo..."
-                rows={2}
-                onPointerDown={e=>e.stopPropagation()}
-                style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"4px 8px", color:WHITE, fontSize:11, outline:"none", resize:"vertical", fontFamily:"inherit" }}
-              />
-            </div>
-            {/* Link field */}
-            <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
-              <span style={{ color:GRAY, fontSize:11, fontWeight:600, minWidth:50 }}>Link:</span>
-              <input
-                value={sn.link || ""}
-                onChange={e=>updateNodeProp(sn.id, { link: e.target.value })}
-                placeholder="https://... (aparece como botón en el nodo)"
-                style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"4px 8px", color:WHITE, fontSize:11, outline:"none" }}
-              />
-              {sn.link && <a href={sn.link} target="_blank" rel="noreferrer"
-                style={{ padding:"3px 10px", borderRadius:6, background:GOLD, color:"#141414", fontSize:11, fontWeight:700, textDecoration:"none", flexShrink:0 }}>
-                Abrir →
-              </a>}
+            <div style={{ width:1, background:BORDER, height:20 }} />
+            {/* Bold toggle */}
+            <button
+              onClick={()=>updateNodeProp(_pn.id, { bold: !_pn.bold })}
+              style={{ padding:"2px 10px", borderRadius:6, border:`1px solid ${_pn.bold ? GOLD : BORDER}`, background: _pn.bold ? "rgba(212,175,55,0.15)" : "transparent", color: _pn.bold ? GOLD : GRAY, fontWeight:700, fontSize:13, cursor:"pointer" }}>
+              B
+            </button>
+            {/* Delete */}
+            <button
+              onClick={()=>{ deleteNode(_pn.id); setSelectedIds(new Set()); }}
+              style={{ padding:"2px 10px", borderRadius:6, border:`1px solid ${RED}`, background:"transparent", color:RED, fontSize:11, cursor:"pointer", marginLeft:"auto" }}>
+              Eliminar
+            </button>
+            <button onClick={()=>setSelectedIds(new Set())} style={{ padding:"2px 8px", borderRadius:6, border:`1px solid ${BORDER}`, background:"transparent", color:GRAY, fontSize:11, cursor:"pointer" }}>✕</button>
+          </div>
+          {/* Shape row */}
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
+            <span style={{ color:GRAY, fontSize:11, fontWeight:600, minWidth:50 }}>Forma:</span>
+            <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+              {[
+                { id:"rectangle", label:"▭ Rect" },
+                { id:"rounded",   label:"⬭ Redond" },
+                { id:"pill",      label:"⬯ Pill" },
+                { id:"circle",    label:"⬤ Círculo" },
+                { id:"diamond",   label:"◆ Rombo" },
+                { id:"hexagon",   label:"⬡ Hexag" },
+                { id:"parallelogram", label:"▱ Paral" },
+              ].map(sh => (
+                <button key={sh.id}
+                  onClick={()=>updateNodeProp(_pn.id, { shape: sh.id })}
+                  style={{ padding:"2px 8px", borderRadius:5, fontSize:10, cursor:"pointer",
+                    background: (_pn.shape||"rectangle")===sh.id ? GOLD : "#222225",
+                    color: (_pn.shape||"rectangle")===sh.id ? "#141414" : GRAY,
+                    border:`1px solid ${(_pn.shape||"rectangle")===sh.id ? GOLD : BORDER}` }}>
+                  {sh.label}
+                </button>
+              ))}
             </div>
           </div>
-        );
-      })()}
+          {/* Text field */}
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
+            <span style={{ color:GRAY, fontSize:11, fontWeight:600, minWidth:50 }}>Texto:</span>
+            <textarea
+              value={_pn.text || ""}
+              onChange={e=>updateNodeProp(_pn.id, { text: e.target.value })}
+              placeholder="Texto del nodo..."
+              rows={2}
+              onPointerDown={e=>e.stopPropagation()}
+              style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"4px 8px", color:WHITE, fontSize:11, outline:"none", resize:"vertical", fontFamily:"inherit" }}
+            />
+          </div>
+          {/* Link field */}
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
+            <span style={{ color:GRAY, fontSize:11, fontWeight:600, minWidth:50 }}>Link:</span>
+            <input
+              value={_pn.link || ""}
+              onChange={e=>updateNodeProp(_pn.id, { link: e.target.value })}
+              placeholder="https://... (aparece como botón en el nodo)"
+              style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"4px 8px", color:WHITE, fontSize:11, outline:"none" }}
+            />
+            {_pn.link && <a href={_pn.link} target="_blank" rel="noreferrer"
+              style={{ padding:"3px 10px", borderRadius:6, background:GOLD, color:"#141414", fontSize:11, fontWeight:700, textDecoration:"none", flexShrink:0 }}>
+              Abrir →
+            </a>}
+          </div>
+        </div>
+      )}
 
       {/* Edge properties panel */}
       {selectedEdgeId && (() => {
