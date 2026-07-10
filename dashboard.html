@@ -400,6 +400,7 @@ function getInitialData(savedOverride) {
     clients: [],
     settings: { apiKey:"" },
     flowTemplates: [],
+    issues: [],
     globalTasks: GEMA_TASKS.map(t => ({...t, id:"gt_"+t.n})),
     globalMvpSteps: MVP_STEPS.map(s => ({...s, id:"mvp_"+s.n})),
     globalFullSteps: FULL_STEPS.map(s => ({...s, id:"full_"+s.n})),
@@ -950,8 +951,8 @@ function FlowCanvas({ flow, clientName, clientProfile, clientTasks, onUpdate, ap
     { label:"Bosque",    bg:"#14532D" },
   ];
 
-  const nodes = flow.nodes || [];
-  const edges = flow.edges || [];
+  const nodes = Array.isArray(flow.nodes) ? flow.nodes : [];
+  const edges = Array.isArray(flow.edges) ? flow.edges : [];
 
   const snap = (v) => snapGrid ? Math.round(v/20)*20 : v;
 
@@ -1703,9 +1704,9 @@ ${text}`;
 
       {/* Edge properties panel */}
       {selectedEdgeId && (() => {
-        const edge = flow.edges.find(e=>e.id===selectedEdgeId);
+        const edge = edges.find(e=>e.id===selectedEdgeId);
         if (!edge) return null;
-        const updateEdge = (patch) => update({ ...flow, edges: flow.edges.map(e=>e.id===selectedEdgeId?{...e,...patch}:e) });
+        const updateEdge = (patch) => update({ ...flow, edges: edges.map(e=>e.id===selectedEdgeId?{...e,...patch}:e) });
         return (
           <div style={{ padding:"10px 14px", background:"#1A1A1D", border:`1px solid ${GOLD_DIM}`, borderRadius:8, marginBottom:6 }}>
             <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
@@ -1748,7 +1749,7 @@ ${text}`;
               <input value={edge.label||""} onChange={e=>updateEdge({label:e.target.value})}
                 placeholder="Etiqueta libre..."
                 style={{ flex:1, minWidth:80, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"3px 8px", color:WHITE, fontSize:11, outline:"none" }} />
-              <button onClick={()=>{ update({...flow, edges:flow.edges.filter(e=>e.id!==selectedEdgeId)}); setSelectedEdgeId(null); }}
+              <button onClick={()=>{ update({...flow, edges:edges.filter(e=>e.id!==selectedEdgeId)}); setSelectedEdgeId(null); }}
                 style={{ padding:"2px 8px", borderRadius:5, fontSize:10, cursor:"pointer", border:`1px solid ${RED}`, color:RED, background:"transparent" }}>✕</button>
               <button onClick={()=>setSelectedEdgeId(null)}
                 style={{ padding:"2px 8px", borderRadius:5, fontSize:10, cursor:"pointer", border:`1px solid ${BORDER}`, color:GRAY, background:"transparent" }}>Cerrar</button>
@@ -1772,13 +1773,13 @@ ${text}`;
           {/* Edges */}
           <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", overflow:"visible", pointerEvents:"none" }}>
             <defs>
-              {flow.edges.map(edge => (
+              {edges.map(edge => (
                 <marker key={edge.id} id={`arrow-${edge.id}`} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
                   <polygon points="0 0, 8 3, 0 6" fill={edge.edgeColor || "#9B9B9F"} />
                 </marker>
               ))}
             </defs>
-            {flow.edges.map(edge => {
+            {edges.map(edge => {
               const fc = getNodeCenter(edge.from);
               const tc = getNodeCenter(edge.to);
               if (!fc || !tc) return null;
@@ -3091,7 +3092,147 @@ function MetodoTab({ data, onChange }) {
 }
 
 // ─── HOME TAB ─────────────────────────────────────────────────────────────────
-function HomeTab({ data, onGoToClients, onSelectClient }) {
+// ─── ISSUES PANEL ─────────────────────────────────────────────────────────────
+const ISSUE_PRIORITY = {
+  rojo:    { label:"Urgente",  color:"#EF4444", icon:"🔴", bg:"rgba(239,68,68,0.08)" },
+  amarillo:{ label:"Normal",   color:"#F59E0B", icon:"🟡", bg:"rgba(245,158,11,0.08)" },
+  verde:   { label:"Baja",     color:"#22C55E", icon:"🟢", bg:"rgba(34,197,94,0.08)" },
+};
+const ISSUE_STATUS = {
+  pendiente:     { label:"Pendiente",   color:"#9CA3AF" },
+  "en-progreso": { label:"En progreso", color:"#60A5FA" },
+  listo:         { label:"Listo ✓",     color:"#22C55E" },
+};
+
+function IssuesPanel({ issues, team, onChange }) {
+  const [showForm, setShowForm] = useState(false);
+  const [filter, setFilter] = useState("abiertas"); // "abiertas" | "todas"
+  const blank = { title:"", priority:"amarillo", type:"interna", assigneeId:"", dueDate:"", desc:"" };
+  const [form, setForm] = useState(blank);
+
+  const addIssue = () => {
+    if (!form.title.trim()) return;
+    onChange([...(issues||[]), { ...form, id:uid(), status:"pendiente", createdAt:Date.now(), assigneeId:form.assigneeId||null }]);
+    setForm(blank); setShowForm(false);
+  };
+
+  const update = (id, patch) => onChange((issues||[]).map(i=>i.id===id?{...i,...patch}:i));
+  const remove = (id) => onChange((issues||[]).filter(i=>i.id!==id));
+  const clearDone = () => onChange((issues||[]).filter(i=>i.status!=="listo"));
+
+  const list = (issues||[]).filter(i => filter==="todas" || i.status!=="listo");
+  const sorted = [...list].sort((a,b)=>{
+    const order = {rojo:0,amarillo:1,verde:2};
+    return (order[a.priority]||1)-(order[b.priority]||1);
+  });
+  const doneCount = (issues||[]).filter(i=>i.status==="listo").length;
+
+  return (
+    <div style={{ padding:18, background:CARD, border:`1px solid ${BORDER}`, borderRadius:12 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ color:WHITE, fontWeight:600, fontSize:13 }}>🚦 Tablero de tareas</span>
+          {doneCount > 0 && (
+            <button onClick={clearDone} style={{ background:"none", border:"none", color:GRAY, fontSize:10, cursor:"pointer", textDecoration:"underline" }}>
+              limpiar {doneCount} listas
+            </button>
+          )}
+        </div>
+        <div style={{ display:"flex", gap:6 }}>
+          <div style={{ display:"flex", background:"#111113", borderRadius:6, padding:2, border:`1px solid ${BORDER}` }}>
+            {[["abiertas","Abiertas"],["todas","Todas"]].map(([v,l])=>(
+              <button key={v} onClick={()=>setFilter(v)} style={{ padding:"3px 10px", borderRadius:5, fontSize:11, cursor:"pointer", border:"none",
+                background:filter===v?GOLD:"transparent", color:filter===v?"#141414":GRAY, fontWeight:filter===v?700:400 }}>{l}</button>
+            ))}
+          </div>
+          <button onClick={()=>setShowForm(s=>!s)} style={{ padding:"4px 12px", borderRadius:6, fontSize:11, cursor:"pointer",
+            background:showForm?GOLD:"transparent", color:showForm?"#141414":GOLD, border:`1px dashed ${GOLD_DIM}`, fontWeight:600 }}>
+            + Nueva
+          </button>
+        </div>
+      </div>
+
+      {showForm && (
+        <div style={{ marginBottom:12, padding:12, background:"#111113", borderRadius:8, border:`1px solid ${BORDER}`, display:"flex", flexDirection:"column", gap:8 }}>
+          <input value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))} placeholder="Título de la tarea..."
+            style={{ background:"transparent", border:`1px solid ${BORDER}`, borderRadius:6, padding:"7px 10px", color:WHITE, fontSize:12, outline:"none" }} />
+          <textarea value={form.desc} onChange={e=>setForm(f=>({...f,desc:e.target.value}))} placeholder="Descripción (opcional)..."
+            rows={2} style={{ background:"transparent", border:`1px solid ${BORDER}`, borderRadius:6, padding:"7px 10px", color:WHITE, fontSize:11, outline:"none", resize:"none" }} />
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
+            <select value={form.priority} onChange={e=>setForm(f=>({...f,priority:e.target.value}))}
+              style={{ background:"#222225", border:`1px solid ${BORDER}`, borderRadius:6, color:WHITE, fontSize:11, padding:"5px 8px" }}>
+              <option value="rojo">🔴 Urgente</option>
+              <option value="amarillo">🟡 Normal</option>
+              <option value="verde">🟢 Baja</option>
+            </select>
+            <select value={form.type} onChange={e=>setForm(f=>({...f,type:e.target.value}))}
+              style={{ background:"#222225", border:`1px solid ${BORDER}`, borderRadius:6, color:WHITE, fontSize:11, padding:"5px 8px" }}>
+              <option value="interna">Interna</option>
+              <option value="externa">Externa</option>
+            </select>
+            <select value={form.assigneeId||""} onChange={e=>setForm(f=>({...f,assigneeId:e.target.value}))}
+              style={{ background:"#222225", border:`1px solid ${BORDER}`, borderRadius:6, color:WHITE, fontSize:11, padding:"5px 8px" }}>
+              <option value="">Sin asignar</option>
+              {(team||[]).map(m=><option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+            <input type="date" value={form.dueDate||""} onChange={e=>setForm(f=>({...f,dueDate:e.target.value}))}
+              style={{ background:"#222225", border:`1px solid ${BORDER}`, borderRadius:6, color:GRAY, fontSize:11, padding:"5px 8px" }} />
+            <button onClick={addIssue} style={{ padding:"5px 16px", borderRadius:6, fontSize:11, cursor:"pointer", background:GOLD, color:"#141414", border:"none", fontWeight:700, marginLeft:"auto" }}>
+              Agregar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {sorted.length === 0 && (
+        <div style={{ color:GRAY, fontSize:12, paddingTop:4 }}>
+          {filter==="abiertas" ? "No hay tareas abiertas. Todo al día ✓" : "No hay tareas registradas."}
+        </div>
+      )}
+
+      <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+        {sorted.map(issue => {
+          const pc = ISSUE_PRIORITY[issue.priority] || ISSUE_PRIORITY.amarillo;
+          const sc = ISSUE_STATUS[issue.status] || ISSUE_STATUS.pendiente;
+          const assignee = (team||[]).find(m=>m.id===issue.assigneeId);
+          const isDone = issue.status==="listo";
+          return (
+            <div key={issue.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px",
+              background: isDone ? "#111113" : pc.bg, border:`1px solid ${isDone?BORDER:pc.color+"33"}`,
+              borderRadius:8, opacity: isDone ? 0.5 : 1 }}>
+              <span style={{ fontSize:16, flexShrink:0 }}>{pc.icon}</span>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ color: isDone ? GRAY : WHITE, fontSize:12, fontWeight:500, textDecoration:isDone?"line-through":"none" }}>
+                  {issue.title}
+                </div>
+                <div style={{ display:"flex", gap:6, marginTop:3, flexWrap:"wrap", alignItems:"center" }}>
+                  <span style={{ fontSize:9, color:GRAY, background:"#222225", padding:"1px 5px", borderRadius:3, textTransform:"uppercase", letterSpacing:0.5 }}>
+                    {issue.type}
+                  </span>
+                  {assignee && <span style={{ fontSize:10, color:GOLD, fontWeight:600 }}>→ {assignee.name}</span>}
+                  {issue.dueDate && <span style={{ fontSize:10, color: new Date(issue.dueDate+"T00:00")<new Date() && !isDone ? "#EF4444" : GRAY }}>
+                    {new Date(issue.dueDate+"T00:00").toLocaleDateString("es-CO",{day:"2-digit",month:"short"})}
+                  </span>}
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:4, alignItems:"center", flexShrink:0 }}>
+                <select value={issue.status} onChange={e=>update(issue.id,{status:e.target.value})}
+                  style={{ background:"#222225", border:`1px solid ${BORDER}`, borderRadius:5, color:sc.color, fontSize:10, padding:"3px 5px", cursor:"pointer" }}>
+                  <option value="pendiente">Pendiente</option>
+                  <option value="en-progreso">En progreso</option>
+                  <option value="listo">Listo ✓</option>
+                </select>
+                <button onClick={()=>remove(issue.id)} style={{ background:"none", border:"none", color:GRAY, cursor:"pointer", fontSize:13, padding:"0 2px", lineHeight:1 }}>✕</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues }) {
   const allTasks = data.clients.flatMap(c => c.tasks || []);
   const doneTasks = allTasks.filter(t => t.done);
   const pct = allTasks.length ? Math.round(doneTasks.length / allTasks.length * 100) : 0;
@@ -3122,11 +3263,15 @@ function HomeTab({ data, onGoToClients, onSelectClient }) {
   const fmtDate = d => d.toLocaleDateString("es-CO", { weekday:"short", day:"2-digit", month:"short" });
   const today = new Date().toLocaleDateString("es-CO", { weekday:"long", day:"2-digit", month:"long", year:"numeric" });
 
+  const openIssues = (data.issues||[]).filter(i=>i.status!=="listo");
+  const urgentIssues = openIssues.filter(i=>i.priority==="rojo");
+
   const statCards = [
     { label:"Clientes activos",    value: data.clients.length,              color: GOLD,      icon:"👥", action: onGoToClients },
     { label:"Tareas completadas",  value: `${doneTasks.length}/${allTasks.length}`, color: GREEN, icon:"✓" },
     { label:"Progreso global",     value: `${pct}%`,                        color: pct>70?GREEN:pct>40?GOLD:RED, icon:"📈" },
-    { label:"Próximas reuniones",  value: upcoming.length,                  color: "#60A5FA", icon:"📅" },
+    { label:"Reuniones próximas",  value: upcoming.length,                  color: "#60A5FA", icon:"📅" },
+    { label:"Tareas abiertas",     value: openIssues.length,                color: urgentIssues.length>0?"#EF4444":urgentIssues.length===0&&openIssues.length===0?GREEN:GOLD, icon: urgentIssues.length>0?"🔴":"🚦" },
   ];
 
   return (
@@ -3136,7 +3281,7 @@ function HomeTab({ data, onGoToClients, onSelectClient }) {
         <div style={{ color:GRAY, fontSize:12, marginTop:4, textTransform:"capitalize" }}>{today}</div>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:28 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:14, marginBottom:28 }}>
         {statCards.map(card => (
           <div key={card.label} onClick={card.action}
             style={{ padding:"18px 20px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:12,
@@ -3153,22 +3298,30 @@ function HomeTab({ data, onGoToClients, onSelectClient }) {
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
           <div style={{ padding:18, background:CARD, border:`1px solid ${BORDER}`, borderRadius:12 }}>
-            <div style={{ color:WHITE, fontWeight:600, fontSize:13, marginBottom:14 }}>📅 Próximas reuniones</div>
+            <div style={{ color:WHITE, fontWeight:600, fontSize:13, marginBottom:12 }}>📅 Próximas reuniones</div>
             {upcoming.length === 0
               ? <div style={{ color:GRAY, fontSize:12 }}>No hay reuniones agendadas próximas.</div>
-              : upcoming.map(({ client, meeting, date }) => (
-                <div key={meeting.id} onClick={()=>onSelectClient(client.id)}
-                  style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start",
-                    padding:"9px 0", borderBottom:`1px solid ${BORDER}`, cursor:"pointer" }}
-                  onMouseEnter={e=>e.currentTarget.style.opacity="0.7"}
-                  onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
-                  <div>
-                    <div style={{ color:WHITE, fontSize:13 }}>{meeting.title}</div>
-                    <div style={{ color:GRAY, fontSize:10, marginTop:2 }}>{client.name}</div>
-                  </div>
-                  <span style={{ color:"#60A5FA", fontSize:11, fontWeight:600, whiteSpace:"nowrap", marginLeft:12 }}>{fmtDate(date)}</span>
+              : <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {upcoming.map(({ client, meeting, date }) => (
+                    <div key={meeting.id} onClick={()=>onSelectClient(client.id)}
+                      style={{ background:"#FFFFFF", border:"1px solid #E5E7EB", borderRadius:10,
+                        padding:"11px 14px", cursor:"pointer", display:"flex", justifyContent:"space-between",
+                        alignItems:"center", transition:"box-shadow 0.15s" }}
+                      onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.12)"}
+                      onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+                      <div style={{ minWidth:0 }}>
+                        <div style={{ color:"#111827", fontWeight:600, fontSize:13, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                          {meeting.title}
+                        </div>
+                        <div style={{ color:"#6B7280", fontSize:11, marginTop:2 }}>📌 {client.name}</div>
+                      </div>
+                      <div style={{ textAlign:"right", flexShrink:0, marginLeft:12 }}>
+                        <div style={{ color:"#2563EB", fontWeight:700, fontSize:12 }}>{fmtDate(date)}</div>
+                        {meeting.desc && <div style={{ color:"#9CA3AF", fontSize:10, marginTop:1 }}>{meeting.desc.slice(0,30)}{meeting.desc.length>30?"…":""}</div>}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))
             }
           </div>
 
@@ -3187,6 +3340,7 @@ function HomeTab({ data, onGoToClients, onSelectClient }) {
         </div>
 
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+          <IssuesPanel issues={data.issues||[]} team={data.team||[]} onChange={onUpdateIssues} />
           <div style={{ padding:18, background:CARD, border:`1px solid ${BORDER}`, borderRadius:12 }}>
             <div style={{ color:WHITE, fontWeight:600, fontSize:13, marginBottom:14 }}>👤 Pendientes por responsable</div>
             {Object.keys(byOwner).length === 0
@@ -3370,6 +3524,7 @@ function MetodoGrowthPartner() {
                 data={data}
                 onGoToClients={()=>setTab("clientes")}
                 onSelectClient={(id)=>{ setSelectedClientId(id); setTab("clientes"); }}
+                onUpdateIssues={(issues)=>updateData({...data, issues})}
               />
             )}
             {tab === "clientes" && (
