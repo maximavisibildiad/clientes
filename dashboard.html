@@ -19,6 +19,7 @@
 <body>
   <div id="root"></div>
   <script type="text/babel" data-type="module">
+
 // Growth Partner — Dashboard V4
 // Self-contained React component (no imports beyond React hooks)
 
@@ -881,10 +882,15 @@ function FlowCanvas({ flow, clientName, clientProfile, clientTasks, onUpdate, ap
   const [toolMode, setToolMode] = useState("select");
   const [selectedEdgeId, setSelectedEdgeId] = useState(null);
   const spacePanning = useRef(false);
+  const importInputRef = useRef(null);
   const [history, setHistory] = useState([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [clipboard, setClipboard] = useState(null); // {nodes: [], edges: []}
   const [nodeSearch, setNodeSearch] = useState("");
+  const [importLoading, setImportLoading] = useState(false);
+  const [importError, setImportError] = useState(null);
+  const [importPreview, setImportPreview] = useState(null);
+  const [importPreviewEditing, setImportPreviewEditing] = useState([]);
 
   const NODE_COLORS = [
     { label:"Default",   bg:null },
@@ -1234,6 +1240,105 @@ function FlowCanvas({ flow, clientName, clientProfile, clientTasks, onUpdate, ap
 
   const analysisText = showAnalysis ? buildAnalysis() : "";
 
+  const handleImportImage = (e) => {
+    const file = e.target.files[0];
+    if (!file || !apiKey) return;
+    setImportLoading(true);
+    setImportError(null);
+    setImportPreview(null);
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const base64 = ev.target.result.split(",")[1];
+      const mediaType = file.type || "image/png";
+      try {
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json",
+            "x-api-key": apiKey,
+            "anthropic-version":"2023-06-01",
+            "anthropic-dangerous-direct-browser-access":"true",
+          },
+          body: JSON.stringify({
+            model:"claude-sonnet-4-6",
+            max_tokens:4096,
+            messages:[{
+              role:"user",
+              content:[
+                { type:"image", source:{ type:"base64", media_type:mediaType, data:base64 } },
+                { type:"text", text:`Analizá este diagrama de flujo y extraé todos los nodos y conexiones en JSON.
+
+Devolvé ÚNICAMENTE un objeto JSON válido sin texto extra ni bloques de código:
+{
+  "nodes": [
+    { "id": "1", "type": "speech", "text": "texto del nodo", "x": 100, "y": 100 }
+  ],
+  "edges": [
+    { "id": "e1", "from": "1", "to": "2", "label": "" }
+  ]
+}
+
+Tipos de nodo disponibles:
+- "bpmn_start": evento de inicio del flujo (círculo verde)
+- "bpmn_end": evento de fin (círculo rojo)
+- "decision": rombo de decisión / pregunta con bifurcación
+- "accion": acción, tarea o paso del proceso
+- "alerta": alerta, objeción o punto de atención
+- "speech": mensaje, texto o paso genérico
+
+Posiciones x (50–1200), y (50–2000). Mantené el layout visual original. Mínimo 150px vertical entre nodos, 200px horizontal entre columnas.
+Edges: label "Sí", "No" o "" si no tiene texto.
+Extraé TODOS los nodos visibles. Texto máx 100 caracteres.` }
+              ]
+            }]
+          }),
+        });
+        const json = await res.json();
+        if (json.error) throw new Error(json.error.message);
+        const content = (json.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("No se pudo extraer el diagrama.");
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (!parsed.nodes || !Array.isArray(parsed.nodes)) throw new Error("Formato inválido.");
+        setImportPreview(parsed);
+        setImportPreviewEditing(parsed.nodes.map(n=>({...n})));
+      } catch(e) {
+        setImportError("Error: " + (e.message || "verificá tu API key."));
+      } finally {
+        setImportLoading(false);
+        e.target.value = "";
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const confirmImport = () => {
+    if (!importPreview) return;
+    const idMap = {};
+    const newNodes = importPreviewEditing.map(n => {
+      const newId = uid();
+      idMap[n.id] = newId;
+      return {
+        id: newId,
+        type: NODE_TYPES[n.type] ? n.type : "speech",
+        text: n.text || "",
+        x: Math.max(50, Math.min(1200, Number(n.x) || 100)),
+        y: Math.max(50, Math.min(2000, Number(n.y) || 100)),
+      };
+    });
+    const newEdges = (importPreview.edges||[]).map(e=>({
+      id: uid(),
+      from: idMap[e.from] || e.from,
+      to: idMap[e.to] || e.to,
+      label: e.label || "",
+    })).filter(e=>e.from && e.to);
+    const offsetY = nodes.length > 0 ? Math.max(...nodes.map(n=>n.y)) + 120 : 0;
+    const shifted = newNodes.map(n=>({...n, y: n.y + offsetY}));
+    update({ ...flow, nodes:[...nodes,...shifted], edges:[...edges,...newEdges] });
+    setImportPreview(null);
+    setImportPreviewEditing([]);
+  };
+
   const runAiAnalysis = async () => {
     if (!apiKey) return;
     setAiLoading(true);
@@ -1287,6 +1392,69 @@ ${text}`;
 
   return (
     <div style={wrapperStyle}>
+      {/* Import preview modal */}
+      {importPreview && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", zIndex:10000, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div style={{ background:"#1A1A1D", border:`1px solid ${BORDER}`, borderRadius:12, padding:24, width:"100%", maxWidth:640, maxHeight:"82vh", overflow:"auto", display:"flex", flexDirection:"column", gap:0 }}>
+            <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:14 }}>
+              <div>
+                <div style={{ color:WHITE, fontWeight:700, fontSize:16 }}>📷 Diagrama detectado</div>
+                <div style={{ color:GRAY, fontSize:12, marginTop:3 }}>
+                  {importPreviewEditing.length} nodos · {importPreview.edges?.length || 0} conexiones — Revisá y editá los textos antes de cargar al canvas
+                </div>
+              </div>
+              <button onClick={()=>{ setImportPreview(null); setImportPreviewEditing([]); }}
+                style={{ background:"none", border:"none", color:GRAY, cursor:"pointer", fontSize:22, lineHeight:1, padding:0, marginLeft:12 }}>✕</button>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:7, marginBottom:16 }}>
+              {importPreviewEditing.map((n, i) => {
+                const cfg = NODE_TYPES[n.type] || NODE_TYPES.speech;
+                return (
+                  <div key={n.id} style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <span style={{ color:GRAY, fontSize:11, minWidth:22, textAlign:"right", flexShrink:0 }}>{i+1}.</span>
+                    <span style={{ background:cfg.bg, color:cfg.color, border:`1px solid ${cfg.border}`, borderRadius:cfg.defaultShape==="circle"?20:6, padding:"3px 9px", fontSize:10, fontWeight:700, minWidth:82, textAlign:"center", flexShrink:0 }}>
+                      {cfg.label}
+                    </span>
+                    <input
+                      value={n.text}
+                      onChange={e=>{ const c=[...importPreviewEditing]; c[i]={...c[i],text:e.target.value}; setImportPreviewEditing(c); }}
+                      style={{ flex:1, background:"#222225", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 9px", color:WHITE, fontSize:12, outline:"none" }}
+                    />
+                    <select value={n.type} onChange={e=>{ const c=[...importPreviewEditing]; c[i]={...c[i],type:e.target.value}; setImportPreviewEditing(c); }}
+                      style={{ background:"#222225", border:`1px solid ${BORDER}`, borderRadius:6, color:GRAY, fontSize:11, padding:"4px 6px", cursor:"pointer" }}>
+                      {Object.entries(NODE_TYPES).filter(([,cfg])=>!cfg.swimlane).map(([t,cfg])=>(
+                        <option key={t} value={t}>{cfg.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+            {importPreview.edges && importPreview.edges.length > 0 && (
+              <div style={{ marginBottom:16 }}>
+                <div style={{ color:GRAY, fontSize:11, marginBottom:6, fontWeight:600 }}>CONEXIONES DETECTADAS</div>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
+                  {importPreview.edges.map((e,i)=>(
+                    <span key={i} style={{ background:"#222225", border:`1px solid ${BORDER}`, borderRadius:4, padding:"2px 7px", fontSize:10, color:GRAY }}>
+                      {e.from}→{e.to}{e.label ? ` · ${e.label}` : ""}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={{ display:"flex", gap:8, justifyContent:"flex-end", paddingTop:4 }}>
+              <button onClick={()=>{ setImportPreview(null); setImportPreviewEditing([]); }}
+                style={{ padding:"8px 18px", borderRadius:7, fontSize:13, cursor:"pointer", background:"#222225", color:WHITE, border:`1px solid ${BORDER}` }}>
+                Cancelar
+              </button>
+              <button onClick={confirmImport}
+                style={{ padding:"8px 22px", borderRadius:7, fontSize:13, cursor:"pointer", background:GOLD, color:"#141414", border:"none", fontWeight:700 }}>
+                Cargar al canvas →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Toolbar */}
       <div style={{ display:"flex", flexWrap:"wrap", gap:6, padding:"8px 0", borderBottom:`1px solid ${BORDER}`, marginBottom:8 }}>
         {Object.entries(NODE_TYPES).filter(([,cfg])=>!cfg.bpmn).map(([type, cfg]) => (
@@ -1348,6 +1516,20 @@ ${text}`;
           <span style={{ fontSize:10, color:GRAY, padding:"0 4px" }}>📋 {clipboard.nodes.length} en clipboard</span>
         )}
         <div style={{ flex:1 }} />
+        {apiKey && (
+          <>
+            <input ref={importInputRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleImportImage} />
+            <button
+              onClick={()=>importInputRef.current?.click()}
+              disabled={importLoading}
+              style={{ padding:"4px 12px", borderRadius:6, fontSize:12, cursor: importLoading ? "wait" : "pointer", background:"rgba(96,165,250,0.12)", color:"#60A5FA", border:"1px solid rgba(96,165,250,0.4)", fontWeight:600, opacity: importLoading ? 0.7 : 1 }}>
+              {importLoading ? "Leyendo imagen…" : "📷 Importar imagen"}
+            </button>
+          </>
+        )}
+        {importError && (
+          <span style={{ fontSize:11, color:"#EF4444", maxWidth:200 }}>{importError}</span>
+        )}
         <button
           onClick={apiKey ? runAiAnalysis : ()=>setShowAnalysis(s=>!s)}
           disabled={aiLoading}
@@ -2142,12 +2324,30 @@ function ClientDetail({ client, team, onBack, onChange, apiKey, flowTemplates, o
 }
 
 // ─── CLIENTS LIST ─────────────────────────────────────────────────────────────
-function ClientsList({ clients, onSelect, onCreate }) {
+function ClientsList({ clients, onSelect, onCreate, onDelete, teamPin }) {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [newName, setNewName] = useState("");
   const [newChannel, setNewChannel] = useState("Meta Ads");
   const [view, setView] = useState("cards");
+  const [hoveredId, setHoveredId] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deletePinInput, setDeletePinInput] = useState("");
+  const [deletePinError, setDeletePinError] = useState(false);
+
+  const requestDelete = (e, c) => {
+    e.stopPropagation();
+    setDeleteConfirm({ id: c.id, name: c.name });
+    setDeletePinInput("");
+    setDeletePinError(false);
+  };
+
+  const confirmDelete = () => {
+    if (teamPin && deletePinInput !== teamPin) { setDeletePinError(true); return; }
+    onDelete && onDelete(deleteConfirm.id);
+    setDeleteConfirm(null);
+    setDeletePinInput("");
+  };
 
   const filtered = clients.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -2174,6 +2374,38 @@ function ClientsList({ clients, onSelect, onCreate }) {
 
   return (
     <div>
+      {/* Delete confirmation modal */}
+      {deleteConfirm && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div style={{ background:"#1A1A1D", border:"1px solid rgba(239,68,68,0.4)", borderRadius:12, padding:24, width:"100%", maxWidth:400 }}>
+            <div style={{ fontSize:24, marginBottom:8 }}>🗑️</div>
+            <div style={{ color:WHITE, fontWeight:700, fontSize:16, marginBottom:6 }}>Eliminar cliente</div>
+            <div style={{ color:GRAY, fontSize:13, marginBottom:16, lineHeight:1.5 }}>
+              Estás por eliminar a <strong style={{ color:WHITE }}>{deleteConfirm.name}</strong>. Esta acción no se puede deshacer y se perderán todos los datos, tareas y procesos del cliente.
+            </div>
+            {teamPin && (
+              <div style={{ marginBottom:14 }}>
+                <div style={{ color:GRAY, fontSize:12, marginBottom:6 }}>Ingresá tu PIN para confirmar:</div>
+                <input type="password" value={deletePinInput} onChange={e=>{ setDeletePinInput(e.target.value); setDeletePinError(false); }}
+                  placeholder="PIN" autoFocus
+                  style={{ width:"100%", background:BG, border:`1px solid ${deletePinError?"#EF4444":BORDER}`, borderRadius:8, padding:"8px 12px", color:WHITE, fontSize:14, outline:"none", letterSpacing:4 }} />
+                {deletePinError && <div style={{ color:"#EF4444", fontSize:11, marginTop:5 }}>PIN incorrecto.</div>}
+              </div>
+            )}
+            <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
+              <button onClick={()=>setDeleteConfirm(null)}
+                style={{ padding:"8px 18px", borderRadius:7, fontSize:13, cursor:"pointer", background:"#222225", color:WHITE, border:`1px solid ${BORDER}` }}>
+                Cancelar
+              </button>
+              <button onClick={confirmDelete} disabled={teamPin && !deletePinInput}
+                style={{ padding:"8px 20px", borderRadius:7, fontSize:13, cursor:"pointer", background:"#EF4444", color:WHITE, border:"none", fontWeight:700, opacity: teamPin && !deletePinInput ? 0.5 : 1 }}>
+                Eliminar definitivamente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ display:"flex", gap:10, marginBottom:20, alignItems:"center" }}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar cliente..."
           style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"9px 12px", color:WHITE, fontSize:13, outline:"none" }} />
@@ -2207,11 +2439,18 @@ function ClientsList({ clients, onSelect, onCreate }) {
             const isDone = pct === 100;
             const stage = getStage(pct);
             return (
-              <div key={c.id} onClick={()=>onSelect(c.id)}
-                style={{ background:CARD, border:`1px solid ${isDone?GREEN:BORDER}`, borderRadius:12, padding:16, cursor:"pointer", transition:"all 0.15s" }}
-                onMouseEnter={e=>e.currentTarget.style.borderColor=GOLD}
-                onMouseLeave={e=>e.currentTarget.style.borderColor=isDone?GREEN:BORDER}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+              <div key={c.id} style={{ position:"relative", background:CARD, border:`1px solid ${hoveredId===c.id?GOLD:isDone?GREEN:BORDER}`, borderRadius:12, padding:16, cursor:"pointer", transition:"all 0.15s" }}
+                onClick={()=>onSelect(c.id)}
+                onMouseEnter={()=>setHoveredId(c.id)}
+                onMouseLeave={()=>setHoveredId(null)}>
+                {onDelete && hoveredId===c.id && (
+                  <button onClick={e=>requestDelete(e,c)}
+                    title="Eliminar cliente"
+                    style={{ position:"absolute", top:10, right:10, background:"rgba(239,68,68,0.15)", border:"none", color:"#EF4444", cursor:"pointer", borderRadius:6, padding:"3px 8px", fontSize:11, fontWeight:700, lineHeight:1.4, zIndex:1 }}>
+                    🗑
+                  </button>
+                )}
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10, paddingRight: onDelete && hoveredId===c.id ? 28 : 0 }}>
                   <div>
                     <div style={{ color:WHITE, fontWeight:600, fontSize:15 }}>{c.name}</div>
                     <div style={{ color:GRAY, fontSize:11, marginTop:2 }}>{c.profile.channel||"Meta Ads"}</div>
@@ -2243,7 +2482,7 @@ function ClientsList({ clients, onSelect, onCreate }) {
           <table style={{ width:"100%", borderCollapse:"collapse" }}>
             <thead>
               <tr style={{ borderBottom:`1px solid ${BORDER}` }}>
-                {["Cliente","Canal","Contrato","Inicio","Progreso","Etapa","Próx. reunión"].map(h=>(
+                {["Cliente","Canal","Contrato","Inicio","Progreso","Etapa","Próx. reunión",""].map(h=>(
                   <th key={h} style={{ padding:"10px 14px", textAlign:"left", fontSize:11, color:GRAY, fontWeight:600, whiteSpace:"nowrap" }}>{h}</th>
                 ))}
               </tr>
@@ -2273,6 +2512,14 @@ function ClientsList({ clients, onSelect, onCreate }) {
                       <span style={{ fontSize:11, color:stage.color, background:stage.color+"18", padding:"2px 8px", borderRadius:10, fontWeight:600 }}>{stage.label}</span>
                     </td>
                     <td style={{ padding:"10px 14px", color:GRAY, fontSize:12 }}>{nextMeeting(c)}</td>
+                    <td style={{ padding:"6px 10px" }}>
+                      {onDelete && (
+                        <button onClick={e=>{ e.stopPropagation(); requestDelete(e,c); }}
+                          style={{ background:"rgba(239,68,68,0.1)", border:"none", color:"#EF4444", cursor:"pointer", borderRadius:6, padding:"4px 8px", fontSize:12 }}>
+                          🗑
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -2300,11 +2547,17 @@ function ClientsList({ clients, onSelect, onCreate }) {
                   {stageClients.map(c => {
                     const pct = overallPct(c.tasks);
                     return (
-                      <div key={c.id} onClick={()=>onSelect(c.id)}
-                        style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:"12px 14px", cursor:"pointer", transition:"border-color 0.15s" }}
-                        onMouseEnter={e=>e.currentTarget.style.borderColor=stageColor}
-                        onMouseLeave={e=>e.currentTarget.style.borderColor=BORDER}>
-                        <div style={{ color:WHITE, fontWeight:600, fontSize:13, marginBottom:4 }}>{c.name}</div>
+                      <div key={c.id} style={{ position:"relative", background:CARD, border:`1px solid ${hoveredId===c.id?stageColor:BORDER}`, borderRadius:10, padding:"12px 14px", cursor:"pointer", transition:"border-color 0.15s" }}
+                        onClick={()=>onSelect(c.id)}
+                        onMouseEnter={()=>setHoveredId(c.id)}
+                        onMouseLeave={()=>setHoveredId(null)}>
+                        {onDelete && hoveredId===c.id && (
+                          <button onClick={e=>requestDelete(e,c)}
+                            style={{ position:"absolute", top:8, right:8, background:"rgba(239,68,68,0.15)", border:"none", color:"#EF4444", cursor:"pointer", borderRadius:5, padding:"2px 6px", fontSize:11, lineHeight:1.4 }}>
+                            🗑
+                          </button>
+                        )}
+                        <div style={{ color:WHITE, fontWeight:600, fontSize:13, marginBottom:4, paddingRight: onDelete && hoveredId===c.id ? 26 : 0 }}>{c.name}</div>
                         <div style={{ color:GRAY, fontSize:11, marginBottom:8 }}>{c.profile.channel||"Meta Ads"}</div>
                         <div style={{ height:4, background:BORDER, borderRadius:2 }}>
                           <div style={{ height:4, width:`${pct}%`, background:stageColor, borderRadius:2 }} />
@@ -2437,6 +2690,8 @@ function TeamTab({ data, onChange }) {
 function SettingsTab({ data, onChange }) {
   const [key, setKey] = useState(data.settings?.apiKey || "");
   const [saved, setSaved] = useState(false);
+  const [testStatus, setTestStatus] = useState(null);
+  const [testMsg, setTestMsg] = useState("");
   const [importMsg, setImportMsg] = useState("");
   const [pinInput, setPinInput] = useState("");
   const [pinCurrent, setPinCurrent] = useState("");
@@ -2470,6 +2725,28 @@ function SettingsTab({ data, onChange }) {
     onChange({ ...data, settings: { ...(data.settings||{}), apiKey: key.trim() } });
     setSaved(true);
     setTimeout(()=>setSaved(false), 2000);
+  };
+
+  const testConnection = async () => {
+    if (!key.trim()) return;
+    setTestStatus("loading"); setTestMsg("");
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "x-api-key": key.trim(),
+          "anthropic-version":"2023-06-01",
+          "anthropic-dangerous-direct-browser-access":"true",
+        },
+        body: JSON.stringify({ model:"claude-haiku-4-5-20251001", max_tokens:10, messages:[{ role:"user", content:"Responde solo: OK" }] }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error.message);
+      setTestStatus("ok"); setTestMsg("Conexión exitosa — Claude responde correctamente.");
+    } catch(e) {
+      setTestStatus("error"); setTestMsg(e.message || "API key inválida o error de red.");
+    }
   };
 
   const handleExport = () => {
@@ -2513,17 +2790,24 @@ function SettingsTab({ data, onChange }) {
           <input
             type="password"
             value={key}
-            onChange={e=>setKey(e.target.value)}
+            onChange={e=>{ setKey(e.target.value); setTestStatus(null); setTestMsg(""); }}
             placeholder="sk-ant-api03-..."
             style={{ flex:1, background:BG, border:`1px solid ${BORDER}`, borderRadius:8, padding:"8px 12px", color:WHITE, fontSize:13, outline:"none" }}
           />
+          <button onClick={testConnection} disabled={!key.trim() || testStatus==="loading"}
+            style={{ padding:"8px 14px", background:"transparent", color:testStatus==="ok"?GREEN:testStatus==="error"?"#EF4444":GRAY, border:`1px solid ${testStatus==="ok"?GREEN:testStatus==="error"?"#EF4444":BORDER}`, borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, opacity: testStatus==="loading"?0.7:1 }}>
+            {testStatus==="loading" ? "Probando…" : testStatus==="ok" ? "✓ OK" : testStatus==="error" ? "✕ Error" : "Probar"}
+          </button>
           <button onClick={saveKey}
             style={{ padding:"8px 18px", background:GOLD, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:13 }}>
             {saved ? "✓ Guardado" : "Guardar"}
           </button>
         </div>
-        {data.settings?.apiKey && (
-          <div style={{ marginTop:8, color:GREEN, fontSize:11 }}>✓ API key activa — el análisis de IA está habilitado en los procesos comerciales.</div>
+        {testMsg && (
+          <div style={{ marginTop:8, fontSize:11, color: testStatus==="ok" ? GREEN : "#EF4444" }}>{testMsg}</div>
+        )}
+        {!testMsg && data.settings?.apiKey && (
+          <div style={{ marginTop:8, color:GREEN, fontSize:11 }}>✓ API key activa — el análisis de IA y la importación de imágenes están habilitados.</div>
         )}
       </div>
 
@@ -2960,6 +3244,11 @@ function MetodoGrowthPartner() {
     setData(d => ({ ...d, clients: d.clients.map(c => c.id === updatedClient.id ? updatedClient : c) }));
   };
 
+  const deleteClient = (id) => {
+    setData(d => ({ ...d, clients: d.clients.filter(c => c.id !== id) }));
+    if (selectedClientId === id) setSelectedClientId(null);
+  };
+
   const saveTemplate = (name, flow) => {
     setData(d => ({ ...d, flowTemplates: [...(d.flowTemplates||[]), { id:uid(), name, createdAt:Date.now(), nodes:flow.nodes, edges:flow.edges }] }));
   };
@@ -3015,7 +3304,7 @@ function MetodoGrowthPartner() {
               />
             )}
             {tab === "clientes" && (
-              <ClientsList clients={data.clients} onSelect={setSelectedClientId} onCreate={createClient} />
+              <ClientsList clients={data.clients} onSelect={setSelectedClientId} onCreate={createClient} onDelete={deleteClient} teamPin={data.settings?.teamPin || ""} />
             )}
             {tab === "metodo" && (
               <MetodoTab data={data} onChange={updateData} />
