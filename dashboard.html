@@ -8,6 +8,8 @@
   <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #0E0E10; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
@@ -19,6 +21,10 @@
 <body>
   <div id="root"></div>
   <script type="text/babel" data-type="module">
+// Growth Partner — Dashboard V4
+// Self-contained React component (no imports beyond React hooks)
+
+const { useState, useEffect, useRef, useCallback } = React;
 
 // Growth Partner — Dashboard V4
 // Self-contained React component (no imports beyond React hooks)
@@ -392,7 +398,7 @@ function makeClient(name, channel, globalTasks) {
   };
 }
 
-function getInitialData() {
+function getInitialData(savedOverride) {
   const defaults = {
     roles: [{ id: uid(), name:"Estratega" }, { id: uid(), name:"Tráfico" }, { id: uid(), name:"Diseño" }],
     team: [{ id: uid(), name:"Pena" }, { id: uid(), name:"JP" }],
@@ -404,7 +410,7 @@ function getInitialData() {
     globalFullSteps: FULL_STEPS.map(s => ({...s, id:"full_"+s.n})),
     teamFlow: { id: "team_flow", name: "Organigrama del equipo", nodes: [], edges: [] },
   };
-  const saved = storageGet();
+  const saved = savedOverride || storageGet();
   if (saved && saved.clients) {
     return {
       ...defaults,
@@ -416,6 +422,25 @@ function getInitialData() {
     };
   }
   return defaults;
+}
+
+// ─── FIREBASE SYNC ────────────────────────────────────────────────────────────
+const FB_CONFIG = {
+  apiKey: "AIzaSyC3u2YQK4Wvn7Ub94PFvI_tmdL8AFx9cqc",
+  databaseURL: "https://growth-partner-37a25-default-rtdb.firebaseio.com",
+  projectId: "growth-partner-37a25",
+  appId: "1:513071811214:web:fb8e9acc5fac2a368e97df",
+};
+let _fbRef = null;
+function getFbRef() {
+  if (_fbRef) return _fbRef;
+  try {
+    if (typeof firebase !== "undefined") {
+      if (!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
+      _fbRef = firebase.database().ref("gp_dashboard");
+    }
+  } catch(e) { console.warn("Firebase init:", e); }
+  return _fbRef;
 }
 
 function syncTasksToClients(clients, globalTasks) {
@@ -3219,16 +3244,55 @@ function MetodoGrowthPartner() {
   const [tab, setTab] = useState("inicio");
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [saved, setSaved] = useState(true);
+  const [fbStatus, setFbStatus] = useState("sync"); // "sync" | "ok" | "error"
   const saveTimer = useRef(null);
+  const lastSaveTs = useRef(0);
   const [teamUnlocked, setTeamUnlocked] = useState(false);
   const [teamPinInput, setTeamPinInput] = useState("");
   const [teamPinError, setTeamPinError] = useState(false);
 
-  // Auto-save
+  // Firebase: carga inicial + listener de cambios remotos
+  useEffect(() => {
+    const ref = getFbRef();
+    if (!ref) return;
+    ref.once("value").then(snap => {
+      const fbData = snap.val();
+      if (fbData && fbData.clients) {
+        const { _ts, ...clean } = fbData;
+        const merged = getInitialData(clean);
+        setData(merged);
+        try { localStorage.setItem("gp_metodo_v4", JSON.stringify(clean)); } catch(_){}
+        lastSaveTs.current = _ts || 0;
+      }
+      setFbStatus("ok");
+      ref.on("value", snap2 => {
+        const d2 = snap2.val();
+        if (!d2) return;
+        if ((d2._ts || 0) > lastSaveTs.current + 2000) {
+          const { _ts: ts2, ...clean2 } = d2;
+          setData(getInitialData(clean2));
+          try { localStorage.setItem("gp_metodo_v4", JSON.stringify(clean2)); } catch(_){}
+          lastSaveTs.current = ts2 || 0;
+        }
+      });
+    }).catch(() => setFbStatus("error"));
+    return () => { ref.off(); };
+  }, []);
+
+  // Auto-save: localStorage + Firebase
   useEffect(() => {
     clearTimeout(saveTimer.current);
     setSaved(false);
-    saveTimer.current = setTimeout(() => { storageSet(data); setSaved(true); }, 800);
+    saveTimer.current = setTimeout(() => {
+      storageSet(data);
+      const ref = getFbRef();
+      if (ref) {
+        const ts = Date.now();
+        lastSaveTs.current = ts;
+        ref.set({ ...data, _ts: ts }).catch(() => setFbStatus("error"));
+      }
+      setSaved(true);
+    }, 1000);
     return () => clearTimeout(saveTimer.current);
   }, [data]);
 
@@ -3276,8 +3340,8 @@ function MetodoGrowthPartner() {
             ))}
           </div>
           <div style={{ flex:1 }} />
-          <div style={{ fontSize:11, color: saved ? GREEN : GOLD_DIM }}>
-            {saved ? "Guardado" : "Guardando..."}
+          <div style={{ fontSize:11, color: !saved ? GOLD_DIM : fbStatus==="ok" ? GREEN : fbStatus==="error" ? "#EF4444" : GRAY }}>
+            {!saved ? "Guardando..." : fbStatus==="ok" ? "☁ Sincronizado" : fbStatus==="error" ? "Sin conexión" : "Conectando..."}
           </div>
         </div>
       </div>
