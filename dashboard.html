@@ -419,6 +419,19 @@ function getInitialData(savedOverride) {
   return defaults;
 }
 
+// ─── FIREBASE ARRAY FIX ──────────────────────────────────────────────────────
+// Firebase convierte arrays a objetos con claves numéricas. Esta función los revierte.
+function fbToJs(v) {
+  if (v === null || v === undefined || typeof v !== "object" || Array.isArray(v)) return v;
+  const keys = Object.keys(v);
+  const isArr = keys.length > 0 && keys.every(k => /^\d+$/.test(k)) &&
+    keys.map(Number).sort((a,b)=>a-b).every((k,i)=>k===i);
+  if (isArr) return keys.sort((a,b)=>Number(a)-Number(b)).map(k=>fbToJs(v[k]));
+  const out = {};
+  for (const k of keys) out[k] = fbToJs(v[k]);
+  return out;
+}
+
 // ─── FIREBASE SYNC ────────────────────────────────────────────────────────────
 const FB_CONFIG = {
   apiKey: "AIzaSyC3u2YQK4Wvn7Ub94PFvI_tmdL8AFx9cqc",
@@ -1984,12 +1997,11 @@ ${text}`;
 
 // ─── PROCESO COMERCIAL TAB ────────────────────────────────────────────────────
 function ProcesoComercialTab({ client, onChange, apiKey, flowTemplates, onSaveTemplate, onDeleteTemplate }) {
-  const [activeFlowId, setActiveFlowId] = useState(client.flows[0]?.id || null);
+  const flows = Array.isArray(client.flows) ? client.flows : [];
+  const [activeFlowId, setActiveFlowId] = useState(flows[0]?.id || null);
   const [renamingId, setRenamingId] = useState(null);
   const [renameVal, setRenameVal] = useState("");
   const [showTemplates, setShowTemplates] = useState(false);
-
-  const flows = client.flows || [];
   const activeFlow = flows.find(f=>f.id===activeFlowId) || flows[0];
 
   const addFlow = () => {
@@ -3253,10 +3265,10 @@ function MetodoGrowthPartner() {
 
     const syncFromFirebase = (isInitial = false) => {
       ref.once("value").then(snap => {
-        const fbData = snap.val();
-        if (fbData && fbData.clients) {
-          const { _ts, ...clean } = fbData;
-          // Aplicar si: carga inicial, O si Firebase tiene datos más nuevos que nuestro último guardado
+        const fbRaw = snap.val();
+        if (fbRaw && fbRaw.clients) {
+          const { _ts, ...rest } = fbRaw;
+          const clean = fbToJs(rest); // convierte objetos numéricos de Firebase de vuelta a arrays
           if (isInitial || (_ts || 0) > lastSaveTs.current + 2000) {
             setData(getInitialData(clean));
             try { localStorage.setItem("gp_metodo_v4", JSON.stringify(clean)); } catch(_){}
