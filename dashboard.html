@@ -468,7 +468,17 @@ function getInitialData(savedOverride) {
     flowTemplates: [],
     issues: [],
     personal: {
-      metricsItems: [], metricsLogs: {}, goals: ["Viaje Europa con hija","Go to 10K","Construir patrimonio $100K"],
+      metricsItems: [
+        { id:"m1", label:"Entrenamiento completado" },
+        { id:"m2", label:"Calorías y proteína en rango" },
+        { id:"m3", label:"8h de sueño" },
+        { id:"m4", label:"Sin alcohol / sin ultra-procesados" },
+        { id:"m5", label:"Bloque de trabajo profundo (2h+)" },
+        { id:"m6", label:"Tiempo de calidad con hija" },
+        { id:"m7", label:"Lectura o aprendizaje 30min" },
+        { id:"m8", label:"Revisión de finanzas / métricas GP" },
+      ],
+      metricsLogs: {}, goals: ["Viaje Europa con hija","Go to 10K","Construir patrimonio $100K"],
       trainingLogs: {}, bodyLogs: {}, measurements: [],
       finance: { monthlyData:{}, gastoCategories:{ personales:["Hija","Casa","Juan","Tarjeta"], profesionales:["Softwares","Equipo","Impuestos","Anuncios"], otros:["Vuelos","Muebles"] }, assets:[], liabilities:[] }
     },
@@ -2845,6 +2855,39 @@ const PPL_PLAN = [
 
 const MUSCLE_TARGETS = { Pecho:[8,16,20], Espalda:[10,18,22], Hombro:[8,16,20], Tríceps:[6,14,18], Bíceps:[6,14,18], Cuádriceps:[8,16,20], Femoral:[6,14,18], Glúteos:[6,14,18], Gemelos:[8,16,20] };
 
+const EXERCISE_CUES = {
+  p1e1:  { focus:"Escápulas abajo y adentro. El pecho empuja — no los brazos.", why:"Ejercicio compuesto principal. Va primero porque cargás más cuando el SNC está fresco." },
+  p1e2:  { focus:"Core apretado. Sin arquear la lumbar. El hombro mueve, nada más.", why:"Mancuerna permite corregir desbalances y mayor rango de movimiento que barra." },
+  p1e3:  { focus:"Banco a 30°. Si no sentís el pecho superior trabajar, bajá el peso.", why:"El press plano no desarrolla la cabeza clavicular. Sin inclinado, el pecho superior queda vacío." },
+  p1e4:  { focus:"Peso liviano. Cero impulso. Pulgar levemente hacia abajo al final.", why:"El único ejercicio que activa el deltoides lateral directamente. Da la anchura de hombros." },
+  p1e5:  { focus:"Codos fijos al costado. Solo el antebrazo. Apretá el tríceps 1 segundo arriba.", why:"Polea mantiene tensión constante todo el recorrido. Aislamiento seguro para doble fallo." },
+  l1e1:  { focus:"Empezá deprimiendo las escápulas. El pecho al frente — no la barbilla.", why:"El mejor ejercicio para ancho de espalda. Extensión completa abajo en cada rep." },
+  l1e2:  { focus:"Espalda paralela al suelo. Tira hacia el ombligo, no el pecho. Apretá la escápula.", why:"Las dominadas dan ancho. El remo da grosor. Necesitás los dos." },
+  l1e3:  { focus:"Dejá que el hombro baje al bajar la mancuerna. Codo al techo al subir.", why:"Unilateral. Corrige desbalances. Mayor ROM que el remo con barra." },
+  l1e4:  { focus:"Codos arriba. Manos a los lados de la cara. Apretá fuerte 1 segundo.", why:"El ejercicio más importante para salud de hombros. Equilibra todo el empuje de los press." },
+  l1e5:  { focus:"Codos pegados al cuerpo. Supinación completa arriba. Sin impulso de caderas.", why:"La barra permite la carga máxima en bíceps. Seguro para doble fallo." },
+  g1e1:  { focus:"Rodillas siguen los pies. Espalda neutral. Empujá el suelo hacia abajo.", why:"El ejercicio más completo del cuerpo. Cuádriceps, glúteos, femorales, core, espalda." },
+  g1e2:  { focus:"Caderas hacia atrás — no doblés la cintura. Barra rozando las piernas.", why:"Femorales en posición estirada bajo carga. El estímulo más efectivo para hipertrofia femoral." },
+  g1e3:  { focus:"Rodillas no colapsen. No bloquees arriba. Rango completo cada rep.", why:"Volumen de cuádriceps sin carga espinal. Permite rendir más después del peso muerto." },
+  g1e4:  { focus:"3 segundos bajando. El excéntrico es donde más crece el músculo.", why:"Aislamiento de femorales. Los compuestos no los trabajan en todo su rango." },
+  g1e5:  { focus:"Rango completo — talón lo más abajo posible. Pausa 1 segundo arriba. Sin rebote.", why:"Gemelos son resistentes. Necesitan rango completo y volumen alto para crecer." },
+  p2e1:  { focus:"Banco a 30-45°. La barra toca el pecho superior. Escápulas activas.", why:"Push 2 invierte el orden: inclinado primero. Estimula el pecho superior con barra (mayor carga)." },
+  p2e2:  { focus:"Segundo día de hombros. Peso honesto. Técnica limpia.", why:"Los deltoides necesitan alto volumen semanal. 6 series semanales de press overhead." },
+  p2e3:  { focus:"Torso inclinado adelante = más pecho. Vertical = más tríceps. Elegís el ángulo.", why:"Trabaja pecho inferior que el inclinado no toca. Compuesto para tríceps también." },
+  p2e4:  { focus:"Vas al doble de series semanales en deltoides lateral. No lo skipees.", why:"El músculo que más define anchura visual. Alta proporción de fibras lentas — necesita volumen." },
+  p2e5:  { focus:"Brazo levantado estira la cabeza larga del tríceps. Sentís el estiramiento?", why:"La cabeza larga es la más grande del tríceps. El overhead activa lo que la polea no llega." },
+  l2e1:  { focus:"Caderas y hombros suben al mismo tiempo. Si la cadera sube primero, la espalda baja redondea.", why:"El ejercicio más demandante del sistema nervioso. 5-6 reps para mantener técnica con carga máxima." },
+  l2e2:  { focus:"Codo hacia la cadera. No hacia atrás. Sentís el dorsal contraerse?", why:"Complementa las dominadas con agarre diferente. Más activación del dorsal en aducción." },
+  l2e3:  { focus:"Espalda media controlada. Ya hiciste peso muerto pesado — esto es volumen adicional.", why:"Máquina permite más series con menos riesgo después del peso muerto convencional." },
+  l2e4:  { focus:"Agarre neutro activa el braquial — el músculo debajo del bíceps que lo empuja hacia arriba.", why:"Da más grosor y pico al brazo que el curl normal. Complementa el curl de barra del martes." },
+  l2e5:  { focus:"Codos arriba. Manos a los lados de la cara. Rotadores externos trabajando.", why:"Segundo día de salud del manguito rotador. No lo skipees — previene lesiones de hombro." },
+  g2e1:  { focus:"Torso vertical. Codos arriba. Si el torso cae, la movilidad de tobillo/cadera limita.", why:"Más cuádriceps que la sentadilla trasera por el torso vertical. Estímulo diferente." },
+  g2e2:  { focus:"Paso largo. Rodilla trasera al suelo. Empujá el talón delantero al subir.", why:"Unilateral: detecta y corrige desbalances que la sentadilla bilateral esconde." },
+  g2e3:  { focus:"Pies al ancho de hombros. Apretá glúteos 2 segundos arriba. Caderas horizontales.", why:"El mejor ejercicio para glúteos. En la sentadilla son auxiliares. Aquí son protagonistas." },
+  g2e4:  { focus:"Extendé completamente. Los últimos 30° activan el VMO que los compuestos no alcanzan.", why:"El VMO (vasto medial oblicuo) da la forma de lágrima al cuádriceps. Solo se activa en extensión total." },
+  g2e5:  { focus:"Rodilla flexionada = sóleo trabaja. Diferente al de pie. Rango completo.", why:"El sóleo se relaja cuando la rodilla está doblada. Sin sentado, el sóleo queda sin entrenar." },
+};
+
 function isoWeek(d) {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay()||7));
@@ -2978,7 +3021,7 @@ function EntrenamientoSection({ personal, onUpdate }) {
     setMDate(""); setMArm(""); setMLeg(""); setMWst("");
   };
 
-  const tabs = [["sesion","Sesión"],["prs","PRs"],["volumen","Volumen"],["alertas","Alertas"],["cuerpo","Cuerpo"]];
+  const tabs = [["sesion","Sesión"],["prs","PRs"],["volumen","Volumen"],["alertas","Alertas"],["cuerpo","Cuerpo"],["mentalidad","Mentalidad"]];
   const inp = (v,s,ph,w=70) => (
     <input value={v} onChange={e=>s(e.target.value)} placeholder={ph}
       style={{ width:w, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 8px", color:WHITE, fontSize:12, outline:"none" }} />
@@ -3079,6 +3122,14 @@ function EntrenamientoSection({ personal, onUpdate }) {
                       style={{ fontSize:11, padding:"3px 8px", borderRadius:6, background:"transparent", color:GRAY, border:`1px solid ${BORDER}`, cursor:"pointer" }}>
                       ✕ deshacer
                     </button>
+                  </div>
+                )}
+
+                {/* Cues */}
+                {isOpen && EXERCISE_CUES[ex.id] && (
+                  <div style={{ padding:"8px 14px", background:"#0a0a0b", borderTop:`1px solid ${BORDER}22` }}>
+                    <div style={{ color:GOLD, fontSize:11, fontWeight:700, marginBottom:3 }}>FOCO: <span style={{ color:WHITE, fontWeight:400 }}>{EXERCISE_CUES[ex.id].focus}</span></div>
+                    <div style={{ color:GRAY, fontSize:10, fontStyle:"italic" }}>{EXERCISE_CUES[ex.id].why}</div>
                   </div>
                 )}
 
@@ -3208,6 +3259,118 @@ function EntrenamientoSection({ personal, onUpdate }) {
               })}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── MENTALIDAD ── */}
+      {subTab==="mentalidad" && (
+        <div>
+          {/* Identidad */}
+          <div style={{ background:"#0a0a0b", border:`1px solid ${GOLD}44`, borderRadius:12, padding:24, marginBottom:16, borderLeft:`4px solid ${GOLD}` }}>
+            <div style={{ color:GOLD, fontWeight:800, fontSize:11, letterSpacing:2, marginBottom:12 }}>IDENTIDAD</div>
+            <div style={{ color:WHITE, fontSize:15, lineHeight:1.8, fontWeight:500 }}>
+              No sos alguien que "intenta" entrenar.<br/>
+              Ya lo decidiste. La decisión está tomada.<br/>
+              Lo que hacés ahora es ejecutar — aunque no tengas ganas, aunque estés cansado, aunque todo lo demás esté en llamas.
+            </div>
+            <div style={{ marginTop:14, color:GRAY, fontSize:13, lineHeight:1.7 }}>
+              Cada vez que aparecés cuando no querés, estás callosando la mente.<br/>
+              Cada serie que empujás cuando el cuerpo dice basta, estás construyendo la versión más fuerte de vos mismo.<br/>
+              Nadie te va a dar eso. Tenés que ganártelo todos los días.
+            </div>
+          </div>
+
+          {/* Regla del 40% */}
+          <div style={{ background:"#0a0a0b", border:`1px solid #EF444444`, borderRadius:12, padding:24, marginBottom:16, borderLeft:`4px solid #EF4444` }}>
+            <div style={{ color:"#EF4444", fontWeight:800, fontSize:11, letterSpacing:2, marginBottom:12 }}>LA REGLA DEL 40%</div>
+            <div style={{ color:WHITE, fontSize:15, lineHeight:1.8, fontWeight:600 }}>
+              Cuando tu mente diga "no puedo más" — llegaste al 40%.
+            </div>
+            <div style={{ marginTop:10, color:GRAY, fontSize:13, lineHeight:1.7 }}>
+              El restante 60% está bloqueado por una mente que nunca fue entrenada para aguantar.<br/>
+              La incomodidad no es una señal de parar. Es una señal de que estás en el lugar correcto.<br/>
+              El dolor físico que sentís en la última serie es exactamente la sensación que separa quién eras de quién estás siendo.
+            </div>
+            <div style={{ marginTop:14, padding:"10px 14px", background:"#EF444411", borderRadius:8, color:"#EF4444", fontSize:12, fontWeight:600 }}>
+              En la última serie, cuando querés parar — hacé una rep más. Siempre una más.
+            </div>
+          </div>
+
+          {/* Disciplina vs Motivación */}
+          <div style={{ background:"#0a0a0b", border:`1px solid ${BORDER}`, borderRadius:12, padding:24, marginBottom:16 }}>
+            <div style={{ color:WHITE, fontWeight:800, fontSize:11, letterSpacing:2, marginBottom:12 }}>DISCIPLINA ≠ MOTIVACIÓN</div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+              <div style={{ padding:14, background:"#EF444411", borderRadius:8, border:`1px solid #EF444433` }}>
+                <div style={{ color:"#EF4444", fontWeight:700, fontSize:12, marginBottom:8 }}>MOTIVACIÓN</div>
+                <div style={{ color:GRAY, fontSize:12, lineHeight:1.7 }}>
+                  → Aparece cuando tenés ganas<br/>
+                  → Depende de cómo dormiste<br/>
+                  → Desaparece cuando más la necesitás<br/>
+                  → Es emocional, es inestable<br/>
+                  → La mayoría la espera y no llega
+                </div>
+              </div>
+              <div style={{ padding:14, background:"#22C55E11", borderRadius:8, border:`1px solid #22C55E33` }}>
+                <div style={{ color:"#22C55E", fontWeight:700, fontSize:12, marginBottom:8 }}>DISCIPLINA</div>
+                <div style={{ color:WHITE, fontSize:12, lineHeight:1.7 }}>
+                  → Aparecés igual, siempre<br/>
+                  → No pregunta cómo te sentís<br/>
+                  → Es más fuerte cuando duele<br/>
+                  → Es una identidad, no un estado<br/>
+                  → Se construye rep a rep, día a día
+                </div>
+              </div>
+            </div>
+            <div style={{ marginTop:14, color:GRAY, fontSize:12, lineHeight:1.7 }}>
+              Lunes con lluvia. Martes sin haber dormido bien. Miércoles con el trabajo acumulado. Sábado después de una semana larga.<br/>
+              <span style={{ color:WHITE, fontWeight:600 }}>Igual.</span>
+            </div>
+          </div>
+
+          {/* Propósito */}
+          <div style={{ background:"#0a0a0b", border:`1px solid #8B5CF644`, borderRadius:12, padding:24, marginBottom:16, borderLeft:`4px solid #8B5CF6` }}>
+            <div style={{ color:"#8B5CF6", fontWeight:800, fontSize:11, letterSpacing:2, marginBottom:12 }}>POR QUÉ ESTÁS HACIENDO ESTO</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              {[
+                ["Un cuerpo que funcione", "No estás entrenando para verte bien en una foto. Estás construyendo un cuerpo que funcione como debería a los 30, 40, 50 años. Uno que no te falle cuando lo necesitás."],
+                ["Una mente callosada", "Cada sesión difícil que terminás entrena tu mente para aguantar más. La disciplina del gym se traduce directo a los negocios, a las decisiones, a cómo respondés cuando las cosas se ponen difíciles."],
+                ["Lo que le enseñás a tu hija", "No es lo que le decís. Es lo que ve que hace su viejo todos los días. Un hombre que se levanta y hace lo que tiene que hacer aunque no tenga ganas es el mejor modelo que existe. Eso no se enseña con palabras."],
+                ["Ir a 10K", "El cuerpo que necesitás para construir el negocio que querés no es el que tenés si no te cuidás. Energía, claridad mental, presencia — todo depende de esto."],
+              ].map(([title, text]) => (
+                <div key={title} style={{ padding:"12px 14px", background:"#8B5CF611", borderRadius:8 }}>
+                  <div style={{ color:"#8B5CF6", fontWeight:700, fontSize:12, marginBottom:4 }}>→ {title}</div>
+                  <div style={{ color:GRAY, fontSize:12, lineHeight:1.7 }}>{text}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Cómo aplicar la rutina */}
+          <div style={{ background:"#0a0a0b", border:`1px solid ${BORDER}`, borderRadius:12, padding:24, marginBottom:16 }}>
+            <div style={{ color:WHITE, fontWeight:800, fontSize:11, letterSpacing:2, marginBottom:16 }}>CÓMO EJECUTAR LA RUTINA</div>
+            {[
+              ["Progresión doble", "Si llegás al tope del rango de reps en todas las series durante 2 sesiones seguidas → subís 2.5-5% de peso la próxima vez. El objetivo no es hacer lo mismo siempre. El objetivo es ser más fuerte que la semana pasada."],
+              ["RIR — Reps en Reserva", "RIR 1-2 significa que podrías hacer 1 o 2 reps más. No es llegar al fallo en cada serie. Es estar cerca del límite real — eso maximiza el estímulo sin destruir la recuperación."],
+              ["Doble fallo (DF)", "En el último ejercicio de cada sesión: serie 1 al fallo real, 10 segundos de descanso, serie 2 al fallo real. No es rest-pause con reps parciales — son 2 series completas al fallo. Lo hacés en ejercicios de aislamiento donde el fallo es seguro."],
+              ["Deload cada 6-8 semanas", "Reducís el volumen (número de series) en un 40% durante una semana. Los pesos se mantienen. Esto no es debilidad — es cuando el cuerpo supercompensa y realmente crece. Sin deload, acumulás fatiga hasta que el cuerpo te obliga a parar."],
+              ["Recuperación", "Sueño, calorías y proteína no son opcionales. Sin ellos el entrenamiento no construye nada — solo rompe. Registralo en la pestaña Cuerpo. Lo que no se mide, no se mejora."],
+            ].map(([title, text]) => (
+              <div key={title} style={{ marginBottom:12, paddingBottom:12, borderBottom:`1px solid ${BORDER}22` }}>
+                <div style={{ color:GOLD, fontWeight:700, fontSize:12, marginBottom:4 }}>{title}</div>
+                <div style={{ color:GRAY, fontSize:12, lineHeight:1.7 }}>{text}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Mantra */}
+          <div style={{ background:`linear-gradient(135deg, #0a0a0b 0%, #111113 100%)`, border:`1px solid ${GOLD}66`, borderRadius:12, padding:24, textAlign:"center" }}>
+            <div style={{ color:GOLD, fontWeight:800, fontSize:22, letterSpacing:3, marginBottom:8 }}>STAY HARD</div>
+            <div style={{ color:GRAY, fontSize:12, lineHeight:1.8 }}>
+              La mayoría para cuando duele.<br/>
+              Vos empezás cuando duele.<br/>
+              Esa es la única diferencia que importa.
+            </div>
+          </div>
         </div>
       )}
 
