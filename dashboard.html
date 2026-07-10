@@ -67,6 +67,12 @@ function storageSet(val) {
   } catch (_) {}
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(val)); } catch (_) {}
 }
+function storageGetTs() {
+  try { return parseInt(localStorage.getItem(STORAGE_KEY + "_ts") || "0"); } catch(_) { return 0; }
+}
+function storageSetTs(ts) {
+  try { localStorage.setItem(STORAGE_KEY + "_ts", ts.toString()); } catch(_) {}
+}
 
 // ─── GEMA TASKS (261) ─────────────────────────────────────────────────────────
 const GEMA_TASKS = [
@@ -3420,13 +3426,41 @@ function MetodoGrowthPartner() {
     const syncFromFirebase = (isInitial = false) => {
       ref.once("value").then(snap => {
         const fbRaw = snap.val();
+        const localTs = storageGetTs();
+
         if (fbRaw && fbRaw.clients) {
-          const { _ts, ...rest } = fbRaw;
-          const clean = fbToJs(rest); // convierte objetos numéricos de Firebase de vuelta a arrays
-          if (isInitial || (_ts || 0) > lastSaveTs.current + 2000) {
+          const { _ts: fbTs, ...rest } = fbRaw;
+          const fbTime = fbTs || 0;
+          const clean = fbToJs(rest);
+
+          if (fbTime > localTs + 2000) {
+            // Firebase es más nuevo → usar Firebase
             setData(getInitialData(clean));
-            try { localStorage.setItem("gp_metodo_v4", JSON.stringify(clean)); } catch(_){}
-            if (isInitial) lastSaveTs.current = _ts || 0;
+            storageSet(clean);
+            storageSetTs(fbTime);
+            lastSaveTs.current = fbTime;
+          } else if (isInitial && localTs >= fbTime) {
+            // Local es más nuevo o igual → mantener local y empujar a Firebase
+            const localData = storageGet();
+            if (localData && localData.clients) {
+              const ts = localTs || Date.now();
+              lastSaveTs.current = ts;
+              ref.set({ ...localData, _ts: ts }).catch(() => {});
+            }
+          } else if (!isInitial && fbTime > lastSaveTs.current + 2000) {
+            // Polling: Firebase tiene datos del socio
+            setData(getInitialData(clean));
+            storageSet(clean);
+            storageSetTs(fbTime);
+            lastSaveTs.current = fbTime;
+          }
+        } else if (isInitial) {
+          // Firebase vacío → subir datos locales
+          const localData = storageGet();
+          if (localData && localData.clients) {
+            const ts = localTs || Date.now();
+            lastSaveTs.current = ts;
+            ref.set({ ...localData, _ts: ts }).catch(() => {});
           }
         }
         setFbStatus("ok");
@@ -3443,10 +3477,11 @@ function MetodoGrowthPartner() {
     clearTimeout(saveTimer.current);
     setSaved(false);
     saveTimer.current = setTimeout(() => {
+      const ts = Date.now();
       storageSet(data);
+      storageSetTs(ts);
       const ref = getFbRef();
       if (ref) {
-        const ts = Date.now();
         lastSaveTs.current = ts;
         ref.set({ ...data, _ts: ts }).catch(() => setFbStatus("error"));
       }
