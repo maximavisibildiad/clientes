@@ -3246,32 +3246,30 @@ function MetodoGrowthPartner() {
   const [teamPinInput, setTeamPinInput] = useState("");
   const [teamPinError, setTeamPinError] = useState(false);
 
-  // Firebase: carga inicial + listener de cambios remotos
+  // Firebase: carga inicial + polling cada 30 segundos
   useEffect(() => {
     const ref = getFbRef();
-    if (!ref) return;
-    ref.once("value").then(snap => {
-      const fbData = snap.val();
-      if (fbData && fbData.clients) {
-        const { _ts, ...clean } = fbData;
-        const merged = getInitialData(clean);
-        setData(merged);
-        try { localStorage.setItem("gp_metodo_v4", JSON.stringify(clean)); } catch(_){}
-        lastSaveTs.current = _ts || 0;
-      }
-      setFbStatus("ok");
-      ref.on("value", snap2 => {
-        const d2 = snap2.val();
-        if (!d2) return;
-        if ((d2._ts || 0) > lastSaveTs.current + 2000) {
-          const { _ts: ts2, ...clean2 } = d2;
-          setData(getInitialData(clean2));
-          try { localStorage.setItem("gp_metodo_v4", JSON.stringify(clean2)); } catch(_){}
-          lastSaveTs.current = ts2 || 0;
+    if (!ref) { setFbStatus("error"); return; }
+
+    const syncFromFirebase = (isInitial = false) => {
+      ref.once("value").then(snap => {
+        const fbData = snap.val();
+        if (fbData && fbData.clients) {
+          const { _ts, ...clean } = fbData;
+          // Aplicar si: carga inicial, O si Firebase tiene datos más nuevos que nuestro último guardado
+          if (isInitial || (_ts || 0) > lastSaveTs.current + 2000) {
+            setData(getInitialData(clean));
+            try { localStorage.setItem("gp_metodo_v4", JSON.stringify(clean)); } catch(_){}
+            if (isInitial) lastSaveTs.current = _ts || 0;
+          }
         }
-      });
-    }).catch(() => setFbStatus("error"));
-    return () => { ref.off(); };
+        setFbStatus("ok");
+      }).catch(() => setFbStatus("error"));
+    };
+
+    syncFromFirebase(true);
+    const interval = setInterval(() => syncFromFirebase(false), 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // Auto-save: localStorage + Firebase
