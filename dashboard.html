@@ -3110,18 +3110,18 @@ const ISSUE_STATUS = {
   listo:         { label:"Listo ✓",     color:"#22C55E" },
 };
 
-function IssuesPanel({ issues, team, onChange }) {
+function IssuesPanel({ issues, team, roles, onChange }) {
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState("abiertas");
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
-  const blank = { title:"", priority:"amarillo", type:"interna", assigneeId:"", dueDate:"", desc:"" };
+  const blank = { title:"", priority:"amarillo", type:"interna", area:"", assigneeId:"", dueDate:"", desc:"" };
   const [form, setForm] = useState(blank);
 
   const addIssue = () => {
     if (!form.title.trim()) return;
     onChange([...(issues||[]), { ...form, id:uid(), status:"pendiente", createdAt:Date.now(), assigneeId:form.assigneeId||null }]);
-    setForm(blank); setShowForm(false);
+    setForm(blank); // forma sigue abierta para agregar más
   };
 
   const update = (id, patch) => onChange((issues||[]).map(i=>i.id===id?{...i,...patch}:i));
@@ -3150,6 +3150,7 @@ function IssuesPanel({ issues, team, onChange }) {
           <div style={{ display:"flex", gap:6 }}>
             <span style={{ background:"#FEF3C7", color:"#92400E", fontSize:11, fontWeight:600, padding:"2px 9px", borderRadius:20 }}>{openCount} abiertas</span>
             {doneCount > 0 && <span style={{ background:"#D1FAE5", color:"#065F46", fontSize:11, fontWeight:600, padding:"2px 9px", borderRadius:20 }}>{doneCount} listas</span>}
+            <span style={{ background:"#F3F4F6", color:"#6B7280", fontSize:11, fontWeight:600, padding:"2px 9px", borderRadius:20 }}>{(issues||[]).length} total</span>
           </div>
         </div>
         <div style={{ display:"flex", gap:8 }}>
@@ -3185,6 +3186,11 @@ function IssuesPanel({ issues, team, onChange }) {
               style={{ background:"#FFFFFF", border:"1px solid #D1D5DB", borderRadius:8, color:"#374151", fontSize:13, padding:"8px 10px" }}>
               <option value="interna">Interna</option>
               <option value="externa">Externa</option>
+            </select>
+            <select value={form.area||""} onChange={e=>setForm(f=>({...f,area:e.target.value}))}
+              style={{ background:"#FFFFFF", border:"1px solid #D1D5DB", borderRadius:8, color:"#374151", fontSize:13, padding:"8px 10px" }}>
+              <option value="">— Área —</option>
+              {(roles||[]).map(r=><option key={r.id} value={r.name}>{r.name}</option>)}
             </select>
             <select value={form.assigneeId||""} onChange={e=>setForm(f=>({...f,assigneeId:e.target.value}))}
               style={{ background:"#FFFFFF", border:"1px solid #D1D5DB", borderRadius:8, color:"#374151", fontSize:13, padding:"8px 10px" }}>
@@ -3244,6 +3250,11 @@ function IssuesPanel({ issues, team, onChange }) {
                       <option value="interna">Interna</option>
                       <option value="externa">Externa</option>
                     </select>
+                    <select value={ef.area||""} onChange={e=>setEditForm(f=>({...f,area:e.target.value}))}
+                      style={{ background:"#FFFFFF", border:"1px solid #D1D5DB", borderRadius:7, color:"#374151", fontSize:12, padding:"6px 8px" }}>
+                      <option value="">— Área —</option>
+                      {(roles||[]).map(r=><option key={r.id} value={r.name}>{r.name}</option>)}
+                    </select>
                     <select value={ef.assigneeId||""} onChange={e=>setEditForm(f=>({...f,assigneeId:e.target.value}))}
                       style={{ background:"#FFFFFF", border:"1px solid #D1D5DB", borderRadius:7, color:"#374151", fontSize:12, padding:"6px 8px" }}>
                       <option value="">Sin asignar</option>
@@ -3280,6 +3291,11 @@ function IssuesPanel({ issues, team, onChange }) {
                     <span style={{ fontSize:10, color:"#6B7280", background:"#F3F4F6", padding:"2px 7px", borderRadius:4, textTransform:"uppercase", letterSpacing:0.5, fontWeight:600 }}>
                       {issue.type}
                     </span>
+                    {issue.area && (
+                      <span style={{ fontSize:11, color:"#7C3AED", background:"#EDE9FE", padding:"2px 8px", borderRadius:4, fontWeight:600 }}>
+                        {issue.area}
+                      </span>
+                    )}
                     {assignee && (
                       <span style={{ fontSize:11, color:"#1D4ED8", background:"#EFF6FF", padding:"2px 8px", borderRadius:4, fontWeight:600 }}>
                         👤 {assignee.name}
@@ -3484,7 +3500,7 @@ function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues }) {
       </div>
 
       <div style={{ marginTop:20 }}>
-        <IssuesPanel issues={data.issues||[]} team={data.team||[]} onChange={onUpdateIssues} />
+        <IssuesPanel issues={data.issues||[]} team={data.team||[]} roles={data.roles||[]} onChange={onUpdateIssues} />
       </div>
     </div>
   );
