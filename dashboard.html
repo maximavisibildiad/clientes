@@ -3112,7 +3112,9 @@ const ISSUE_STATUS = {
 
 function IssuesPanel({ issues, team, onChange }) {
   const [showForm, setShowForm] = useState(false);
-  const [filter, setFilter] = useState("abiertas"); // "abiertas" | "todas"
+  const [filter, setFilter] = useState("abiertas");
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({});
   const blank = { title:"", priority:"amarillo", type:"interna", assigneeId:"", dueDate:"", desc:"" };
   const [form, setForm] = useState(blank);
 
@@ -3124,7 +3126,13 @@ function IssuesPanel({ issues, team, onChange }) {
 
   const update = (id, patch) => onChange((issues||[]).map(i=>i.id===id?{...i,...patch}:i));
   const remove = (id) => onChange((issues||[]).filter(i=>i.id!==id));
-  const clearDone = () => onChange((issues||[]).filter(i=>i.status!=="listo"));
+
+  const startEdit = (issue) => { setEditingId(issue.id); setEditForm({ ...issue }); };
+  const saveEdit = () => {
+    if (!editForm.title?.trim()) return;
+    update(editingId, editForm);
+    setEditingId(null);
+  };
 
   const list = (issues||[]).filter(i => filter==="todas" || i.status!=="listo");
   const sorted = [...list].sort((a,b)=>{
@@ -3132,58 +3140,60 @@ function IssuesPanel({ issues, team, onChange }) {
     return (order[a.priority]||1)-(order[b.priority]||1);
   });
   const doneCount = (issues||[]).filter(i=>i.status==="listo").length;
+  const openCount = (issues||[]).filter(i=>i.status!=="listo").length;
 
   return (
-    <div style={{ padding:18, background:CARD, border:`1px solid ${BORDER}`, borderRadius:12 }}>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <span style={{ color:WHITE, fontWeight:600, fontSize:13 }}>🚦 Tablero de tareas</span>
-          {doneCount > 0 && (
-            <button onClick={clearDone} style={{ background:"none", border:"none", color:GRAY, fontSize:10, cursor:"pointer", textDecoration:"underline" }}>
-              limpiar {doneCount} listas
-            </button>
-          )}
+    <div style={{ padding:22, background:"#FFFFFF", border:"1px solid #E5E7EB", borderRadius:14 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:18 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <span style={{ color:"#111827", fontWeight:700, fontSize:16 }}>🚦 Tablero de Tareas</span>
+          <div style={{ display:"flex", gap:6 }}>
+            <span style={{ background:"#FEF3C7", color:"#92400E", fontSize:11, fontWeight:600, padding:"2px 9px", borderRadius:20 }}>{openCount} abiertas</span>
+            {doneCount > 0 && <span style={{ background:"#D1FAE5", color:"#065F46", fontSize:11, fontWeight:600, padding:"2px 9px", borderRadius:20 }}>{doneCount} listas</span>}
+          </div>
         </div>
-        <div style={{ display:"flex", gap:6 }}>
-          <div style={{ display:"flex", background:"#111113", borderRadius:6, padding:2, border:`1px solid ${BORDER}` }}>
+        <div style={{ display:"flex", gap:8 }}>
+          <div style={{ display:"flex", background:"#F3F4F6", borderRadius:8, padding:3 }}>
             {[["abiertas","Abiertas"],["todas","Todas"]].map(([v,l])=>(
-              <button key={v} onClick={()=>setFilter(v)} style={{ padding:"3px 10px", borderRadius:5, fontSize:11, cursor:"pointer", border:"none",
-                background:filter===v?GOLD:"transparent", color:filter===v?"#141414":GRAY, fontWeight:filter===v?700:400 }}>{l}</button>
+              <button key={v} onClick={()=>setFilter(v)} style={{ padding:"4px 13px", borderRadius:6, fontSize:12, cursor:"pointer", border:"none",
+                background:filter===v?"#FFFFFF":"transparent", color:filter===v?"#111827":"#6B7280",
+                fontWeight:filter===v?700:500, boxShadow:filter===v?"0 1px 3px rgba(0,0,0,0.1)":"none" }}>{l}</button>
             ))}
           </div>
-          <button onClick={()=>setShowForm(s=>!s)} style={{ padding:"4px 12px", borderRadius:6, fontSize:11, cursor:"pointer",
-            background:showForm?GOLD:"transparent", color:showForm?"#141414":GOLD, border:`1px dashed ${GOLD_DIM}`, fontWeight:600 }}>
-            + Nueva
+          <button onClick={()=>setShowForm(s=>!s)} style={{ padding:"6px 16px", borderRadius:8, fontSize:12, cursor:"pointer",
+            background:showForm?GOLD:"#111827", color:showForm?"#141414":"#FFFFFF", border:"none", fontWeight:700 }}>
+            + Nueva tarea
           </button>
         </div>
       </div>
 
       {showForm && (
-        <div style={{ marginBottom:12, padding:12, background:"#111113", borderRadius:8, border:`1px solid ${BORDER}`, display:"flex", flexDirection:"column", gap:8 }}>
+        <div style={{ marginBottom:16, padding:16, background:"#F9FAFB", borderRadius:10, border:"1px solid #E5E7EB", display:"flex", flexDirection:"column", gap:10 }}>
           <input value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))} placeholder="Título de la tarea..."
-            style={{ background:"transparent", border:`1px solid ${BORDER}`, borderRadius:6, padding:"7px 10px", color:WHITE, fontSize:12, outline:"none" }} />
+            onKeyDown={e=>e.key==="Enter"&&addIssue()}
+            style={{ background:"#FFFFFF", border:"1px solid #D1D5DB", borderRadius:8, padding:"10px 14px", color:"#111827", fontSize:14, outline:"none" }} />
           <textarea value={form.desc} onChange={e=>setForm(f=>({...f,desc:e.target.value}))} placeholder="Descripción (opcional)..."
-            rows={2} style={{ background:"transparent", border:`1px solid ${BORDER}`, borderRadius:6, padding:"7px 10px", color:WHITE, fontSize:11, outline:"none", resize:"none" }} />
+            rows={2} style={{ background:"#FFFFFF", border:"1px solid #D1D5DB", borderRadius:8, padding:"10px 14px", color:"#374151", fontSize:13, outline:"none", resize:"none" }} />
           <div style={{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" }}>
             <select value={form.priority} onChange={e=>setForm(f=>({...f,priority:e.target.value}))}
-              style={{ background:"#222225", border:`1px solid ${BORDER}`, borderRadius:6, color:WHITE, fontSize:11, padding:"5px 8px" }}>
+              style={{ background:"#FFFFFF", border:"1px solid #D1D5DB", borderRadius:8, color:"#374151", fontSize:13, padding:"8px 10px" }}>
               <option value="rojo">🔴 Urgente</option>
               <option value="amarillo">🟡 Normal</option>
               <option value="verde">🟢 Baja</option>
             </select>
             <select value={form.type} onChange={e=>setForm(f=>({...f,type:e.target.value}))}
-              style={{ background:"#222225", border:`1px solid ${BORDER}`, borderRadius:6, color:WHITE, fontSize:11, padding:"5px 8px" }}>
+              style={{ background:"#FFFFFF", border:"1px solid #D1D5DB", borderRadius:8, color:"#374151", fontSize:13, padding:"8px 10px" }}>
               <option value="interna">Interna</option>
               <option value="externa">Externa</option>
             </select>
             <select value={form.assigneeId||""} onChange={e=>setForm(f=>({...f,assigneeId:e.target.value}))}
-              style={{ background:"#222225", border:`1px solid ${BORDER}`, borderRadius:6, color:WHITE, fontSize:11, padding:"5px 8px" }}>
+              style={{ background:"#FFFFFF", border:"1px solid #D1D5DB", borderRadius:8, color:"#374151", fontSize:13, padding:"8px 10px" }}>
               <option value="">Sin asignar</option>
               {(team||[]).map(m=><option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
             <input type="date" value={form.dueDate||""} onChange={e=>setForm(f=>({...f,dueDate:e.target.value}))}
-              style={{ background:"#222225", border:`1px solid ${BORDER}`, borderRadius:6, color:GRAY, fontSize:11, padding:"5px 8px" }} />
-            <button onClick={addIssue} style={{ padding:"5px 16px", borderRadius:6, fontSize:11, cursor:"pointer", background:GOLD, color:"#141414", border:"none", fontWeight:700, marginLeft:"auto" }}>
+              style={{ background:"#FFFFFF", border:"1px solid #D1D5DB", borderRadius:8, color:"#374151", fontSize:13, padding:"8px 10px" }} />
+            <button onClick={addIssue} style={{ padding:"8px 22px", borderRadius:8, fontSize:13, cursor:"pointer", background:GOLD, color:"#141414", border:"none", fontWeight:700, marginLeft:"auto" }}>
               Agregar
             </button>
           </div>
@@ -3191,45 +3201,117 @@ function IssuesPanel({ issues, team, onChange }) {
       )}
 
       {sorted.length === 0 && (
-        <div style={{ color:GRAY, fontSize:12, paddingTop:4 }}>
-          {filter==="abiertas" ? "No hay tareas abiertas. Todo al día ✓" : "No hay tareas registradas."}
+        <div style={{ color:"#9CA3AF", fontSize:13, padding:"20px 0", textAlign:"center" }}>
+          {filter==="abiertas" ? "✓ No hay tareas abiertas. Todo al día." : "No hay tareas registradas."}
         </div>
       )}
 
-      <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
         {sorted.map(issue => {
           const pc = ISSUE_PRIORITY[issue.priority] || ISSUE_PRIORITY.amarillo;
           const sc = ISSUE_STATUS[issue.status] || ISSUE_STATUS.pendiente;
           const assignee = (team||[]).find(m=>m.id===issue.assigneeId);
           const isDone = issue.status==="listo";
+          const isOverdue = issue.dueDate && new Date(issue.dueDate+"T00:00") < new Date() && !isDone;
+          const isEditing = editingId === issue.id;
+          const ef = editForm;
           return (
-            <div key={issue.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px",
-              background: isDone ? "#111113" : pc.bg, border:`1px solid ${isDone?BORDER:pc.color+"33"}`,
-              borderRadius:8, opacity: isDone ? 0.5 : 1 }}>
-              <span style={{ fontSize:16, flexShrink:0 }}>{pc.icon}</span>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ color: isDone ? GRAY : WHITE, fontSize:12, fontWeight:500, textDecoration:isDone?"line-through":"none" }}>
-                  {issue.title}
-                </div>
-                <div style={{ display:"flex", gap:6, marginTop:3, flexWrap:"wrap", alignItems:"center" }}>
-                  <span style={{ fontSize:9, color:GRAY, background:"#222225", padding:"1px 5px", borderRadius:3, textTransform:"uppercase", letterSpacing:0.5 }}>
-                    {issue.type}
-                  </span>
-                  {assignee && <span style={{ fontSize:10, color:GOLD, fontWeight:600 }}>→ {assignee.name}</span>}
-                  {issue.dueDate && <span style={{ fontSize:10, color: new Date(issue.dueDate+"T00:00")<new Date() && !isDone ? "#EF4444" : GRAY }}>
-                    {new Date(issue.dueDate+"T00:00").toLocaleDateString("es-CO",{day:"2-digit",month:"short"})}
-                  </span>}
-                </div>
-              </div>
-              <div style={{ display:"flex", gap:4, alignItems:"center", flexShrink:0 }}>
-                <select value={issue.status} onChange={e=>update(issue.id,{status:e.target.value})}
-                  style={{ background:"#222225", border:`1px solid ${BORDER}`, borderRadius:5, color:sc.color, fontSize:10, padding:"3px 5px", cursor:"pointer" }}>
-                  <option value="pendiente">Pendiente</option>
-                  <option value="en-progreso">En progreso</option>
-                  <option value="listo">Listo ✓</option>
-                </select>
-                <button onClick={()=>remove(issue.id)} style={{ background:"none", border:"none", color:GRAY, cursor:"pointer", fontSize:13, padding:"0 2px", lineHeight:1 }}>✕</button>
-              </div>
+            <div key={issue.id} style={{
+              background: isEditing ? "#FAFAFA" : isDone ? "#F0FDF4" : "#FFFFFF",
+              border: isEditing ? "2px solid #D4AF37" : isDone ? "1px solid #BBF7D0" : `1px solid ${pc.color}44`,
+              borderLeft: `4px solid ${isEditing ? GOLD : isDone ? "#22C55E" : pc.color}`,
+              borderRadius:10, padding:"14px 16px",
+              display:"flex", flexDirection:"column", gap:8,
+              opacity: isDone ? 0.8 : 1,
+            }}>
+              {isEditing ? (
+                <>
+                  <input value={ef.title||""} onChange={e=>setEditForm(f=>({...f,title:e.target.value}))}
+                    autoFocus onKeyDown={e=>e.key==="Enter"&&saveEdit()}
+                    style={{ background:"#FFFFFF", border:"1px solid #D1D5DB", borderRadius:7, padding:"8px 10px", color:"#111827", fontSize:14, fontWeight:600, outline:"none" }} />
+                  <textarea value={ef.desc||""} onChange={e=>setEditForm(f=>({...f,desc:e.target.value}))} rows={2}
+                    placeholder="Descripción..."
+                    style={{ background:"#FFFFFF", border:"1px solid #D1D5DB", borderRadius:7, padding:"8px 10px", color:"#374151", fontSize:12, outline:"none", resize:"none" }} />
+                  <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                    <select value={ef.priority||"amarillo"} onChange={e=>setEditForm(f=>({...f,priority:e.target.value}))}
+                      style={{ background:"#FFFFFF", border:"1px solid #D1D5DB", borderRadius:7, color:"#374151", fontSize:12, padding:"6px 8px" }}>
+                      <option value="rojo">🔴 Urgente</option>
+                      <option value="amarillo">🟡 Normal</option>
+                      <option value="verde">🟢 Baja</option>
+                    </select>
+                    <select value={ef.type||"interna"} onChange={e=>setEditForm(f=>({...f,type:e.target.value}))}
+                      style={{ background:"#FFFFFF", border:"1px solid #D1D5DB", borderRadius:7, color:"#374151", fontSize:12, padding:"6px 8px" }}>
+                      <option value="interna">Interna</option>
+                      <option value="externa">Externa</option>
+                    </select>
+                    <select value={ef.assigneeId||""} onChange={e=>setEditForm(f=>({...f,assigneeId:e.target.value}))}
+                      style={{ background:"#FFFFFF", border:"1px solid #D1D5DB", borderRadius:7, color:"#374151", fontSize:12, padding:"6px 8px" }}>
+                      <option value="">Sin asignar</option>
+                      {(team||[]).map(m=><option key={m.id} value={m.id}>{m.name}</option>)}
+                    </select>
+                    <input type="date" value={ef.dueDate||""} onChange={e=>setEditForm(f=>({...f,dueDate:e.target.value}))}
+                      style={{ background:"#FFFFFF", border:"1px solid #D1D5DB", borderRadius:7, color:"#374151", fontSize:12, padding:"6px 8px" }} />
+                  </div>
+                  <div style={{ display:"flex", gap:8 }}>
+                    <button onClick={saveEdit} style={{ flex:1, padding:"7px", borderRadius:7, fontSize:13, cursor:"pointer", background:GOLD, color:"#141414", border:"none", fontWeight:700 }}>
+                      Guardar
+                    </button>
+                    <button onClick={()=>setEditingId(null)} style={{ padding:"7px 14px", borderRadius:7, fontSize:13, cursor:"pointer", background:"#F3F4F6", color:"#374151", border:"none" }}>
+                      Cancelar
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ display:"flex", alignItems:"flex-start", gap:8 }}>
+                    <span style={{ fontSize:18, flexShrink:0, lineHeight:1.2 }}>{pc.icon}</span>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ color: isDone ? "#6B7280" : "#111827", fontSize:14, fontWeight:600,
+                        textDecoration: isDone ? "line-through" : "none", lineHeight:1.3 }}>
+                        {issue.title}
+                      </div>
+                      {issue.desc && <div style={{ color:"#9CA3AF", fontSize:12, marginTop:4 }}>{issue.desc}</div>}
+                    </div>
+                    <button onClick={()=>startEdit(issue)} style={{ background:"none", border:"1px solid #E5E7EB", borderRadius:6, color:"#9CA3AF", cursor:"pointer", fontSize:11, padding:"3px 8px", flexShrink:0 }}>
+                      ✏ Editar
+                    </button>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                    <span style={{ fontSize:10, color:"#6B7280", background:"#F3F4F6", padding:"2px 7px", borderRadius:4, textTransform:"uppercase", letterSpacing:0.5, fontWeight:600 }}>
+                      {issue.type}
+                    </span>
+                    {assignee && (
+                      <span style={{ fontSize:11, color:"#1D4ED8", background:"#EFF6FF", padding:"2px 8px", borderRadius:4, fontWeight:600 }}>
+                        👤 {assignee.name}
+                      </span>
+                    )}
+                    {issue.dueDate && (
+                      <span style={{ fontSize:11, color: isOverdue?"#DC2626":"#6B7280", background:isOverdue?"#FEE2E2":"#F3F4F6", padding:"2px 7px", borderRadius:4, fontWeight:isOverdue?700:400 }}>
+                        {isOverdue?"⚠ ":""}{new Date(issue.dueDate+"T00:00").toLocaleDateString("es-CO",{day:"2-digit",month:"short"})}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:2 }}>
+                    <select value={issue.status} onChange={e=>update(issue.id,{status:e.target.value})}
+                      style={{ flex:1, background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:7, color:sc.color, fontSize:12, padding:"6px 8px", cursor:"pointer", fontWeight:600 }}>
+                      <option value="pendiente">⏳ Pendiente</option>
+                      <option value="en-progreso">🔄 En progreso</option>
+                      <option value="listo">✅ Listo</option>
+                    </select>
+                    {isDone ? (
+                      <button onClick={()=>remove(issue.id)} style={{
+                        padding:"6px 14px", borderRadius:7, fontSize:12, cursor:"pointer",
+                        background:"#EF4444", color:"#FFFFFF", border:"none", fontWeight:700, flexShrink:0
+                      }}>🗑 Eliminar</button>
+                    ) : (
+                      <button onClick={()=>remove(issue.id)} style={{
+                        background:"none", border:"1px solid #E5E7EB", borderRadius:7, color:"#D1D5DB",
+                        cursor:"pointer", fontSize:13, padding:"6px 10px", lineHeight:1, flexShrink:0
+                      }}>✕</button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           );
         })}
@@ -3346,7 +3428,6 @@ function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues }) {
         </div>
 
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-          <IssuesPanel issues={data.issues||[]} team={data.team||[]} onChange={onUpdateIssues} />
           <div style={{ padding:18, background:CARD, border:`1px solid ${BORDER}`, borderRadius:12 }}>
             <div style={{ color:WHITE, fontWeight:600, fontSize:13, marginBottom:14 }}>👤 Pendientes por responsable</div>
             {Object.keys(byOwner).length === 0
@@ -3400,6 +3481,10 @@ function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues }) {
             }
           </div>
         </div>
+      </div>
+
+      <div style={{ marginTop:20 }}>
+        <IssuesPanel issues={data.issues||[]} team={data.team||[]} onChange={onUpdateIssues} />
       </div>
     </div>
   );
