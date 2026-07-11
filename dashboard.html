@@ -879,20 +879,23 @@ function EjecucionTab({ client, team, onChange }) {
   return (
     <div>
       {/* Reuniones */}
-      <div style={{ padding:"14px 16px", background:"#FFFFFF", border:`1px solid #E5E7EB`, borderRadius:10, marginBottom:20 }}>
+      <div style={{ background:"#0a0a0b", border:`1px solid #60A5FA22`, borderLeft:`4px solid #60A5FA`, borderRadius:10, padding:"14px 16px", marginBottom:20 }}>
+        {/* Header */}
+        <div style={{ marginBottom:12 }}>
+          <div style={{ color:"#60A5FA88", fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:3 }}>Agenda</div>
+          <div style={{ color:WHITE, fontWeight:800, fontSize:14, letterSpacing:-0.2 }}>Reuniones del Cliente</div>
+        </div>
         {meetings.length === 0 && !showMeetingForm ? (
           <button onClick={()=>setShowMeetingForm(true)}
-            style={{ width:"100%", padding:"14px", background:"#F9FAFB", border:"1px dashed #D1D5DB", borderRadius:8, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+            style={{ width:"100%", padding:"12px", background:"rgba(96,165,250,0.06)", border:"1px dashed rgba(96,165,250,0.3)", borderRadius:8, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
             <span style={{ fontSize:14 }}>📅</span>
-            <span style={{ color:"#6B7280", fontSize:13 }}>Agendar reuniones</span>
+            <span style={{ color:GRAY, fontSize:12 }}>Agendar primera reunión</span>
           </button>
         ) : (
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: (upcomingMeetings.length > 0 || showMeetingForm) ? 12 : 0, gap:8 }}>
             <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-              <span style={{ fontSize:15 }}>📅</span>
-              <span style={{ color:"#111827", fontWeight:600, fontSize:13 }}>Reuniones</span>
               {upcomingMeetings.length > 0 && (
-                <span style={{ background:"rgba(212,175,55,0.15)", color:GOLD, fontSize:10, fontWeight:700, padding:"1px 7px", borderRadius:20 }}>
+                <span style={{ background:"rgba(96,165,250,0.12)", color:"#60A5FA", fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:20, border:"1px solid rgba(96,165,250,0.2)" }}>
                   {upcomingMeetings.length} próxima{upcomingMeetings.length>1?"s":""}
                 </span>
               )}
@@ -943,14 +946,14 @@ function EjecucionTab({ client, team, onChange }) {
         {upcomingMeetings.map(m => {
           const linked = m.taskId ? client.tasks.find(t=>t.id===m.taskId) : null;
           return (
-            <div key={m.id} style={{ display:"flex", gap:12, alignItems:"flex-start", padding:"9px 0", borderBottom:"1px solid #F3F4F6" }}>
-              <div style={{ minWidth:90, color:GOLD, fontSize:11, fontWeight:600, paddingTop:1 }}>{fmtMeeting(m.date)}</div>
+            <div key={m.id} style={{ display:"flex", gap:12, alignItems:"flex-start", padding:"9px 0", borderBottom:`1px solid ${BORDER}33` }}>
+              <div style={{ minWidth:96, color:"#60A5FA", fontSize:11, fontWeight:600, paddingTop:1 }}>{fmtMeeting(m.date)}</div>
               <div style={{ flex:1 }}>
-                <div style={{ color:"#111827", fontSize:13, fontWeight:600 }}>{m.title}</div>
-                {m.desc && <div style={{ color:"#6B7280", fontSize:11, marginTop:2, lineHeight:1.4 }}>{m.desc}</div>}
-                {linked && <div style={{ color:"#92722A", fontSize:10, marginTop:3 }}>↳ #{linked.n} {linked.title}</div>}
+                <div style={{ color:WHITE, fontSize:13, fontWeight:600 }}>{m.title}</div>
+                {m.desc && <div style={{ color:GRAY, fontSize:11, marginTop:2, lineHeight:1.4 }}>{m.desc}</div>}
+                {linked && <div style={{ color:GOLD_DIM, fontSize:10, marginTop:3 }}>↳ #{linked.n} {linked.title}</div>}
               </div>
-              <button onClick={()=>deleteMeeting(m.id)} style={{ background:"none", border:"none", color:"#9CA3AF", cursor:"pointer", fontSize:13, flexShrink:0 }}>×</button>
+              <button onClick={()=>deleteMeeting(m.id)} style={{ background:"none", border:"none", color:GRAY, cursor:"pointer", fontSize:13, flexShrink:0 }}>×</button>
             </div>
           );
         })}
@@ -964,15 +967,16 @@ function EjecucionTab({ client, team, onChange }) {
 
       {/* Week stats */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:20 }}>
-        {WEEKS.map(w => {
+        {WEEKS.map((w, wi) => {
           const s = weekStats(tasks, w);
           const pct = s.total ? Math.round(s.done/s.total*100) : 0;
+          const c = pct >= 100 ? GREEN : pct >= 50 ? GOLD : "#60A5FA";
           return (
-            <div key={w} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:"12px 14px" }}>
-              <div style={{ fontSize:11, color:GRAY, marginBottom:4 }}>{w}</div>
-              <div style={{ fontSize:18, fontWeight:700, color:WHITE, marginBottom:6 }}>{s.done}<span style={{ color:GRAY, fontWeight:400, fontSize:13 }}>/{s.total}</span></div>
-              <ProgressBar pct={pct} />
-              <div style={{ fontSize:11, color:GOLD, marginTop:4 }}>{pct}%</div>
+            <div key={w} style={{ background:"#0a0a0b", border:`1px solid ${c}22`, borderTop:`2px solid ${c}55`, borderRadius:10, padding:"12px 14px" }}>
+              <div style={{ color:`${c}88`, fontSize:9, fontWeight:700, letterSpacing:2, textTransform:"uppercase", marginBottom:4 }}>Semana {wi+1}</div>
+              <div style={{ fontSize:24, fontWeight:900, color:c, lineHeight:1, marginBottom:6 }}>{pct}%</div>
+              <ProgressBar pct={pct} color={c} height={4} />
+              <div style={{ fontSize:11, color:GRAY, marginTop:6 }}>{s.done}/{s.total} tareas</div>
             </div>
           );
         })}
@@ -997,20 +1001,20 @@ function EjecucionTab({ client, team, onChange }) {
         return (
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
             {[
-              { icon:"🎯", name:"MVP Launch", date:mvp, diff:mvpDiff, desc:"Semana 2 · Mínimo viable activo" },
-              { icon:"🚀", name:"Full Launch", date:full, diff:fullDiff, desc:"Semana 3 · Sistema completo en marcha" },
+              { icon:"🎯", name:"MVP Launch", overline:"Semana 2", date:mvp, diff:mvpDiff, desc:"Mínimo viable activo", baseColor:GOLD },
+              { icon:"🚀", name:"Full Launch", overline:"Semana 3", date:full, diff:fullDiff, desc:"Sistema completo en marcha", baseColor:GREEN },
             ].map(m => {
               const st = status(m.diff);
               return (
-                <div key={m.name} style={{ background:CARD, border:`1px solid ${st.color}44`, borderRadius:10, padding:"10px 14px", display:"flex", alignItems:"center", gap:12 }}>
-                  <div style={{ fontSize:22 }}>{m.icon}</div>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:12, fontWeight:700, color:WHITE }}>{m.name}</div>
-                    <div style={{ fontSize:11, color:GRAY }}>{m.desc}</div>
+                <div key={m.name} style={{ background:"#0a0a0b", border:`1px solid ${m.baseColor}22`, borderLeft:`4px solid ${m.baseColor}`, borderRadius:10, padding:"12px 14px" }}>
+                  <div style={{ color:`${m.baseColor}88`, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:4 }}>{m.overline}</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                    <span style={{ fontSize:18 }}>{m.icon}</span>
+                    <div style={{ color:WHITE, fontWeight:800, fontSize:13, letterSpacing:-0.2 }}>{m.name}</div>
                   </div>
-                  <div style={{ textAlign:"right" }}>
-                    <div style={{ fontSize:14, fontWeight:700, color:st.color }}>{fmt(m.date)}</div>
-                    <div style={{ fontSize:10, color:st.color, opacity:0.8 }}>{st.label}</div>
+                  <div style={{ display:"flex", alignItems:"baseline", gap:8 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:st.color }}>{fmt(m.date)}</div>
+                    <div style={{ fontSize:10, background:`${st.color}15`, color:st.color, padding:"1px 6px", borderRadius:4, border:`1px solid ${st.color}33` }}>{st.label}</div>
                   </div>
                 </div>
               );
@@ -2288,6 +2292,14 @@ function ProcesoComercialTab({ client, onChange, apiKey, flowTemplates, onSaveTe
 
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100%", minHeight:600 }}>
+      {/* Header */}
+      <div style={{ background:"#0a0a0b", border:`1px solid ${GOLD}22`, borderLeft:`4px solid ${GOLD}`, borderRadius:10, padding:"12px 16px", marginBottom:14 }}>
+        <div style={{ color:GOLD_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:3 }}>Visualización</div>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
+          <div style={{ color:WHITE, fontWeight:800, fontSize:14, letterSpacing:-0.2 }}>Proceso Comercial</div>
+          <span style={{ color:GRAY, fontSize:11 }}>{flows.length} proceso{flows.length!==1?"s":""} · doble clic para renombrar</span>
+        </div>
+      </div>
       {/* Flow selector */}
       <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:12, alignItems:"center" }}>
         {flows.map(f => (
@@ -2417,16 +2429,20 @@ function LaunchTab({ client, onChange, globalMvpSteps, globalFullSteps }) {
       </div>
 
       {/* MVP checklist */}
-      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
-        <span style={{ color:GOLD, fontWeight:700, fontSize:14 }}>🎯 Pasos Mínimo Viable</span>
-        <span style={{ fontSize:12, color:GOLD }}>{done}/{mvpSteps.length}</span>
-        <div style={{ flex:1, height:4, background:"#222", borderRadius:2, overflow:"hidden" }}>
-          <div style={{ height:"100%", width:pct+"%", background:GOLD, borderRadius:2, transition:"width 0.3s" }} />
+      <div style={{ background:"#0a0a0b", border:`1px solid ${GOLD}22`, borderLeft:`4px solid ${GOLD}`, borderRadius:10, padding:"12px 16px", marginBottom:14 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, marginBottom:10 }}>
+          <div>
+            <div style={{ color:GOLD_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:3 }}>Semana 2</div>
+            <div style={{ color:WHITE, fontWeight:800, fontSize:14, letterSpacing:-0.2 }}>🎯 Mínimo Viable</div>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ color:GOLD, fontWeight:700, fontSize:12 }}>{done}/{mvpSteps.length} · {pct}%</span>
+            <button onClick={()=>setShowMvpEditor(s=>!s)} style={{ padding:"3px 10px", borderRadius:5, fontSize:10, cursor:"pointer", border:`1px solid ${showMvpEditor ? GOLD : BORDER}`, background:showMvpEditor?"rgba(212,175,55,0.1)":"transparent", color:showMvpEditor?GOLD:GRAY }}>
+              {showMvpEditor ? "✕" : "✎ Editar"}
+            </button>
+          </div>
         </div>
-        <span style={{ fontSize:11, color:GOLD }}>{pct}%</span>
-        <button onClick={()=>setShowMvpEditor(s=>!s)} style={{ padding:"2px 10px", borderRadius:5, fontSize:10, cursor:"pointer", border:`1px solid ${showMvpEditor ? GOLD : BORDER}`, background:showMvpEditor?"rgba(212,175,55,0.1)":"transparent", color:showMvpEditor?GOLD:GRAY }}>
-          {showMvpEditor ? "✕ Cerrar" : "✎ Editar"}
-        </button>
+        <ProgressBar pct={pct} color={GOLD} height={5} />
       </div>
 
       {/* MVP Editor panel */}
@@ -2486,16 +2502,20 @@ function LaunchTab({ client, onChange, globalMvpSteps, globalFullSteps }) {
 
       {/* Full launch checklist */}
       <div style={{ marginTop:28 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
-          <span style={{ color:"#22C55E", fontWeight:700, fontSize:14 }}>🚀 Pasos Full Launch — Semana 3</span>
-          <span style={{ fontSize:12, color:"#22C55E" }}>{fdone}/{fullSteps.length}</span>
-          <div style={{ flex:1, height:4, background:"#222", borderRadius:2, overflow:"hidden" }}>
-            <div style={{ height:"100%", width:fpct+"%", background:"#22C55E", borderRadius:2, transition:"width 0.3s" }} />
+        <div style={{ background:"#0a0a0b", border:`1px solid #22C55E22`, borderLeft:`4px solid #22C55E`, borderRadius:10, padding:"12px 16px", marginBottom:14 }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, marginBottom:10 }}>
+            <div>
+              <div style={{ color:"#22C55E88", fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:3 }}>Semana 3</div>
+              <div style={{ color:WHITE, fontWeight:800, fontSize:14, letterSpacing:-0.2 }}>🚀 Full Launch</div>
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ color:GREEN, fontWeight:700, fontSize:12 }}>{fdone}/{fullSteps.length} · {fpct}%</span>
+              <button onClick={()=>setShowFullEditor(s=>!s)} style={{ padding:"3px 10px", borderRadius:5, fontSize:10, cursor:"pointer", border:`1px solid ${showFullEditor ? GREEN : BORDER}`, background:showFullEditor?"rgba(76,175,125,0.1)":"transparent", color:showFullEditor?GREEN:GRAY }}>
+                {showFullEditor ? "✕" : "✎ Editar"}
+              </button>
+            </div>
           </div>
-          <span style={{ fontSize:11, color:"#22C55E" }}>{fpct}%</span>
-          <button onClick={()=>setShowFullEditor(s=>!s)} style={{ padding:"2px 10px", borderRadius:5, fontSize:10, cursor:"pointer", border:`1px solid ${showFullEditor ? GREEN : BORDER}`, background:showFullEditor?"rgba(76,175,125,0.1)":"transparent", color:showFullEditor?GREEN:GRAY }}>
-            {showFullEditor ? "✕ Cerrar" : "✎ Editar"}
-          </button>
+          <ProgressBar pct={fpct} color={GREEN} height={5} />
         </div>
 
         {/* Full Editor panel */}
@@ -4254,12 +4274,13 @@ function FinanzasSection({ personal, onUpdate }) {
   const visionUSD   = finance.visionUSD   !== undefined ? finance.visionUSD : 250000;
   const fxRate      = finance.fxRate      !== undefined ? finance.fxRate    : 4200;
   const salesConfig = finance.salesConfig || {
-    monthlyTarget:   15000000,
-    avgFee:          4500000,
-    channelPct:      10,
-    avgClientSales:  25000000,
-    upsellPrice:     2000000,
-    meetingsPerClose:3,
+    monthlyTarget:    15000000,
+    avgFee:           4500000,
+    channelPct:       10,
+    avgClientSales:   25000000,
+    commissionFloor:  0,
+    upsellPrice:      2000000,
+    meetingsPerClose: 3,
   };
   const updateSC = (patch) => onUpdate({ finance:{ ...finance, salesConfig:{ ...salesConfig, ...patch } } });
 
@@ -4306,7 +4327,7 @@ function FinanzasSection({ personal, onUpdate }) {
   const getTotalGastos = (m) => {
     const md = getMD(m);
     const ledger = (md.egresos||[]).reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
-    if (ledger > 0) return ledger;
+    if (md.egresos !== undefined) return ledger;
     const allCats = [...(gastoCategories.personales||[]).map(c=>`personales_${c}`),...(gastoCategories.profesionales||[]).map(c=>`profesionales_${c}`),...(gastoCategories.otros||[]).map(c=>`otros_${c}`)];
     const gi = md.gastoItems || {};
     const cat = allCats.reduce((s,k)=>s+(gi[k]||0),0);
@@ -4384,7 +4405,8 @@ function FinanzasSection({ personal, onUpdate }) {
           {/* Config ventas — Card estilo Cuerpo */}
           {(()=>{
             const fee      = salesConfig.avgFee || 0;
-            const canal    = (salesConfig.avgClientSales||0) * (salesConfig.channelPct||10) / 100;
+            const cFloor   = salesConfig.commissionFloor || 0;
+            const canal    = Math.max(0, (salesConfig.avgClientSales||0) - cFloor) * (salesConfig.channelPct||10) / 100;
             const revPC    = fee + canal;
             const target   = salesConfig.monthlyTarget || 0;
             const cltsN    = revPC > 0 ? Math.ceil(target/revPC) : null;
@@ -4407,10 +4429,10 @@ function FinanzasSection({ personal, onUpdate }) {
                 {/* Metric chips */}
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8, marginBottom:12 }}>
                   {[
-                    { label:"Fee base",       val:fmtCOP(fee),                          color:GOLD,      sub:"por cliente/mes" },
-                    { label:"+ Canal",         val:fmtCOP(canal),                        color:"#22C55E", sub:`${salesConfig.channelPct||10}% de ventas` },
-                    { label:"= Total/cliente", val:fmtCOP(revPC),                        color:"#60A5FA", sub:"ingreso mensual" },
-                    { label:"Mejora Continua", val:fmtCOP(salesConfig.upsellPrice||0),   color:"#8B5CF6", sub:"upsell por cliente" },
+                    { label:"Fee base",         val:fmtCOP(fee),                          color:GOLD,      sub:"por cliente/mes" },
+                    { label:"+ Comisión canal",  val:fmtCOP(canal),                        color:"#22C55E", sub: cFloor>0 ? `${salesConfig.channelPct||10}% sobre >${fmtCOP(cFloor)}` : `${salesConfig.channelPct||10}% de ventas` },
+                    { label:"= Total/cliente",   val:fmtCOP(revPC),                        color:"#60A5FA", sub:"ingreso mensual" },
+                    { label:"Upsell / Adicional",val:fmtCOP(salesConfig.upsellPrice||0),   color:"#8B5CF6", sub:"servicio extra por cliente" },
                   ].map(chip=>(
                     <div key={chip.label} style={{ background:"#111113", borderRadius:8, padding:"10px 10px", border:`1px solid ${chip.color}18` }}>
                       <div style={{ color:GRAY, fontSize:9, marginBottom:5 }}>{chip.label}</div>
@@ -4446,14 +4468,15 @@ function FinanzasSection({ personal, onUpdate }) {
                 {/* Parámetros editables */}
                 <div style={{ borderTop:`1px solid ${BORDER}33`, paddingTop:12 }}>
                   <div style={{ color:GRAY, fontSize:9, fontWeight:700, letterSpacing:1.5, textTransform:"uppercase", marginBottom:8 }}>Parámetros</div>
-                  <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8 }}>
                     {[
-                      ["Meta mensual (COP)",       "monthlyTarget",    salesConfig.monthlyTarget,   1],
-                      ["Fee promedio (COP)",        "avgFee",           salesConfig.avgFee,          1],
-                      ["Ventas del cliente/mes",   "avgClientSales",   salesConfig.avgClientSales,  1],
-                      ["% comisión canal",          "channelPct",       salesConfig.channelPct,      0.01],
-                      ["Precio Mejora Continua",   "upsellPrice",      salesConfig.upsellPrice,     1],
-                      ["Reuniones para 1 cierre",  "meetingsPerClose", salesConfig.meetingsPerClose, 0.1],
+                      ["Meta mensual (COP)",          "monthlyTarget",    salesConfig.monthlyTarget,     1],
+                      ["Fee promedio (COP)",           "avgFee",           salesConfig.avgFee,            1],
+                      ["Ventas del cliente/mes",      "avgClientSales",   salesConfig.avgClientSales,    1],
+                      ["% comisión canal",             "channelPct",       salesConfig.channelPct,        0.01],
+                      ["Piso comisión (ventas mín.)", "commissionFloor",  salesConfig.commissionFloor||0, 1],
+                      ["Precio upsell / adicional",   "upsellPrice",      salesConfig.upsellPrice,       1],
+                      ["Reuniones para 1 cierre",     "meetingsPerClose", salesConfig.meetingsPerClose,  0.1],
                     ].map(([label,key,val,step])=>(
                       <div key={key}>
                         <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>{label}</div>
@@ -4633,9 +4656,10 @@ function FinanzasSection({ personal, onUpdate }) {
                         const gapToTarget = Math.max(0, target - cc);
                         const pctDone  = target > 0 ? Math.min(100, cc/target*100) : 0;
 
-                        // Revenue per new client: fee + canal commission
+                        // Revenue per new client: fee + canal commission (above floor)
                         const fee      = salesConfig.avgFee || 0;
-                        const canal    = (salesConfig.avgClientSales||0) * (salesConfig.channelPct||10) / 100;
+                        const cFloor2  = salesConfig.commissionFloor || 0;
+                        const canal    = Math.max(0, (salesConfig.avgClientSales||0) - cFloor2) * (salesConfig.channelPct||10) / 100;
                         const revPerClient = fee + canal;
 
                         // Existing clients in the ledger
@@ -4680,7 +4704,7 @@ function FinanzasSection({ personal, onUpdate }) {
                                 <div style={{ background:CARD,borderRadius:8,padding:"8px 12px",fontSize:10,color:GRAY }}>
                                   <span>Por cliente: </span>
                                   <span style={{ color:WHITE }}>{fmtCOP(fee)}</span><span> fee </span>
-                                  <span style={{ color:"#22C55E",fontWeight:700 }}>+ {fmtCOP(canal)} canal ({salesConfig.channelPct||10}% × {fmtCOP(salesConfig.avgClientSales||0)})</span>
+                                  <span style={{ color:"#22C55E",fontWeight:700 }}>+ {fmtCOP(canal)} canal ({salesConfig.channelPct||10}%{cFloor2>0?` sobre >${fmtCOP(cFloor2)}`:""})</span>
                                   <span style={{ color:GOLD,fontWeight:700 }}> = {fmtCOP(revPerClient)}/mes</span>
                                 </div>
 
@@ -4703,12 +4727,12 @@ function FinanzasSection({ personal, onUpdate }) {
                                   </div>
                                 </div>
 
-                                {/* Option B: Upsell Mejora Continua + new clients */}
+                                {/* Option B: Upsell / Adicional + new clients */}
                                 {existingClients>0 && (
                                   <div style={{ background:CARD,borderRadius:8,padding:"10px 12px",border:`1px solid #8B5CF622` }}>
-                                    <div style={{ color:"#8B5CF6",fontSize:10,fontWeight:700,letterSpacing:0.5,marginBottom:8 }}>B · UPSELL MEJORA CONTINUA + NUEVOS (RECOMENDADO)</div>
+                                    <div style={{ color:"#8B5CF6",fontSize:10,fontWeight:700,letterSpacing:0.5,marginBottom:8 }}>B · UPSELL A CLIENTES ACTUALES + NUEVOS (RECOMENDADO)</div>
                                     <div style={{ color:GRAY,fontSize:10,marginBottom:6 }}>
-                                      Activar <span style={{ color:"#8B5CF6",fontWeight:700 }}>Mejora Continua</span> en {existingClients} cliente{existingClients!==1?"s":""} actuales:
+                                      Ofrecer servicio adicional a {existingClients} cliente{existingClients!==1?"s":""} actuales:
                                       <span style={{ color:"#8B5CF6",fontWeight:700 }}> +{fmtCOP(upsellTotal)}/mes</span>
                                     </div>
                                     {gapAfterUpsell<=0
