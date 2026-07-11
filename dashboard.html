@@ -126,6 +126,31 @@
       box-shadow: 0 6px 28px rgba(0,0,0,0.45) !important;
     }
 
+    /* Tool icon buttons */
+    .gp-tool-btn {
+      position: relative;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9px;
+      border: 1px solid rgba(42,42,46,0.9);
+      background: transparent;
+      cursor: pointer;
+      font-size: 15px;
+      transition: all 0.15s ease;
+    }
+    .gp-tool-btn:hover {
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(212,175,55,0.3);
+    }
+    .gp-tool-btn.active {
+      background: rgba(212,175,55,0.08);
+      border-color: rgba(212,175,55,0.45);
+      box-shadow: 0 0 10px rgba(212,175,55,0.15);
+    }
+
     /* Gold button */
     .gp-btn-gold {
       background: linear-gradient(135deg, #D4AF37 0%, #B8962E 100%) !important;
@@ -5659,11 +5684,11 @@ function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues }) {
   const urgentIssues = openIssues.filter(i=>i.priority==="rojo");
 
   const statCards = [
-    { label:"Clientes activos",    value: data.clients.length,              color: GOLD,      icon:"👥", action: onGoToClients },
-    { label:"Tareas completadas",  value: `${doneTasks.length}/${allTasks.length}`, color: GREEN, icon:"✓" },
-    { label:"Progreso global",     value: `${pct}%`,                        color: pct>70?GREEN:pct>40?GOLD:RED, icon:"📈" },
-    { label:"Reuniones próximas",  value: upcoming.length,                  color: "#60A5FA", icon:"📅" },
-    { label:"Tareas abiertas",     value: openIssues.length,                color: urgentIssues.length>0?"#EF4444":urgentIssues.length===0&&openIssues.length===0?GREEN:GOLD, icon: urgentIssues.length>0?"🔴":"🚦" },
+    { overline:"Portafolio",  label:"Clientes Activos",    value: data.clients.length,              color: GOLD,      icon:"👥", action: onGoToClients },
+    { overline:"Ejecución",   label:"Tareas Completadas",  value: `${doneTasks.length}/${allTasks.length}`, color: GREEN, icon:"✓" },
+    { overline:"Avance",      label:"Progreso Global",     value: `${pct}%`,                        color: pct>70?GREEN:pct>40?GOLD:RED, icon:"📈" },
+    { overline:"Agenda",      label:"Reuniones Próximas",  value: upcoming.length,                  color: "#60A5FA", icon:"📅" },
+    { overline:"Alertas",     label:"Tareas Abiertas",     value: openIssues.length,                color: urgentIssues.length>0?"#EF4444":urgentIssues.length===0&&openIssues.length===0?GREEN:GOLD, icon: urgentIssues.length>0?"🔴":"🚦" },
   ];
 
   return (
@@ -5685,9 +5710,10 @@ function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues }) {
               boxShadow:"0 2px 12px rgba(0,0,0,0.25)" }}
             onMouseEnter={e=>{ e.currentTarget.style.borderColor=card.color+"88"; e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow=`0 6px 24px rgba(0,0,0,0.4), 0 0 0 1px ${card.color}22`; }}
             onMouseLeave={e=>{ e.currentTarget.style.borderColor=BORDER; e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow="0 2px 12px rgba(0,0,0,0.25)"; }}>
-            <div style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:34, height:34, borderRadius:8, background:`${card.color}14`, marginBottom:12, fontSize:17 }}>{card.icon}</div>
-            <div style={{ fontSize:30, fontWeight:900, color:card.color, lineHeight:1, letterSpacing:-1 }}>{card.value}</div>
-            <div style={{ fontSize:11, color:GRAY, marginTop:7, fontWeight:500, lineHeight:1.3 }}>{card.label}</div>
+            <div style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:32, height:32, borderRadius:8, background:`${card.color}14`, marginBottom:14, fontSize:16 }}>{card.icon}</div>
+            <div style={{ color:card.color+"88", fontSize:9, fontWeight:700, letterSpacing:2, textTransform:"uppercase", marginBottom:4 }}>{card.overline}</div>
+            <div style={{ fontSize:29, fontWeight:900, color:card.color, lineHeight:1, letterSpacing:-1 }}>{card.value}</div>
+            <div style={{ fontSize:11, color:GRAY, marginTop:6, fontWeight:500 }}>{card.label}</div>
           </div>
         ))}
       </div>
@@ -5695,28 +5721,29 @@ function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues }) {
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
           <div style={{ padding:20, background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, boxShadow:"0 2px 12px rgba(0,0,0,0.2)" }}>
-            <div style={{ color:WHITE, fontWeight:700, fontSize:13, marginBottom:14, display:"flex", alignItems:"center", gap:8 }}>
-              <span style={{ fontSize:16 }}>📅</span> Próximas reuniones
+            <div style={{ marginBottom:16 }}>
+              <div style={{ color:GOLD_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:5 }}>Agenda</div>
+              <div style={{ color:WHITE, fontWeight:800, fontSize:16, letterSpacing:-0.3 }}>Próximas Reuniones</div>
             </div>
             {upcoming.length === 0
-              ? <div style={{ color:GRAY, fontSize:12 }}>No hay reuniones agendadas próximas.</div>
-              : <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              ? <div style={{ color:GRAY, fontSize:12, padding:"12px 0" }}>No hay reuniones agendadas próximas.</div>
+              : <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
                   {upcoming.map(({ client, meeting, date }) => (
                     <div key={meeting.id} onClick={()=>onSelectClient(client.id)}
-                      style={{ background:"#FFFFFF", border:"1px solid #E5E7EB", borderRadius:10,
-                        padding:"11px 14px", cursor:"pointer", display:"flex", justifyContent:"space-between",
-                        alignItems:"center", transition:"box-shadow 0.15s" }}
-                      onMouseEnter={e=>e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,0.12)"}
-                      onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+                      style={{ background:"rgba(255,255,255,0.04)", border:`1px solid ${BORDER}`, borderLeft:`3px solid #60A5FA55`, borderRadius:9,
+                        padding:"10px 13px", cursor:"pointer", display:"flex", justifyContent:"space-between",
+                        alignItems:"center", transition:"all 0.15s" }}
+                      onMouseEnter={e=>{ e.currentTarget.style.borderLeftColor="#60A5FA"; e.currentTarget.style.background="rgba(255,255,255,0.07)"; }}
+                      onMouseLeave={e=>{ e.currentTarget.style.borderLeftColor="#60A5FA55"; e.currentTarget.style.background="rgba(255,255,255,0.04)"; }}>
                       <div style={{ minWidth:0 }}>
-                        <div style={{ color:"#111827", fontWeight:600, fontSize:13, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                        <div style={{ color:WHITE, fontWeight:600, fontSize:13, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                           {meeting.title}
                         </div>
-                        <div style={{ color:"#6B7280", fontSize:11, marginTop:2 }}>📌 {client.name}</div>
+                        <div style={{ color:GRAY, fontSize:11, marginTop:2 }}>📌 {client.name}</div>
                       </div>
                       <div style={{ textAlign:"right", flexShrink:0, marginLeft:12 }}>
-                        <div style={{ color:"#2563EB", fontWeight:700, fontSize:12 }}>{fmtDate(date)}</div>
-                        {meeting.desc && <div style={{ color:"#9CA3AF", fontSize:10, marginTop:1 }}>{meeting.desc.slice(0,30)}{meeting.desc.length>30?"…":""}</div>}
+                        <div style={{ color:"#60A5FA", fontWeight:700, fontSize:12 }}>{fmtDate(date)}</div>
+                        {meeting.desc && <div style={{ color:GRAY, fontSize:10, marginTop:1 }}>{meeting.desc.slice(0,30)}{meeting.desc.length>30?"…":""}</div>}
                       </div>
                     </div>
                   ))}
@@ -5725,15 +5752,19 @@ function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues }) {
           </div>
 
           <div style={{ padding:20, background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, boxShadow:"0 2px 12px rgba(0,0,0,0.2)" }}>
-            <div style={{ color:WHITE, fontWeight:700, fontSize:13, marginBottom:14, display:"flex", alignItems:"center", gap:8 }}>
-              <span style={{ fontSize:16 }}>✓</span> Completado últimos 7 días
+            <div style={{ marginBottom:16 }}>
+              <div style={{ color:GREEN+"99", fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:5 }}>Esta semana</div>
+              <div style={{ color:WHITE, fontWeight:800, fontSize:16, letterSpacing:-0.3 }}>Victorias Recientes</div>
             </div>
             {recentlyDone.length === 0
-              ? <div style={{ color:GRAY, fontSize:12 }}>No hay tareas completadas esta semana.</div>
+              ? <div style={{ color:GRAY, fontSize:12, padding:"12px 0" }}>No hay tareas completadas esta semana.</div>
               : recentlyDone.map(t => (
-                <div key={t.id} style={{ padding:"6px 0", borderBottom:`1px solid ${BORDER}` }}>
-                  <div style={{ color:WHITE, fontSize:12, lineHeight:1.4 }}>{t.title}</div>
-                  <div style={{ color:GRAY, fontSize:10, marginTop:2 }}>{t.clientName} · {t.week}</div>
+                <div key={t.id} style={{ padding:"7px 0", borderBottom:`1px solid rgba(42,42,46,0.6)`, display:"flex", alignItems:"flex-start", gap:8 }}>
+                  <span style={{ color:GREEN, fontSize:11, marginTop:1, flexShrink:0 }}>✓</span>
+                  <div>
+                    <div style={{ color:WHITE, fontSize:12, lineHeight:1.4 }}>{t.title}</div>
+                    <div style={{ color:GRAY, fontSize:10, marginTop:1 }}>{t.clientName} · {t.week}</div>
+                  </div>
                 </div>
               ))
             }
@@ -5742,56 +5773,59 @@ function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues }) {
 
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
           <div style={{ padding:20, background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, boxShadow:"0 2px 12px rgba(0,0,0,0.2)" }}>
-            <div style={{ color:WHITE, fontWeight:700, fontSize:13, marginBottom:14, display:"flex", alignItems:"center", gap:8 }}>
-              <span style={{ fontSize:16 }}>👤</span> Pendientes por responsable
+            <div style={{ marginBottom:16 }}>
+              <div style={{ color:GOLD_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:5 }}>Equipo</div>
+              <div style={{ color:WHITE, fontWeight:800, fontSize:16, letterSpacing:-0.3 }}>Carga de Trabajo</div>
             </div>
             {Object.keys(byOwner).length === 0
-              ? <div style={{ color:GREEN, fontSize:12 }}>Todo al día — no hay tareas pendientes.</div>
+              ? <div style={{ color:GREEN, fontSize:12, padding:"12px 0", display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ color:GREEN }}>✓</span> Todo al día — sin tareas pendientes.
+                </div>
               : Object.entries(byOwner).sort((a,b)=>b[1].pending-a[1].pending).map(([owner, info]) => (
                 <div key={owner} style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
-                  padding:"9px 0", borderBottom:`1px solid ${BORDER}` }}>
+                  padding:"9px 0", borderBottom:`1px solid rgba(42,42,46,0.6)` }}>
                   <div>
-                    <span style={{ color:WHITE, fontSize:13 }}>{owner}</span>
-                    <span style={{ color:GRAY, fontSize:10, marginLeft:8 }}>
+                    <span style={{ color:WHITE, fontSize:13, fontWeight:600 }}>{owner}</span>
+                    <div style={{ color:GRAY, fontSize:10, marginTop:2 }}>
                       {[...info.clients].slice(0,2).join(", ")}{info.clients.size>2?` +${info.clients.size-2}`:""}
-                    </span>
+                    </div>
                   </div>
-                  <span style={{ background:"rgba(212,175,55,0.12)", color:GOLD, fontSize:11, fontWeight:700,
-                    padding:"2px 10px", borderRadius:20 }}>{info.pending}</span>
+                  <span style={{ background:"rgba(212,175,55,0.1)", color:GOLD, fontSize:12, fontWeight:800,
+                    padding:"3px 12px", borderRadius:20, border:"1px solid rgba(212,175,55,0.2)" }}>{info.pending}</span>
                 </div>
               ))
             }
           </div>
 
           <div style={{ padding:20, background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, boxShadow:"0 2px 12px rgba(0,0,0,0.2)" }}>
-            <div style={{ color:WHITE, fontWeight:700, fontSize:13, marginBottom:14, display:"flex", alignItems:"center", gap:8 }}>
-              <span style={{ fontSize:16 }}>📊</span> Progreso por cliente
+            <div style={{ marginBottom:16 }}>
+              <div style={{ color:"#A78BFA99", fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:5 }}>Portafolio</div>
+              <div style={{ color:WHITE, fontWeight:800, fontSize:16, letterSpacing:-0.3 }}>Estado de Clientes</div>
             </div>
             {data.clients.length === 0
-              ? <div style={{ color:GRAY, fontSize:12 }}>
+              ? <div style={{ color:GRAY, fontSize:12, padding:"12px 0" }}>
                   No hay clientes.{" "}
                   <button onClick={onGoToClients}
-                    style={{ background:"none", border:"none", color:GOLD, cursor:"pointer", fontSize:12, textDecoration:"underline" }}>
-                    Crear primer cliente
+                    style={{ background:"none", border:"none", color:GOLD, cursor:"pointer", fontSize:12, fontWeight:600, textDecoration:"none" }}>
+                    Crear primer cliente →
                   </button>
                 </div>
               : data.clients.map(c => {
                 const ct = c.tasks || [];
                 const cd = ct.filter(t => t.done).length;
                 const cp = ct.length ? Math.round(cd / ct.length * 100) : 0;
+                const barColor = cp>70?GREEN:cp>40?GOLD:RED;
                 return (
                   <div key={c.id} onClick={()=>onSelectClient(c.id)}
-                    style={{ padding:"9px 0", borderBottom:`1px solid ${BORDER}`, cursor:"pointer" }}
+                    style={{ padding:"9px 0", borderBottom:`1px solid rgba(42,42,46,0.6)`, cursor:"pointer", transition:"opacity 0.15s" }}
                     onMouseEnter={e=>e.currentTarget.style.opacity="0.7"}
                     onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5 }}>
-                      <span style={{ color:WHITE, fontSize:12 }}>{c.name}</span>
-                      <span style={{ color:GRAY, fontSize:11 }}>{cd}/{ct.length} · {cp}%</span>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6, alignItems:"baseline" }}>
+                      <span style={{ color:WHITE, fontSize:12, fontWeight:600 }}>{c.name}</span>
+                      <span style={{ color:barColor, fontSize:11, fontWeight:700 }}>{cp}%</span>
                     </div>
-                    <div style={{ height:4, background:BORDER, borderRadius:2 }}>
-                      <div style={{ height:4, width:`${cp}%`, background:cp>70?GREEN:cp>40?GOLD:RED,
-                        borderRadius:2, transition:"width 0.3s" }} />
-                    </div>
+                    <ProgressBar pct={cp} color={barColor} height={3} />
+                    <div style={{ color:GRAY, fontSize:10, marginTop:3 }}>{cd} de {ct.length} tareas</div>
                   </div>
                 );
               })
@@ -5930,9 +5964,9 @@ function MetodoGrowthPartner() {
           </div>
           {/* Separator */}
           <div style={{ width:1, height:22, background:"rgba(42,42,46,0.8)", marginRight:4 }} />
-          {/* Nav tabs */}
+          {/* Main nav */}
           <div style={{ display:"flex", gap:0 }}>
-            {[["inicio","Inicio"],["clientes","Clientes"],["metodo","Método"],["equipo","Equipo"],["personal","Personal"],["configuracion","Config"]].map(([id,label]) => (
+            {[["inicio","Inicio"],["clientes","Clientes"],["metodo","Método"]].map(([id,label]) => (
               <button key={id}
                 className={`gp-nav-tab${tab===id&&!selectedClientId?" active":""}`}
                 onClick={()=>{ setTab(id); setSelectedClientId(null); }}>
@@ -5941,6 +5975,20 @@ function MetodoGrowthPartner() {
             ))}
           </div>
           <div style={{ flex:1 }} />
+          {/* Tool icons */}
+          <div style={{ display:"flex", gap:3, paddingRight:14, borderRight:`1px solid rgba(42,42,46,0.6)`, marginRight:14 }}>
+            {[["equipo","👥","Equipo y Roles"],["personal","🔒","Área Personal"],["configuracion","⚙️","Configuración"]].map(([id,icon,label]) => {
+              const isActive = tab===id && !selectedClientId;
+              return (
+                <button key={id} title={label}
+                  className={`gp-tool-btn${isActive?" active":""}`}
+                  onClick={()=>{ setTab(id); setSelectedClientId(null); }}>
+                  {icon}
+                  {isActive && <span style={{ position:"absolute", bottom:4, left:"50%", transform:"translateX(-50%)", width:4, height:4, borderRadius:2, background:GOLD, boxShadow:"0 0 4px "+GOLD }} />}
+                </button>
+              );
+            })}
+          </div>
           {/* Sync status */}
           <div style={{ display:"flex", alignItems:"center", fontSize:11 }}>
             <span className={`gp-status-dot ${!saved?"saving":fbStatus==="ok"?"online":fbStatus==="error"?"error":"sync"}`} />
