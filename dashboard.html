@@ -3841,23 +3841,29 @@ function MetricasSection({ personal, onUpdate }) {
   const snapRef  = ur({});
   snapRef.current = { warMap, warMapCategories, paintCatId };
 
+  // Ref siempre actualizado para onUpdate y personal (evita stale closures en el efecto de sync)
+  const syncRef = ur({});
+  syncRef.current = { personal, onUpdate };
+
   // Sync warMapCategories from goals whenever goals change
   ue(() => {
-    const wmc = personal.warMapCategories || [];
-    const goalLabels = personal.goals || [];
+    const { personal: p, onUpdate: upd } = syncRef.current;
+    const wmc = p.warMapCategories || [];
+    const goalLabels = p.goals || [];
     if (!goalLabels.length) return;
-    const needsSync = goalLabels.some(g => !wmc.find(c => c.label === g))
-                   || wmc.some(c => !goalLabels.includes(c.label));
+    // Solo sincroniza si hay una meta sin categoría (no remueve cats extras — addGoal/removeGoalAndCat lo manejan)
+    const needsSync = goalLabels.some(g => !wmc.find(c => c.label === g));
     if (!needsSync) return;
     const COLORS = ["#22C55E","#3B82F6","#F59E0B","#8B5CF6","#EC4899","#EF4444","#06B6D4","#84CC16","#F97316"];
+    const usedColors = wmc.map(c => c.color);
     const newCats = goalLabels.map((g, i) => {
       const ex = wmc.find(c => c.label === g);
       if (ex) return ex;
-      const usedColors = wmc.filter(c => goalLabels.includes(c.label)).map(c => c.color);
       const col = COLORS.find(c => !usedColors.includes(c)) || COLORS[i % COLORS.length];
-      return { id: `cat_${Date.now()}_${i}`, label: g, color: col };
+      usedColors.push(col);
+      return { id: `cat_${uid()}`, label: g, color: col };
     });
-    onUpdate({ warMapCategories: newCats });
+    upd({ warMapCategories: newCats });
   }, [(personal.goals || []).join('|')]);
 
   // Global mousemove + mouseup for drag-paint
@@ -4298,6 +4304,8 @@ function FinanzasSection({ personal, onUpdate }) {
   const [liabName,  setLiabName]  = us(""); const [liabVal,   setLiabVal]   = us("");
   const [debtName,  setDebtName]  = us(""); const [debtBal,   setDebtBal]   = us("");
   const [debtRate,  setDebtRate]  = us(""); const [debtPmt,   setDebtPmt]   = us("");
+  const [showCatEditor, setShowCatEditor] = us(false);
+  const [newCatInputs, setNewCatInputs] = us({ personales:"", profesionales:"", otros:"" });
 
   const MONTHS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
   const fmtCOP = (v) => v ? "$"+Number(Math.round(v)).toLocaleString("es-CO") : "—";
@@ -4348,6 +4356,27 @@ function FinanzasSection({ personal, onUpdate }) {
     setMD(m, md=>({...md, egresos:[...(md.egresos||[]),eg]}));
     setEgForms(p=>({...p,[m]:{cat:"",desc:"",amount:""}}));
   };
+
+  // Migra gastoItems (formato legacy) → egresos (formato editable) al expandir el mes
+  const migrateGastoItems = (m) => {
+    const md = getMD(m);
+    if (md.egresos !== undefined || !md.gastoItems) return;
+    const gi = md.gastoItems;
+    const newEgresos = [];
+    const push = (group, label) => {
+      (gastoCategories[group]||[]).forEach(c => {
+        const v = gi[`${group}_${c}`];
+        if (v > 0) newEgresos.push({ id:"eg_m_"+uid(), category:`${label} · ${c}`, description:c, amount:v });
+      });
+    };
+    push("personales", "Personales");
+    push("profesionales", "Profesionales");
+    push("otros", "Otros");
+    const { gastoItems: _removed, ...restMd } = md;
+    setMD(m, () => ({ ...restMd, egresos: newEgresos }));
+  };
+
+  const updateGastoCats = (newCats) => onUpdate({ finance:{ ...finance, gastoCategories: newCats } });
 
   const yearTotals = Array.from({length:12},(_,m)=>{
     const cc=getCashCollected(m), g=getTotalGastos(m), md=getMD(m);
@@ -4507,6 +4536,49 @@ function FinanzasSection({ personal, onUpdate }) {
             ))}
           </div>
 
+          {/* Editor de categorías */}
+          <div style={{ marginBottom:14 }}>
+            <button onClick={()=>setShowCatEditor(s=>!s)}
+              style={{ padding:"6px 14px", borderRadius:7, fontSize:11, cursor:"pointer", border:`1px solid ${showCatEditor?GOLD:BORDER}`, background:showCatEditor?"rgba(212,175,55,0.08)":"transparent", color:showCatEditor?GOLD:GRAY, fontWeight:600 }}>
+              {showCatEditor ? "✕ Cerrar categorías" : "⚙ Categorías de gasto"}
+            </button>
+            {showCatEditor && (
+              <div style={{ background:"#0a0a0b", border:`1px solid ${GOLD}22`, borderRadius:10, padding:"14px 16px", marginTop:8 }}>
+                <div style={{ color:GOLD_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:10 }}>Administrar categorías</div>
+                {[
+                  { key:"personales",     label:"Personales",     color:"#F59E0B" },
+                  { key:"profesionales",  label:"Profesionales",  color:"#3B82F6" },
+                  { key:"otros",          label:"Otros",          color:"#8B5CF6" },
+                ].map(({ key, label, color }) => {
+                  const cats = gastoCategories[key] || [];
+                  return (
+                    <div key={key} style={{ marginBottom:12 }}>
+                      <div style={{ color, fontSize:10, fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:6 }}>{label}</div>
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:6 }}>
+                        {cats.map(c => (
+                          <div key={c} style={{ display:"flex", alignItems:"center", gap:4, background:`${color}12`, border:`1px solid ${color}33`, borderRadius:20, padding:"2px 10px 2px 10px" }}>
+                            <span style={{ color, fontSize:11, fontWeight:600 }}>{c}</span>
+                            <button onClick={()=>updateGastoCats({ ...gastoCategories, [key]: cats.filter(x=>x!==c) })}
+                              style={{ background:"none", border:"none", color:`${color}88`, cursor:"pointer", fontSize:13, lineHeight:1, padding:"0 0 0 3px" }}>×</button>
+                          </div>
+                        ))}
+                        {cats.length === 0 && <span style={{ color:GRAY, fontSize:11 }}>Sin categorías</span>}
+                      </div>
+                      <div style={{ display:"flex", gap:6 }}>
+                        <input value={newCatInputs[key]} onChange={e=>setNewCatInputs(p=>({...p,[key]:e.target.value}))}
+                          onKeyDown={e=>{ if(e.key==="Enter"&&newCatInputs[key].trim()){ updateGastoCats({...gastoCategories,[key]:[...cats,newCatInputs[key].trim()]}); setNewCatInputs(p=>({...p,[key]:""})); }}}
+                          placeholder={`Nueva categoría ${label.toLowerCase()}...`}
+                          style={{ flex:1, background:"#0e0e10", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 9px", color:WHITE, fontSize:11, outline:"none" }} />
+                        <button onClick={()=>{ if(!newCatInputs[key].trim()) return; updateGastoCats({...gastoCategories,[key]:[...cats,newCatInputs[key].trim()]}); setNewCatInputs(p=>({...p,[key]:""})); }}
+                          style={{ padding:"5px 14px", background:color, color:"#141414", border:"none", borderRadius:6, cursor:"pointer", fontWeight:700, fontSize:11 }}>+</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Cards por mes */}
           <div style={{ display:"flex",flexDirection:"column",gap:6 }}>
             {MONTHS.map((mes,m)=>{
@@ -4522,7 +4594,7 @@ function FinanzasSection({ personal, onUpdate }) {
               return (
                 <div key={m} style={{ background:CARD,borderRadius:10,border:`1px solid ${hasData?BORDER:BORDER+"44"}`,overflow:"hidden" }}>
                   {/* Header */}
-                  <div onClick={()=>setExpandedM(exp?null:m)}
+                  <div onClick={()=>{ if(!exp) migrateGastoItems(m); setExpandedM(exp?null:m); }}
                     style={{ display:"flex",alignItems:"center",padding:"10px 16px",cursor:"pointer",gap:0,userSelect:"none" }}>
                     <span style={{ color:WHITE,fontWeight:700,fontSize:13,width:36 }}>{mes}</span>
                     <div style={{ flex:1,display:"flex",gap:5,alignItems:"center",overflow:"hidden" }}>
