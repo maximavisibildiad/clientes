@@ -3663,14 +3663,44 @@ function MetricasSection({ personal, onUpdate }) {
   const [modalTime,   setModalTime]   = us("09:00");
   const [modalAllDay, setModalAllDay] = us(true);
   const [paintCatId,  setPaintCatId]  = us(null);
-  const [isDragging,  setIsDragging]  = us(false);
+  const [dragDays,    setDragDays]    = us([]);
 
-  // refs for drag-paint (avoid stale closures in window mouseup)
+  // refs for drag-paint (avoid stale closures in window events)
   const dragRef  = ur({ painting: false, days: [] });
   const snapRef  = ur({});
   snapRef.current = { warMap, warMapCategories, paintCatId };
 
+  // Sync warMapCategories from goals whenever goals change
   ue(() => {
+    const wmc = personal.warMapCategories || [];
+    const goalLabels = personal.goals || [];
+    if (!goalLabels.length) return;
+    const needsSync = goalLabels.some(g => !wmc.find(c => c.label === g))
+                   || wmc.some(c => !goalLabels.includes(c.label));
+    if (!needsSync) return;
+    const COLORS = ["#22C55E","#3B82F6","#F59E0B","#8B5CF6","#EC4899","#EF4444","#06B6D4","#84CC16","#F97316"];
+    const newCats = goalLabels.map((g, i) => {
+      const ex = wmc.find(c => c.label === g);
+      if (ex) return ex;
+      const usedColors = wmc.filter(c => goalLabels.includes(c.label)).map(c => c.color);
+      const col = COLORS.find(c => !usedColors.includes(c)) || COLORS[i % COLORS.length];
+      return { id: `cat_${Date.now()}_${i}`, label: g, color: col };
+    });
+    onUpdate({ warMapCategories: newCats });
+  }, [(personal.goals || []).join('|')]);
+
+  // Global mousemove + mouseup for drag-paint
+  ue(() => {
+    const handleMove = (e) => {
+      if (!dragRef.current.painting) return;
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const ds = el?.dataset?.ds || el?.parentElement?.dataset?.ds;
+      if (ds && !dragRef.current.days.includes(ds)) {
+        const next = [...dragRef.current.days, ds];
+        dragRef.current.days = next;
+        setDragDays(next);
+      }
+    };
     const handleUp = () => {
       const { warMap: wm, warMapCategories: cats, paintCatId: cid } = snapRef.current;
       if (dragRef.current.painting && dragRef.current.days.length > 0 && cid) {
@@ -3685,10 +3715,14 @@ function MetricasSection({ personal, onUpdate }) {
         }
       }
       dragRef.current = { painting: false, days: [] };
-      setIsDragging(false);
+      setDragDays([]);
     };
+    window.addEventListener("mousemove", handleMove);
     window.addEventListener("mouseup", handleUp);
-    return () => window.removeEventListener("mouseup", handleUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMove);
+      window.removeEventListener("mouseup", handleUp);
+    };
   }, []);
 
   const todayStr = new Date().toISOString().slice(0,10);
@@ -3766,29 +3800,27 @@ function MetricasSection({ personal, onUpdate }) {
       const isToday = ds === todayDs;
       cells.push(
         <div key={d}
+          data-ds={ds}
           title={entry?.title ? `${ds}: ${entry.title}` : ds}
           onMouseDown={e=>{
             e.preventDefault();
             if (paintCatId) {
               dragRef.current = { painting: true, days: [ds] };
-              setIsDragging(true);
+              setDragDays([ds]);
             } else {
               openModal(ds);
-            }
-          }}
-          onMouseEnter={()=>{
-            if (dragRef.current.painting && paintCatId && !dragRef.current.days.includes(ds)) {
-              dragRef.current.days.push(ds);
             }
           }}
           style={{ width:20, height:20, display:"flex", alignItems:"center", justifyContent:"center",
             borderRadius:3, fontSize:9, position:"relative", userSelect:"none",
             cursor: paintCatId ? "crosshair" : "pointer",
-            background: col || "transparent",
-            color: col ? "#141414" : isToday ? GOLD : GRAY,
+            background: dragDays.includes(ds) && paintCatId
+              ? (warMapCategories.find(c=>c.id===paintCatId)?.color||GOLD)+"bb"
+              : col || "transparent",
+            color: col || (dragDays.includes(ds) && paintCatId) ? "#141414" : isToday ? GOLD : GRAY,
             border: `1px solid ${isToday&&!col ? GOLD+"88" : col ? "transparent" : "#2a2a2e"}`,
-            fontWeight: col||isToday ? 700 : 400,
-            outline: isDragging && dragRef.current.days.includes(ds) ? `2px solid ${warMapCategories.find(c=>c.id===paintCatId)?.color||GOLD}` : "none" }}>
+            fontWeight: col||isToday||dragDays.includes(ds) ? 700 : 400,
+            outline: dragDays.includes(ds) ? `2px solid ${warMapCategories.find(c=>c.id===paintCatId)?.color||GOLD}` : "none" }}>
           {d}
           {entry?.title && <span style={{ position:"absolute", top:1, right:1, width:4, height:4, borderRadius:"50%", background:"#141414", opacity:0.7 }} />}
         </div>
@@ -4070,16 +4102,26 @@ function FinanzasSection({ personal, onUpdate }) {
   const debts       = finance.debts       || [];
   const visionUSD   = finance.visionUSD   !== undefined ? finance.visionUSD : 250000;
   const fxRate      = finance.fxRate      !== undefined ? finance.fxRate    : 4200;
+  const salesConfig = finance.salesConfig || {
+    monthlyTarget:   15000000,
+    avgFee:          4500000,
+    channelPct:      10,
+    avgClientSales:  25000000,
+    upsellPrice:     2000000,
+    meetingsPerClose:3,
+  };
+  const updateSC = (patch) => onUpdate({ finance:{ ...finance, salesConfig:{ ...salesConfig, ...patch } } });
 
   const [year,      setYear]      = us(new Date().getFullYear());
   const [expandedM, setExpandedM] = us(null);
   const [tab,       setTab]       = us("mensual");
-  const [ingClient,  setIngClient]  = us("");
-  const [ingConcept, setIngConcept] = us("");
-  const [ingAmount,  setIngAmount]  = us("");
-  const [egCat,    setEgCat]    = us("");
-  const [egDesc,   setEgDesc]   = us("");
-  const [egAmount, setEgAmount] = us("");
+  // Per-month form state (avoids cross-month interference)
+  const [ingForms, setIngForms] = us({});
+  const [egForms,  setEgForms]  = us({});
+  const ingF = (m) => ingForms[m] || {client:"",concept:"",amount:""};
+  const egF  = (m) => egForms[m]  || {cat:"",desc:"",amount:""};
+  const setIngF = (m,k,v) => setIngForms(p=>{ const c=p[m]||{client:"",concept:"",amount:""}; return {...p,[m]:{...c,[k]:v}}; });
+  const setEgF  = (m,k,v) => setEgForms(p=>{ const c=p[m]||{cat:"",desc:"",amount:""}; return {...p,[m]:{...c,[k]:v}}; });
   const [assetName, setAssetName] = us(""); const [assetVal,  setAssetVal]  = us("");
   const [liabName,  setLiabName]  = us(""); const [liabVal,   setLiabVal]   = us("");
   const [debtName,  setDebtName]  = us(""); const [debtBal,   setDebtBal]   = us("");
@@ -4121,16 +4163,18 @@ function FinanzasSection({ personal, onUpdate }) {
   };
 
   const addIngreso = (m) => {
-    if (!ingAmount) return;
-    const ing = { id:"ing_"+Date.now(), client:ingClient.trim(), concept:ingConcept.trim(), amount:parseFloat(ingAmount)||0 };
+    const f = ingF(m);
+    if (!f.amount) return;
+    const ing = { id:"ing_"+Date.now(), client:f.client.trim(), concept:f.concept.trim(), amount:parseFloat(f.amount)||0 };
     setMD(m, md=>({...md, ingresos:[...(md.ingresos||[]),ing]}));
-    setIngClient(""); setIngConcept(""); setIngAmount("");
+    setIngForms(p=>({...p,[m]:{client:"",concept:"",amount:""}}));
   };
   const addEgreso = (m) => {
-    if (!egAmount) return;
-    const eg = { id:"eg_"+Date.now(), category:egCat, description:egDesc.trim(), amount:parseFloat(egAmount)||0 };
+    const f = egF(m);
+    if (!f.amount) return;
+    const eg = { id:"eg_"+Date.now(), category:f.cat, description:f.desc.trim(), amount:parseFloat(f.amount)||0 };
     setMD(m, md=>({...md, egresos:[...(md.egresos||[]),eg]}));
-    setEgCat(""); setEgDesc(""); setEgAmount("");
+    setEgForms(p=>({...p,[m]:{cat:"",desc:"",amount:""}}));
   };
 
   const yearTotals = Array.from({length:12},(_,m)=>{
@@ -4188,13 +4232,38 @@ function FinanzasSection({ personal, onUpdate }) {
             <button onClick={()=>setYear(y=>y+1)} style={{ background:CARD,border:`1px solid ${BORDER}`,color:WHITE,borderRadius:6,padding:"4px 10px",cursor:"pointer",fontSize:13 }}>→</button>
           </div>
 
+          {/* Config ventas */}
+          <div style={{ background:"#111113",borderRadius:10,padding:"12px 16px",marginBottom:16,border:`1px solid ${BORDER}` }}>
+            <div style={{ color:GOLD,fontSize:10,fontWeight:700,letterSpacing:1,marginBottom:10 }}>CONFIGURACIÓN VENTAS</div>
+            <div style={{ display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end" }}>
+              {[
+                ["Meta/mes",          "monthlyTarget",   salesConfig.monthlyTarget,   1],
+                ["Fee promedio",      "avgFee",          salesConfig.avgFee,           1],
+                ["Ventas cliente/mes","avgClientSales",  salesConfig.avgClientSales,   1],
+                ["% comisión canal",  "channelPct",      salesConfig.channelPct,       0.01],
+                ["Mejora Continua",   "upsellPrice",     salesConfig.upsellPrice,      1],
+                ["Reuniones/cierre",  "meetingsPerClose",salesConfig.meetingsPerClose, 0.1],
+              ].map(([label,key,val,step])=>(
+                <div key={key} style={{ display:"flex",flexDirection:"column",gap:3 }}>
+                  <span style={{ color:GRAY,fontSize:9,letterSpacing:0.5 }}>{label}</span>
+                  <input type="number" value={val} step={step}
+                    onChange={e=>updateSC({[key]:parseFloat(e.target.value)||0})}
+                    style={{ width:90,background:"#0e0e10",border:`1px solid ${BORDER}`,borderRadius:5,padding:"4px 7px",color:GOLD,fontSize:11,outline:"none",fontWeight:600 }} />
+                </div>
+              ))}
+            </div>
+            <div style={{ color:GRAY,fontSize:9,marginTop:8 }}>
+              Ingreso/cliente = Fee + (Ventas cliente × % comisión) · Comisión canal se acumula mensualmente
+            </div>
+          </div>
+
           {/* Resumen año */}
           <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:20 }}>
             {[
-              ["Cash Collected",fmtCOP(totCC),GOLD],
-              ["Gastos",        fmtCOP(totG),"#EF4444"],
-              ["Flujo Neto",    fmtCOP(totFlujo),totFlujo>=0?"#22C55E":"#EF4444"],
-              ["Cash Propio",   fmtCOP(totCP),"#22C55E"],
+              ["Ingresos",   fmtCOP(totCC),    GOLD],
+              ["Gastos",     fmtCOP(totG),     "#EF4444"],
+              ["Flujo Neto", fmtCOP(totFlujo), totFlujo>=0?"#22C55E":"#EF4444"],
+              ["Margen",     totCC>0?(totFlujo/totCC*100).toFixed(0)+"%":"—", totFlujo>=0?"#22C55E":"#EF4444"],
             ].map(([label,val,color])=>(
               <div key={label} style={{ background:CARD,borderRadius:10,padding:"12px 14px",border:`1px solid ${BORDER}` }}>
                 <div style={{ color:GRAY,fontSize:10,marginBottom:4 }}>{label}</div>
@@ -4218,7 +4287,7 @@ function FinanzasSection({ personal, onUpdate }) {
               return (
                 <div key={m} style={{ background:CARD,borderRadius:10,border:`1px solid ${hasData?BORDER:BORDER+"44"}`,overflow:"hidden" }}>
                   {/* Header */}
-                  <div onClick={()=>{setExpandedM(exp?null:m);setIngClient("");setIngConcept("");setIngAmount("");setEgCat("");setEgDesc("");setEgAmount("");}}
+                  <div onClick={()=>setExpandedM(exp?null:m)}
                     style={{ display:"flex",alignItems:"center",padding:"10px 16px",cursor:"pointer",gap:0,userSelect:"none" }}>
                     <span style={{ color:WHITE,fontWeight:700,fontSize:13,width:36 }}>{mes}</span>
                     <div style={{ flex:1,display:"flex",gap:5,alignItems:"center",overflow:"hidden" }}>
@@ -4262,15 +4331,15 @@ function FinanzasSection({ personal, onUpdate }) {
                           {/* Formulario ingreso */}
                           <div style={{ marginTop:8,padding:"10px",background:"#111113",borderRadius:8,border:`1px solid #22C55E22` }}>
                             <div style={{ color:"#22C55E",fontSize:10,fontWeight:700,marginBottom:7,letterSpacing:0.5 }}>+ AGREGAR INGRESO</div>
-                            <input value={ingClient} onChange={e=>setIngClient(e.target.value)}
+                            <input value={ingF(m).client} onChange={e=>setIngF(m,"client",e.target.value)}
                               placeholder="Cliente / Fuente  (Ej: Zenova, Stefa, AYM...)"
                               style={{ width:"100%",background:"#0e0e10",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:WHITE,fontSize:11,outline:"none",marginBottom:5,boxSizing:"border-box" }} />
-                            <input value={ingConcept} onChange={e=>setIngConcept(e.target.value)}
+                            <input value={ingF(m).concept} onChange={e=>setIngF(m,"concept",e.target.value)}
                               placeholder="Concepto  (Ej: Fee julio, Comisión cerrada, Bono)"
-                              onKeyDown={e=>e.key==="Enter"&&ingAmount&&addIngreso(m)}
+                              onKeyDown={e=>e.key==="Enter"&&ingF(m).amount&&addIngreso(m)}
                               style={{ width:"100%",background:"#0e0e10",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:WHITE,fontSize:11,outline:"none",marginBottom:5,boxSizing:"border-box" }} />
                             <div style={{ display:"flex",gap:6 }}>
-                              <input value={ingAmount} onChange={e=>setIngAmount(e.target.value)} type="number"
+                              <input value={ingF(m).amount} onChange={e=>setIngF(m,"amount",e.target.value)} type="number"
                                 placeholder="$ Monto COP"
                                 onKeyDown={e=>e.key==="Enter"&&addIngreso(m)}
                                 style={{ flex:1,background:"#0e0e10",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:WHITE,fontSize:11,outline:"none" }} />
@@ -4279,21 +4348,6 @@ function FinanzasSection({ personal, onUpdate }) {
                             </div>
                           </div>
 
-                          {/* Cash propio y dividendos */}
-                          <div style={{ marginTop:10,display:"flex",flexDirection:"column",gap:6 }}>
-                            <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-                              <span style={{ color:GRAY,fontSize:11,flex:1 }}>Cash Propio (tu sueldo)</span>
-                              <input value={md.cashPropio||""} onChange={e=>setMD(m,md=>({...md,cashPropio:parseFloat(e.target.value)||0}))}
-                                placeholder="0" type="number"
-                                style={{ width:110,background:"#111113",border:`1px solid ${BORDER}`,borderRadius:5,padding:"4px 8px",color:"#22C55E",fontSize:11,outline:"none",textAlign:"right" }} />
-                            </div>
-                            <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-                              <span style={{ color:GRAY,fontSize:11,flex:1 }}>Dividendos distribuidos</span>
-                              <input value={md.dividends||""} onChange={e=>setMD(m,md=>({...md,dividends:parseFloat(e.target.value)||0}))}
-                                placeholder="0" type="number"
-                                style={{ width:110,background:"#111113",border:`1px solid ${BORDER}`,borderRadius:5,padding:"4px 8px",color:"#8B5CF6",fontSize:11,outline:"none",textAlign:"right" }} />
-                            </div>
-                          </div>
                         </div>
 
                         {/* EGRESOS */}
@@ -4330,17 +4384,17 @@ function FinanzasSection({ personal, onUpdate }) {
                           {/* Formulario egreso */}
                           <div style={{ marginTop:8,padding:"10px",background:"#111113",borderRadius:8,border:`1px solid #EF444422` }}>
                             <div style={{ color:"#EF4444",fontSize:10,fontWeight:700,marginBottom:7,letterSpacing:0.5 }}>+ AGREGAR GASTO</div>
-                            <select value={egCat} onChange={e=>setEgCat(e.target.value)}
-                              style={{ width:"100%",background:"#0e0e10",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:egCat?WHITE:"#666",fontSize:11,outline:"none",marginBottom:5,boxSizing:"border-box" }}>
+                            <select value={egF(m).cat} onChange={e=>setEgF(m,"cat",e.target.value)}
+                              style={{ width:"100%",background:"#0e0e10",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:egF(m).cat?WHITE:"#666",fontSize:11,outline:"none",marginBottom:5,boxSizing:"border-box" }}>
                               <option value="">Categoría...</option>
                               {egCats.map(c=>(<option key={c} value={c}>{c}</option>))}
                             </select>
-                            <input value={egDesc} onChange={e=>setEgDesc(e.target.value)}
+                            <input value={egF(m).desc} onChange={e=>setEgF(m,"desc",e.target.value)}
                               placeholder="Descripción  (Ej: Mercado, Netflix, Vuelo Madrid)"
-                              onKeyDown={e=>e.key==="Enter"&&egAmount&&addEgreso(m)}
+                              onKeyDown={e=>e.key==="Enter"&&egF(m).amount&&addEgreso(m)}
                               style={{ width:"100%",background:"#0e0e10",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:WHITE,fontSize:11,outline:"none",marginBottom:5,boxSizing:"border-box" }} />
                             <div style={{ display:"flex",gap:6 }}>
-                              <input value={egAmount} onChange={e=>setEgAmount(e.target.value)} type="number"
+                              <input value={egF(m).amount} onChange={e=>setEgF(m,"amount",e.target.value)} type="number"
                                 placeholder="$ Monto COP"
                                 onKeyDown={e=>e.key==="Enter"&&addEgreso(m)}
                                 style={{ flex:1,background:"#0e0e10",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:WHITE,fontSize:11,outline:"none" }} />
@@ -4357,9 +4411,117 @@ function FinanzasSection({ personal, onUpdate }) {
                           <span style={{ fontSize:11,color:GRAY }}>Ingresos: <span style={{ color:GOLD,fontWeight:700 }}>{fmtCOP(cc)}</span></span>
                           <span style={{ fontSize:11,color:GRAY }}>Gastos: <span style={{ color:"#EF4444",fontWeight:700 }}>{fmtCOP(g)}</span></span>
                           <span style={{ fontSize:11,color:GRAY }}>Flujo Neto: <span style={{ color:flujo>=0?"#22C55E":"#EF4444",fontWeight:700 }}>{fmtCOP(flujo)}</span></span>
-                          {md.cashPropio>0 && <span style={{ fontSize:11,color:GRAY }}>Cash Propio: <span style={{ color:"#22C55E",fontWeight:700 }}>{fmtCOP(md.cashPropio)}</span></span>}
                         </div>
                       )}
+
+                      {/* PROYECCIÓN DE PIPELINE */}
+                      {(()=>{
+                        const target   = salesConfig.monthlyTarget || 0;
+                        if (!target) return null;
+                        const gapToTarget = Math.max(0, target - cc);
+                        const pctDone  = target > 0 ? Math.min(100, cc/target*100) : 0;
+
+                        // Revenue per new client: fee + canal commission
+                        const fee      = salesConfig.avgFee || 0;
+                        const canal    = (salesConfig.avgClientSales||0) * (salesConfig.channelPct||10) / 100;
+                        const revPerClient = fee + canal;
+
+                        // Existing clients in the ledger
+                        const existingClients = [...new Set(ingresos.map(i=>i.client||i.concept).filter(Boolean))].length;
+
+                        // Upsell potential: Mejora Continua on existing clients
+                        const upsellTotal = existingClients * (salesConfig.upsellPrice||2000000);
+
+                        // Pure new-client path
+                        const newClientsNeeded   = revPerClient>0 ? Math.ceil(gapToTarget/revPerClient) : null;
+                        const meetingsNeeded     = newClientsNeeded ? newClientsNeeded * (salesConfig.meetingsPerClose||3) : null;
+
+                        // Hybrid: upsell first, then new clients
+                        const gapAfterUpsell     = Math.max(0, gapToTarget - upsellTotal);
+                        const newAfterUpsell     = revPerClient>0 ? Math.ceil(gapAfterUpsell/revPerClient) : null;
+                        const meetingsAfterUpsell= newAfterUpsell ? newAfterUpsell * (salesConfig.meetingsPerClose||3) : 0;
+                        const convPct = Math.round(100/(salesConfig.meetingsPerClose||3));
+
+                        return (
+                          <div style={{ marginTop:14,background:"#0a0a0b",borderRadius:10,border:`1px solid ${GOLD}22`,padding:"14px 16px" }}>
+                            <div style={{ color:GOLD,fontWeight:700,fontSize:11,letterSpacing:1,marginBottom:12 }}>PROYECCIÓN DE CIERRE</div>
+
+                            {/* Progress bar */}
+                            <div style={{ marginBottom:12 }}>
+                              <div style={{ display:"flex",justifyContent:"space-between",marginBottom:5 }}>
+                                <span style={{ color:GRAY,fontSize:11 }}>Meta: <span style={{ color:WHITE,fontWeight:700 }}>{fmtCOP(target)}</span></span>
+                                <span style={{ color:pctDone>=100?"#22C55E":GOLD,fontSize:11,fontWeight:700 }}>{pctDone.toFixed(0)}%</span>
+                              </div>
+                              <div style={{ height:6,background:"#222",borderRadius:3,overflow:"hidden" }}>
+                                <div style={{ height:"100%",width:pctDone+"%",background:`linear-gradient(90deg,${GOLD_DIM},${GOLD})`,borderRadius:3,transition:"width 0.4s" }} />
+                              </div>
+                              {gapToTarget>0
+                                ? <div style={{ color:"#EF4444",fontSize:11,marginTop:5 }}>Falta cerrar: <span style={{ fontWeight:700 }}>{fmtCOP(gapToTarget)}</span></div>
+                                : <div style={{ color:"#22C55E",fontSize:11,fontWeight:700,marginTop:5 }}>✓ Meta del mes alcanzada</div>
+                              }
+                            </div>
+
+                            {gapToTarget>0 && (
+                              <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+
+                                {/* Revenue per client breakdown */}
+                                <div style={{ background:CARD,borderRadius:8,padding:"8px 12px",fontSize:10,color:GRAY }}>
+                                  <span>Por cliente: </span>
+                                  <span style={{ color:WHITE }}>{fmtCOP(fee)}</span><span> fee </span>
+                                  <span style={{ color:"#22C55E",fontWeight:700 }}>+ {fmtCOP(canal)} canal ({salesConfig.channelPct||10}% × {fmtCOP(salesConfig.avgClientSales||0)})</span>
+                                  <span style={{ color:GOLD,fontWeight:700 }}> = {fmtCOP(revPerClient)}/mes</span>
+                                </div>
+
+                                {/* Option A: Pure new clients */}
+                                <div style={{ background:CARD,borderRadius:8,padding:"10px 12px",border:`1px solid #3B82F622` }}>
+                                  <div style={{ color:"#3B82F6",fontSize:10,fontWeight:700,letterSpacing:0.5,marginBottom:8 }}>A · SOLO NUEVOS CLIENTES</div>
+                                  <div style={{ display:"flex",gap:20 }}>
+                                    <div style={{ textAlign:"center" }}>
+                                      <div style={{ color:WHITE,fontWeight:900,fontSize:22 }}>{newClientsNeeded ?? "—"}</div>
+                                      <div style={{ color:GRAY,fontSize:9 }}>clientes a cerrar</div>
+                                    </div>
+                                    <div style={{ textAlign:"center" }}>
+                                      <div style={{ color:"#F59E0B",fontWeight:900,fontSize:22 }}>{meetingsNeeded ?? "—"}</div>
+                                      <div style={{ color:GRAY,fontSize:9 }}>reuniones a agendar</div>
+                                    </div>
+                                    <div style={{ textAlign:"center" }}>
+                                      <div style={{ color:GRAY,fontWeight:700,fontSize:16 }}>{convPct}%</div>
+                                      <div style={{ color:GRAY,fontSize:9 }}>conversión</div>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Option B: Upsell Mejora Continua + new clients */}
+                                {existingClients>0 && (
+                                  <div style={{ background:CARD,borderRadius:8,padding:"10px 12px",border:`1px solid #8B5CF622` }}>
+                                    <div style={{ color:"#8B5CF6",fontSize:10,fontWeight:700,letterSpacing:0.5,marginBottom:8 }}>B · UPSELL MEJORA CONTINUA + NUEVOS (RECOMENDADO)</div>
+                                    <div style={{ color:GRAY,fontSize:10,marginBottom:6 }}>
+                                      Activar <span style={{ color:"#8B5CF6",fontWeight:700 }}>Mejora Continua</span> en {existingClients} cliente{existingClients!==1?"s":""} actuales:
+                                      <span style={{ color:"#8B5CF6",fontWeight:700 }}> +{fmtCOP(upsellTotal)}/mes</span>
+                                    </div>
+                                    {gapAfterUpsell<=0
+                                      ? <div style={{ color:"#22C55E",fontSize:11,fontWeight:700 }}>✓ Solo el upsell ya cubre la brecha</div>
+                                      : <div style={{ color:GRAY,fontSize:10 }}>
+                                          Brecha restante: <span style={{ color:"#EF4444",fontWeight:700 }}>{fmtCOP(gapAfterUpsell)}</span>
+                                          {" → "}<span style={{ color:WHITE,fontWeight:700 }}>{newAfterUpsell}</span> cliente nuevo
+                                          {" = "}<span style={{ color:"#F59E0B",fontWeight:700 }}>{meetingsAfterUpsell}</span> reunión{meetingsAfterUpsell!==1?"es":""}
+                                        </div>
+                                    }
+                                  </div>
+                                )}
+
+                                {/* Call to action */}
+                                <div style={{ background:"#F59E0B11",borderRadius:8,padding:"8px 12px",border:`1px solid #F59E0B22`,display:"flex",alignItems:"center",gap:8 }}>
+                                  <span style={{ fontSize:14 }}>📅</span>
+                                  <span style={{ color:"#F59E0B",fontSize:11,fontWeight:700 }}>
+                                    Agendá {existingClients>0?meetingsAfterUpsell:meetingsNeeded} reunión{(existingClients>0?meetingsAfterUpsell:meetingsNeeded)!==1?"es":""} este mes para cerrar la meta
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
@@ -4372,6 +4534,22 @@ function FinanzasSection({ personal, onUpdate }) {
       {/* ══ PATRIMONIO & DEUDAS ══ */}
       {tab==="patrimonio" && (
         <div>
+          {/* Flujo neto acumulado del año */}
+          {(totCC>0||totG>0) && (
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16 }}>
+              {[
+                ["Ingresado este año",        fmtCOP(totCC),    "#22C55E"],
+                ["Gastado este año",           fmtCOP(totG),    "#EF4444"],
+                ["Queda después de costos",    fmtCOP(totFlujo), totFlujo>=0?"#22C55E":"#EF4444"],
+              ].map(([label,val,color])=>(
+                <div key={label} style={{ background:"#111113",borderRadius:10,padding:"14px 16px",border:`1px solid ${BORDER}`,textAlign:"center" }}>
+                  <div style={{ color:GRAY,fontSize:10,marginBottom:6 }}>{label}</div>
+                  <div style={{ color,fontWeight:700,fontSize:14 }}>{val}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div style={{ background:CARD,borderRadius:14,padding:"20px 24px",border:`2px solid ${netWorth>=0?"#22C55E44":"#EF444444"}`,marginBottom:20,textAlign:"center" }}>
             <div style={{ color:GRAY,fontSize:11,marginBottom:4 }}>Patrimonio Neto</div>
             <div style={{ color:netWorth>=0?"#22C55E":"#EF4444",fontWeight:800,fontSize:30 }}>{fmtCOP(netWorth)}</div>
@@ -4534,13 +4712,33 @@ function FinanzasSection({ personal, onUpdate }) {
 
           <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:20 }}>
             {[
-              ["Para llegar en 24 meses", gap>0?fmtUSD(gap/24)+"/mes":"¡Meta alcanzada!", "#3B82F6"],
-              ["Para llegar en 36 meses", gap>0?fmtUSD(gap/36)+"/mes":"¡Meta alcanzada!", "#8B5CF6"],
-              ["Falta para la meta",      gap>0?fmtUSD(gap)+" USD":"¡Ya llegaste!",       gap<=0?"#22C55E":GOLD],
-            ].map(([label,val,color])=>(
+              {
+                label:"Para llegar en 24 meses",
+                sub:"necesitás ganar/mes",
+                val: gap>0 ? fmtCOP(gap/24*fxRate + avgG) : "¡Meta alcanzada!",
+                detail: gap>0 ? `(${fmtUSD(gap/24)} ahorro + gastos)` : null,
+                color:"#3B82F6"
+              },
+              {
+                label:"Para llegar en 36 meses",
+                sub:"necesitás ganar/mes",
+                val: gap>0 ? fmtCOP(gap/36*fxRate + avgG) : "¡Meta alcanzada!",
+                detail: gap>0 ? `(${fmtUSD(gap/36)} ahorro + gastos)` : null,
+                color:"#8B5CF6"
+              },
+              {
+                label:"Falta para la meta",
+                sub: gap>0 ? `≈ ${fmtCOP(gap*fxRate)}` : "Objetivo superado",
+                val: gap>0 ? fmtUSD(gap)+" USD" : "¡Ya llegaste!",
+                detail: null,
+                color: gap<=0?"#22C55E":GOLD
+              },
+            ].map(({label,sub,val,detail,color})=>(
               <div key={label} style={{ background:CARD,borderRadius:10,padding:"14px 16px",border:`1px solid ${BORDER}`,textAlign:"center" }}>
-                <div style={{ color:GRAY,fontSize:10,marginBottom:6 }}>{label}</div>
-                <div style={{ color,fontWeight:700,fontSize:12 }}>{val}</div>
+                <div style={{ color:GRAY,fontSize:10,marginBottom:4 }}>{label}</div>
+                <div style={{ color,fontWeight:800,fontSize:13,marginBottom:2 }}>{val}</div>
+                {sub && <div style={{ color:GRAY,fontSize:10,marginBottom:2 }}>{sub}</div>}
+                {detail && <div style={{ color:GRAY,fontSize:9,opacity:0.7 }}>{detail}</div>}
               </div>
             ))}
           </div>
