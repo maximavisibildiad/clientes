@@ -1302,8 +1302,7 @@ function FlowCanvas({ flow, clientName, clientProfile, clientTasks, onUpdate, ap
     if (connectMode) {
       if (!connectFrom) { setConnectFrom(nodeId); return; }
       if (connectFrom !== nodeId) {
-        const label = window.prompt("Etiqueta de conexión (opcional):", "") || "";
-        update({ ...flow, edges: [...edges, { id:uid(), from:connectFrom, to:nodeId, label }] });
+        update({ ...flow, edges: [...edges, { id:uid(), from:connectFrom, to:nodeId, label:"" }] });
       }
       setConnectFrom(null);
       setConnectMode(false);
@@ -4304,6 +4303,9 @@ function FinanzasSection({ personal, onUpdate }) {
   const [liabName,  setLiabName]  = us(""); const [liabVal,   setLiabVal]   = us("");
   const [debtName,  setDebtName]  = us(""); const [debtBal,   setDebtBal]   = us("");
   const [debtRate,  setDebtRate]  = us(""); const [debtPmt,   setDebtPmt]   = us("");
+  const [abonoInputs, setAbonoInputs] = us({});
+  const [abonoDate,   setAbonoDate]   = us({});
+  const [expandedDebt, setExpandedDebt] = us(null);
   const [showCatEditor, setShowCatEditor] = us(false);
   const [newCatInputs, setNewCatInputs] = us({ personales:"", profesionales:"", otros:"" });
 
@@ -4349,31 +4351,46 @@ function FinanzasSection({ personal, onUpdate }) {
     setMD(m, md=>({...md, ingresos:[...(md.ingresos||[]),ing]}));
     setIngForms(p=>({...p,[m]:{client:"",concept:"",amount:""}}));
   };
+  // Convierte gastoItems (formato legacy) a array egresos — pura, sin side effects
+  const giToEgresos = (gi) => {
+    const out = [];
+    [["personales","Personales"],["profesionales","Profesionales"],["otros","Otros"]].forEach(([g,l]) => {
+      (gastoCategories[g]||[]).forEach(c => {
+        const v = gi[`${g}_${c}`];
+        if (v > 0) out.push({ id:`eg_m_${uid()}`, category:`${l} · ${c}`, description:c, amount:v });
+      });
+    });
+    return out;
+  };
+
+  // Devuelve egresos para display: usa md.egresos si existe, sino convierte gastoItems
+  const getEgresosDisplay = (m) => {
+    const md = getMD(m);
+    if (md.egresos !== undefined) return md.egresos;
+    const gi = md.gastoItems || {};
+    return giToEgresos(gi).map(e => ({ ...e, id: `_leg_${e.id}` }));
+  };
+
   const addEgreso = (m) => {
     const f = egF(m);
     if (!f.amount) return;
     const eg = { id:"eg_"+Date.now(), category:f.cat, description:f.desc.trim(), amount:parseFloat(f.amount)||0 };
-    setMD(m, md=>({...md, egresos:[...(md.egresos||[]),eg]}));
+    setMD(m, md => {
+      if (md.egresos !== undefined) return { ...md, egresos:[...md.egresos, eg] };
+      // Auto-migrar gastoItems y agregar nuevo gasto en un solo update
+      const migrated = giToEgresos(md.gastoItems || {});
+      const { gastoItems:_, ...rest } = md;
+      return { ...rest, egresos:[...migrated, eg] };
+    });
     setEgForms(p=>({...p,[m]:{cat:"",desc:"",amount:""}}));
   };
 
-  // Migra gastoItems (formato legacy) → egresos (formato editable) al expandir el mes
   const migrateGastoItems = (m) => {
     const md = getMD(m);
     if (md.egresos !== undefined || !md.gastoItems) return;
-    const gi = md.gastoItems;
-    const newEgresos = [];
-    const push = (group, label) => {
-      (gastoCategories[group]||[]).forEach(c => {
-        const v = gi[`${group}_${c}`];
-        if (v > 0) newEgresos.push({ id:"eg_m_"+uid(), category:`${label} · ${c}`, description:c, amount:v });
-      });
-    };
-    push("personales", "Personales");
-    push("profesionales", "Profesionales");
-    push("otros", "Otros");
-    const { gastoItems: _removed, ...restMd } = md;
-    setMD(m, () => ({ ...restMd, egresos: newEgresos }));
+    const migrated = giToEgresos(md.gastoItems);
+    const { gastoItems:_, ...rest } = md;
+    setMD(m, () => ({ ...rest, egresos: migrated }));
   };
 
   const updateGastoCats = (newCats) => onUpdate({ finance:{ ...finance, gastoCategories: newCats } });
@@ -4499,19 +4516,20 @@ function FinanzasSection({ personal, onUpdate }) {
                   <div style={{ color:GRAY, fontSize:9, fontWeight:700, letterSpacing:1.5, textTransform:"uppercase", marginBottom:8 }}>Parámetros</div>
                   <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8 }}>
                     {[
-                      ["Meta mensual (COP)",          "monthlyTarget",    salesConfig.monthlyTarget,     1],
-                      ["Fee promedio (COP)",           "avgFee",           salesConfig.avgFee,            1],
-                      ["Ventas del cliente/mes",      "avgClientSales",   salesConfig.avgClientSales,    1],
-                      ["% comisión canal",             "channelPct",       salesConfig.channelPct,        0.01],
-                      ["Piso comisión (ventas mín.)", "commissionFloor",  salesConfig.commissionFloor||0, 1],
-                      ["Precio upsell / adicional",   "upsellPrice",      salesConfig.upsellPrice,       1],
-                      ["Reuniones para 1 cierre",     "meetingsPerClose", salesConfig.meetingsPerClose,  0.1],
+                      ["Meta mensual (COP)",              "monthlyTarget",    salesConfig.monthlyTarget,     1],
+                      ["Fee promedio (COP)",               "avgFee",           salesConfig.avgFee,            1],
+                      ["Proyección ventas/cliente (COP)",  "avgClientSales",   salesConfig.avgClientSales,    1],
+                      ["% comisión canal",                 "channelPct",       salesConfig.channelPct,        0.01],
+                      ["Piso comisión — ventas mín.",      "commissionFloor",  salesConfig.commissionFloor||0, 1],
+                      ["Precio upsell / adicional",        "upsellPrice",      salesConfig.upsellPrice,       1],
+                      ["Reuniones para 1 cierre",          "meetingsPerClose", salesConfig.meetingsPerClose,  0.1],
                     ].map(([label,key,val,step])=>(
                       <div key={key}>
                         <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>{label}</div>
-                        <input type="number" value={val} step={step}
+                        <input type="number" value={val||""} step={step}
+                          placeholder={key==="avgClientSales"?"Ej: 100000000":""}
                           onChange={e=>updateSC({[key]:parseFloat(e.target.value)||0})}
-                          style={{ width:"100%", background:"#0e0e10", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 8px", color:GOLD, fontSize:12, outline:"none", fontWeight:700, boxSizing:"border-box" }} />
+                          style={{ width:"100%", background:"#0e0e10", border:`1px solid ${key==="avgClientSales"&&!val?`${GOLD}55`:BORDER}`, borderRadius:6, padding:"5px 8px", color:GOLD, fontSize:12, outline:"none", fontWeight:700, boxSizing:"border-box" }} />
                       </div>
                     ))}
                   </div>
@@ -4584,7 +4602,7 @@ function FinanzasSection({ personal, onUpdate }) {
             {MONTHS.map((mes,m)=>{
               const md       = getMD(m);
               const ingresos = md.ingresos || [];
-              const egresos  = md.egresos  || [];
+              const egresos  = getEgresosDisplay(m);
               const cc = getCashCollected(m);
               const g  = getTotalGastos(m);
               const flujo = cc - g;
@@ -4679,8 +4697,12 @@ function FinanzasSection({ personal, onUpdate }) {
                                       {eg.description && <div style={{ color:GRAY,fontSize:10,marginTop:1 }}>{eg.description}</div>}
                                     </div>
                                     <span style={{ color:"#EF4444",fontSize:11,fontWeight:700,whiteSpace:"nowrap" }}>{fmtCOP(eg.amount)}</span>
-                                    <button onClick={()=>setMD(m,md=>({...md,egresos:(md.egresos||[]).filter(x=>x.id!==eg.id)}))}
-                                      style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:14,opacity:0.5,lineHeight:1,padding:0 }}>×</button>
+                                    <button onClick={()=>setMD(m,md=>{
+                                      if (md.egresos !== undefined) return {...md, egresos:md.egresos.filter(x=>x.id!==eg.id)};
+                                      // Legacy: migrar y omitir este item
+                                      const kept = giToEgresos(md.gastoItems||{}).filter(x=>x.category!==eg.category||x.amount!==eg.amount);
+                                      const {gastoItems:_,...rest}=md; return {...rest,egresos:kept};
+                                    })} style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:14,opacity:0.5,lineHeight:1,padding:0 }}>×</button>
                                   </div>
                                 ))}
                               </div>
@@ -4916,27 +4938,88 @@ function FinanzasSection({ personal, onUpdate }) {
               {debts.map(d=>{
                 const {months,totalPaid,totalInterest}=calcDebt(d.balance,d.rate,d.payment);
                 const noAlcanza=d.payment>0&&d.rate>0&&months===null;
+                const payments = d.payments||[];
+                const totalAbonado = payments.reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
+                const expD = expandedDebt===d.id;
+                const doAbono = () => {
+                  const amt=parseFloat(abonoInputs[d.id]); if(!amt||amt<=0) return;
+                  const fecha = abonoDate[d.id] || new Date().toISOString().slice(0,10);
+                  const nb = Math.max(0, d.balance-amt);
+                  const newPmt = { id:"ab_"+Date.now(), date:fecha, amount:amt };
+                  const updD = nb===0
+                    ? { ...d, balance:0, payments:[...payments,newPmt] }
+                    : { ...d, balance:nb, payments:[...payments,newPmt] };
+                  onUpdate({finance:{...finance, debts: nb===0 ? debts.filter(x=>x.id!==d.id) : debts.map(x=>x.id===d.id?updD:x)}});
+                  setAbonoInputs(p=>({...p,[d.id]:""}));
+                };
                 return (
-                  <div key={d.id} style={{ marginBottom:10,padding:"10px 12px",background:"#EF444408",borderRadius:8,border:`1px solid #EF444422` }}>
-                    <div style={{ display:"flex",justifyContent:"space-between",marginBottom:5 }}>
-                      <span style={{ color:WHITE,fontSize:12,fontWeight:700 }}>{d.name}</span>
-                      <button onClick={()=>onUpdate({finance:{...finance,debts:debts.filter(x=>x.id!==d.id)}})}
-                        style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:14,opacity:0.5 }}>×</button>
-                    </div>
-                    <div style={{ display:"flex",gap:10,fontSize:11,color:GRAY,flexWrap:"wrap",marginBottom:5 }}>
-                      <span>Saldo: <span style={{ color:"#EF4444",fontWeight:700 }}>{fmtCOP(d.balance)}</span></span>
-                      {d.rate>0  && <span>Tasa: <span style={{ color:"#F59E0B" }}>{d.rate}%/mes</span></span>}
-                      {d.payment>0 && <span>Cuota: <span style={{ color:WHITE }}>{fmtCOP(d.payment)}</span></span>}
-                    </div>
-                    {noAlcanza ? (
-                      <div style={{ color:"#EF4444",fontSize:11,fontWeight:700 }}>⚠ La cuota no cubre los intereses — nunca termina</div>
-                    ) : months ? (
-                      <div style={{ background:"#111113",borderRadius:6,padding:"6px 10px",display:"flex",gap:14,flexWrap:"wrap" }}>
-                        <span style={{ fontSize:11 }}><span style={{ color:GRAY }}>Plazo real: </span><span style={{ color:"#F59E0B",fontWeight:700 }}>{months} cuotas ({(months/12).toFixed(1)}a)</span></span>
-                        <span style={{ fontSize:11 }}><span style={{ color:GRAY }}>Intereses: </span><span style={{ color:"#EF4444",fontWeight:700 }}>{fmtCOP(totalInterest)}</span></span>
-                        <span style={{ fontSize:11 }}><span style={{ color:GRAY }}>Total: </span><span style={{ color:WHITE,fontWeight:700 }}>{fmtCOP(totalPaid)}</span></span>
+                  <div key={d.id} style={{ marginBottom:10,background:"#EF444408",borderRadius:8,border:`1px solid #EF444422`,overflow:"hidden" }}>
+                    {/* Header deuda */}
+                    <div style={{ padding:"10px 12px" }}>
+                      <div style={{ display:"flex",justifyContent:"space-between",marginBottom:5 }}>
+                        <span style={{ color:WHITE,fontSize:12,fontWeight:700 }}>{d.name}</span>
+                        <button onClick={()=>onUpdate({finance:{...finance,debts:debts.filter(x=>x.id!==d.id)}})}
+                          style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:14,opacity:0.5 }}>×</button>
                       </div>
-                    ):null}
+                      <div style={{ display:"flex",gap:10,fontSize:11,color:GRAY,flexWrap:"wrap",marginBottom:5 }}>
+                        <span>Saldo: <span style={{ color:"#EF4444",fontWeight:700 }}>{fmtCOP(d.balance)}</span></span>
+                        {d.rate>0  && <span>Tasa: <span style={{ color:"#F59E0B" }}>{d.rate}%/mes</span></span>}
+                        {d.payment>0 && (()=>{
+                          const {months:m2}=calcDebt(d.balance,d.rate,d.payment);
+                          return <span>Cuota: <span style={{ color:WHITE }}>{fmtCOP(d.payment)}</span>{m2&&<span style={{ color:GRAY }}> · {m2} pagos</span>}</span>;
+                        })()}
+                        {totalAbonado>0 && <span>Abonado: <span style={{ color:"#22C55E",fontWeight:700 }}>{fmtCOP(totalAbonado)}</span></span>}
+                      </div>
+                      {noAlcanza ? (
+                        <div style={{ color:"#EF4444",fontSize:11,fontWeight:700 }}>⚠ La cuota no cubre los intereses — nunca termina</div>
+                      ) : months ? (
+                        <div style={{ background:"#111113",borderRadius:6,padding:"6px 10px",display:"flex",gap:14,flexWrap:"wrap" }}>
+                          <span style={{ fontSize:11 }}><span style={{ color:GRAY }}>Plazo: </span><span style={{ color:"#F59E0B",fontWeight:700 }}>{months} cuotas ({(months/12).toFixed(1)}a)</span></span>
+                          <span style={{ fontSize:11 }}><span style={{ color:GRAY }}>Intereses: </span><span style={{ color:"#EF4444",fontWeight:700 }}>{fmtCOP(totalInterest)}</span></span>
+                          <span style={{ fontSize:11 }}><span style={{ color:GRAY }}>Total: </span><span style={{ color:WHITE,fontWeight:700 }}>{fmtCOP(totalPaid)}</span></span>
+                        </div>
+                      ):null}
+
+                      {/* Abono rápido */}
+                      <div style={{ display:"flex",gap:5,marginTop:8 }}>
+                        <input type="date" value={abonoDate[d.id]||new Date().toISOString().slice(0,10)}
+                          onChange={e=>setAbonoDate(p=>({...p,[d.id]:e.target.value}))}
+                          style={{ background:"#0e0e10",border:`1px solid ${BORDER}`,borderRadius:5,padding:"5px 7px",color:GRAY,fontSize:10,outline:"none",width:115 }} />
+                        <input value={abonoInputs[d.id]||""} type="number" placeholder="Monto a abonar..."
+                          onChange={e=>setAbonoInputs(p=>({...p,[d.id]:e.target.value}))}
+                          onKeyDown={e=>e.key==="Enter"&&doAbono()}
+                          style={{ flex:1,background:"#0e0e10",border:`1px solid #22C55E44`,borderRadius:5,padding:"5px 8px",color:WHITE,fontSize:11,outline:"none" }} />
+                        <button onClick={doAbono}
+                          style={{ padding:"5px 12px",background:"#22C55E",color:"#111",border:"none",borderRadius:5,cursor:"pointer",fontWeight:800,fontSize:12,whiteSpace:"nowrap" }}>
+                          ↓ Abonar
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Historial de abonos */}
+                    {payments.length>0 && (
+                      <div style={{ borderTop:`1px solid #EF444422` }}>
+                        <div onClick={()=>setExpandedDebt(expD?null:d.id)}
+                          style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 12px",cursor:"pointer",userSelect:"none" }}>
+                          <span style={{ color:GRAY,fontSize:10,fontWeight:700,letterSpacing:1 }}>HISTORIAL ({payments.length} abonos)</span>
+                          <span style={{ color:GRAY,fontSize:10 }}>{expD?"▲":"▼"}</span>
+                        </div>
+                        {expD && (
+                          <div style={{ padding:"0 12px 10px" }}>
+                            {[...payments].reverse().map(p=>(
+                              <div key={p.id} style={{ display:"flex",alignItems:"center",gap:8,padding:"4px 0",borderBottom:`1px solid #EF444411` }}>
+                                <span style={{ color:GRAY,fontSize:11,flex:1 }}>{p.date}</span>
+                                <span style={{ color:"#22C55E",fontSize:11,fontWeight:700 }}>-{fmtCOP(p.amount)}</span>
+                                <button onClick={()=>{
+                                  const restored = d.balance + parseFloat(p.amount);
+                                  onUpdate({finance:{...finance, debts:debts.map(x=>x.id===d.id?{...x,balance:restored,payments:payments.filter(pp=>pp.id!==p.id)}:x)}});
+                                }} style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:12,opacity:0.4,padding:0 }}>×</button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
