@@ -4306,6 +4306,7 @@ function FinanzasSection({ personal, onUpdate }) {
   const [abonoInputs, setAbonoInputs] = us({});
   const [abonoDate,   setAbonoDate]   = us({});
   const [expandedDebt, setExpandedDebt] = us(null);
+  const [simExtras,   setSimExtras]   = us({});
   const [showCatEditor, setShowCatEditor] = us(false);
   const [newCatInputs, setNewCatInputs] = us({ personales:"", profesionales:"", otros:"" });
 
@@ -5008,35 +5009,88 @@ function FinanzasSection({ personal, onUpdate }) {
                     </div>
 
                     {/* ── Proyección & crédito ── */}
-                    {payoffStr && (
+                    {payoffStr && (()=>{
+                      const simExtra = parseFloat(simExtras[d.id])||0;
+                      const simPmt   = (d.payment||0) + simExtra;
+                      const sim      = simExtra>0 ? calcDebt(d.balance, d.rate, simPmt) : null;
+                      const simDate  = sim?.months ? new Date(today.getFullYear(), today.getMonth()+sim.months, 1) : null;
+                      const simStr   = simDate ? simDate.toLocaleDateString("es-CO",{month:"long",year:"numeric"}) : null;
+                      const msSaved  = sim?.months ? months - sim.months : 0;
+                      const intSaved = (sim?.totalInterest!=null&&totalInterest!=null) ? Math.max(0,totalInterest-sim.totalInterest) : 0;
+                      const simCreditDate = simDate ? simDate.toLocaleDateString("es-CO",{month:"short",year:"numeric"}) : null;
+                      const baseCreditDate= new Date(today.getFullYear(),today.getMonth()+months,1).toLocaleDateString("es-CO",{month:"short",year:"numeric"});
+                      const simCredit = simPmt * 30;
+                      return (
                       <div style={{ borderTop:`1px solid #22C55E22`,padding:"10px 12px",background:"#22C55E05" }}>
                         <div style={{ color:"#22C55E",fontSize:9,fontWeight:700,letterSpacing:1.5,marginBottom:8 }}>PROYECCIÓN & ACCESO A CRÉDITO</div>
 
-                        {/* Fecha objetivo input */}
-                        <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
+                        {/* Fecha objetivo */}
+                        <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:10 }}>
                           <span style={{ color:GRAY,fontSize:11,whiteSpace:"nowrap" }}>Fecha objetivo:</span>
                           <input type="date" value={d.targetDate||""}
                             onChange={e=>onUpdate({finance:{...finance,debts:debts.map(x=>x.id===d.id?{...x,targetDate:e.target.value}:x)}})}
                             style={{ background:"#0e0e10",border:`1px solid ${BORDER}`,borderRadius:4,padding:"3px 6px",color:WHITE,fontSize:11,outline:"none" }} />
                         </div>
 
-                        {/* 3 chips */}
-                        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8 }}>
+                        {/* Chips base */}
+                        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:10 }}>
                           <div style={{ background:"#111113",borderRadius:6,padding:"7px 9px" }}>
-                            <div style={{ color:GRAY,fontSize:9,marginBottom:3 }}>Liquidación estimada</div>
-                            <div style={{ color:WHITE,fontSize:12,fontWeight:700,lineHeight:1.2 }}>{payoffStr}</div>
+                            <div style={{ color:GRAY,fontSize:9,marginBottom:3 }}>Liquidación actual</div>
+                            <div style={{ color:simExtra>0?"#9B9B9F":WHITE,fontSize:12,fontWeight:700,lineHeight:1.2,textDecoration:simExtra>0?"line-through":"none" }}>{payoffStr}</div>
                             <div style={{ color:GRAY,fontSize:10,marginTop:2 }}>{months} cuotas · {(months/12).toFixed(1)}a</div>
                           </div>
                           <div style={{ background:"#111113",borderRadius:6,padding:"7px 9px" }}>
                             <div style={{ color:GRAY,fontSize:9,marginBottom:3 }}>Flujo liberado/mes</div>
                             <div style={{ color:"#22C55E",fontSize:12,fontWeight:700 }}>{fmtCOP(d.payment||0)}</div>
-                            <div style={{ color:GRAY,fontSize:10,marginTop:2 }}>al terminar la deuda</div>
+                            <div style={{ color:GRAY,fontSize:10,marginTop:2 }}>al terminar</div>
                           </div>
                           <div style={{ background:"#111113",borderRadius:6,padding:"7px 9px" }}>
-                            <div style={{ color:GRAY,fontSize:9,marginBottom:3 }}>Capacidad crédito est.</div>
-                            <div style={{ color:GOLD,fontSize:12,fontWeight:700 }}>{fmtCOP(creditCap)}</div>
-                            <div style={{ color:GRAY,fontSize:10,marginTop:2 }}>~30× cuota liberada</div>
+                            <div style={{ color:GRAY,fontSize:9,marginBottom:3 }}>Crédito accesible est.</div>
+                            <div style={{ color:simExtra>0?"#9B9B9F":GOLD,fontSize:12,fontWeight:700,textDecoration:simExtra>0?"line-through":"none" }}>{fmtCOP(creditCap)}</div>
+                            <div style={{ color:GRAY,fontSize:10,marginTop:2 }}>en {baseCreditDate}</div>
                           </div>
+                        </div>
+
+                        {/* ── Simulador ── */}
+                        <div style={{ background:"#111113",borderRadius:7,padding:"9px 10px",marginBottom:8 }}>
+                          <div style={{ color:GOLD,fontSize:9,fontWeight:700,letterSpacing:1.5,marginBottom:7 }}>SIMULAR PAGO EXTRA</div>
+                          <div style={{ display:"flex",gap:6,alignItems:"center",marginBottom: simExtra>0?8:0 }}>
+                            <span style={{ color:GRAY,fontSize:11,whiteSpace:"nowrap" }}>+ Extra/mes:</span>
+                            <input type="number" value={simExtras[d.id]||""} placeholder="0"
+                              onChange={e=>setSimExtras(p=>({...p,[d.id]:e.target.value}))}
+                              style={{ flex:1,background:"#0e0e10",border:`1px solid ${GOLD}55`,borderRadius:5,padding:"4px 8px",color:GOLD,fontSize:12,fontWeight:700,outline:"none" }} />
+                            {simExtra>0&&<button onClick={()=>setSimExtras(p=>({...p,[d.id]:""}))}
+                              style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:12,opacity:0.5 }}>×</button>}
+                          </div>
+
+                          {/* Resultado simulación */}
+                          {simExtra>0 && simStr && (
+                            <div>
+                              <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:6 }}>
+                                <div style={{ background:"#0a0a0b",borderRadius:5,padding:"6px 8px",border:`1px solid ${GOLD}33` }}>
+                                  <div style={{ color:GRAY,fontSize:9,marginBottom:2 }}>Nueva liquidación</div>
+                                  <div style={{ color:GOLD,fontSize:12,fontWeight:800 }}>{simStr}</div>
+                                  <div style={{ color:"#22C55E",fontSize:10,marginTop:1 }}>-{msSaved} meses antes</div>
+                                </div>
+                                <div style={{ background:"#0a0a0b",borderRadius:5,padding:"6px 8px",border:`1px solid #22C55E33` }}>
+                                  <div style={{ color:GRAY,fontSize:9,marginBottom:2 }}>Intereses ahorrados</div>
+                                  <div style={{ color:"#22C55E",fontSize:12,fontWeight:800 }}>{fmtCOP(Math.round(intSaved))}</div>
+                                  <div style={{ color:GRAY,fontSize:10,marginTop:1 }}>{sim.months} cuotas</div>
+                                </div>
+                                <div style={{ background:"#0a0a0b",borderRadius:5,padding:"6px 8px",border:`1px solid ${GOLD}33` }}>
+                                  <div style={{ color:GRAY,fontSize:9,marginBottom:2 }}>Crédito accesible</div>
+                                  <div style={{ color:GOLD,fontSize:12,fontWeight:800 }}>{fmtCOP(Math.round(simCredit))}</div>
+                                  <div style={{ color:GRAY,fontSize:10,marginTop:1 }}>en {simCreditDate}</div>
+                                </div>
+                              </div>
+                              <div style={{ padding:"5px 8px",borderRadius:5,background:"#22C55E10",border:`1px solid #22C55E22`,fontSize:10,color:"#22C55E" }}>
+                                Pagando <span style={{ fontWeight:700 }}>{fmtCOP(simPmt)}/mes</span> ({fmtCOP(simExtra)} extra) accedes a ~<span style={{ fontWeight:700 }}>{fmtCOP(Math.round(simCredit))}</span> en crédito nuevo <span style={{ fontWeight:700 }}>{msSaved} meses antes</span>
+                              </div>
+                            </div>
+                          )}
+                          {simExtra>0 && !simStr && (
+                            <div style={{ color:"#F59E0B",fontSize:10 }}>Calcula agregando tasa mensual para ver proyección</div>
+                          )}
                         </div>
 
                         {/* Estado vs fecha objetivo */}
@@ -5046,27 +5100,21 @@ function FinanzasSection({ personal, onUpdate }) {
                             border:`1px solid ${targetStatus.onTrack?"#22C55E33":"#EF444433"}` }}>
                             {targetStatus.onTrack
                               ? <span style={{ color:"#22C55E",fontSize:11,fontWeight:600 }}>✓ Vas en ritmo — terminas antes de la fecha objetivo</span>
-                              : <span style={{ color:"#EF4444",fontSize:11 }}>Para llegar a la fecha objetivo necesitas <span style={{ fontWeight:700 }}>{fmtCOP(targetStatus.extra)}/mes extra</span></span>
+                              : <span style={{ color:"#EF4444",fontSize:11 }}>Para tu fecha objetivo necesitas <span style={{ fontWeight:700 }}>{fmtCOP(targetStatus.extra)}/mes extra</span></span>
                             }
                           </div>
                         )}
 
-                        {/* Tip aceleración */}
-                        {aceleracion && (
-                          <div style={{ color:GRAY,fontSize:10 }}>
-                            ↑ Agrega <span style={{ color:"#F59E0B",fontWeight:700 }}>{fmtCOP(aceleracion)}/mes</span> y terminas 6 meses antes — ahorras en intereses y abres cupo de crédito antes
-                          </div>
-                        )}
-
-                        {/* Total costo */}
+                        {/* Intereses base */}
                         {totalPaid && (
-                          <div style={{ marginTop:6,display:"flex",gap:16,fontSize:10 }}>
+                          <div style={{ display:"flex",gap:16,fontSize:10 }}>
                             <span style={{ color:GRAY }}>Intereses totales: <span style={{ color:"#EF4444",fontWeight:600 }}>{fmtCOP(totalInterest)}</span></span>
                             <span style={{ color:GRAY }}>Costo total: <span style={{ color:WHITE,fontWeight:600 }}>{fmtCOP(totalPaid)}</span></span>
                           </div>
                         )}
                       </div>
-                    )}
+                      );
+                    })()}
 
                     {/* ── Historial de abonos ── */}
                     {payments.length>0 && (
