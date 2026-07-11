@@ -3838,7 +3838,7 @@ function MetricasSection({ personal, onUpdate }) {
   // refs for drag-paint (avoid stale closures in window events)
   const dragRef  = ur({ painting: false, days: [] });
   const snapRef  = ur({});
-  snapRef.current = { warMap, warMapCategories, paintCatId };
+  snapRef.current = { warMap, warMapCategories, paintCatId, onUpdate };
 
   // Ref siempre actualizado para onUpdate y personal (evita stale closures en el efecto de sync)
   const syncRef = ur({});
@@ -3878,7 +3878,7 @@ function MetricasSection({ personal, onUpdate }) {
       }
     };
     const handleUp = () => {
-      const { warMap: wm, warMapCategories: cats, paintCatId: cid } = snapRef.current;
+      const { warMap: wm, warMapCategories: cats, paintCatId: cid, onUpdate: upd } = snapRef.current;
       if (dragRef.current.painting && dragRef.current.days.length > 0 && cid) {
         const cat = cats.find(c => c.id === cid);
         if (cat) {
@@ -3887,7 +3887,7 @@ function MetricasSection({ personal, onUpdate }) {
             const ex = nm[ds];
             nm[ds] = { color: cat.color, title: (ex && typeof ex === "object" ? ex.title : "") || "", catId: cid };
           });
-          onUpdate({ warMap: nm });
+          upd({ warMap: nm });
         }
       }
       dragRef.current = { painting: false, days: [] };
@@ -4302,7 +4302,7 @@ function FinanzasSection({ personal, onUpdate }) {
   const [assetName, setAssetName] = us(""); const [assetVal,  setAssetVal]  = us("");
   const [liabName,  setLiabName]  = us(""); const [liabVal,   setLiabVal]   = us("");
   const [debtName,  setDebtName]  = us(""); const [debtBal,   setDebtBal]   = us("");
-  const [debtRate,  setDebtRate]  = us(""); const [debtPmt,   setDebtPmt]   = us("");
+  const [debtRate,  setDebtRate]  = us(""); const [debtPmt,   setDebtPmt]   = us(""); const [debtTarget, setDebtTarget] = us("");
   const [abonoInputs, setAbonoInputs] = us({});
   const [abonoDate,   setAbonoDate]   = us({});
   const [expandedDebt, setExpandedDebt] = us(null);
@@ -4946,42 +4946,55 @@ function FinanzasSection({ personal, onUpdate }) {
                   const fecha = abonoDate[d.id] || new Date().toISOString().slice(0,10);
                   const nb = Math.max(0, d.balance-amt);
                   const newPmt = { id:"ab_"+Date.now(), date:fecha, amount:amt };
-                  const updD = nb===0
-                    ? { ...d, balance:0, payments:[...payments,newPmt] }
-                    : { ...d, balance:nb, payments:[...payments,newPmt] };
+                  const updD = { ...d, balance:nb, payments:[...payments,newPmt] };
                   onUpdate({finance:{...finance, debts: nb===0 ? debts.filter(x=>x.id!==d.id) : debts.map(x=>x.id===d.id?updD:x)}});
                   setAbonoInputs(p=>({...p,[d.id]:""}));
                 };
+
+                // ── Proyección ──
+                const today = new Date();
+                let payoffStr=null, targetStatus=null, aceleracion=null;
+                if (months) {
+                  const pd = new Date(today.getFullYear(), today.getMonth()+months, 1);
+                  payoffStr = pd.toLocaleDateString("es-CO",{month:"long",year:"numeric"});
+                  const r=(d.rate||0)/100;
+                  // 6 meses antes
+                  const fn=Math.max(1,months-6);
+                  const fp=r>0 ? d.balance*r*Math.pow(1+r,fn)/(Math.pow(1+r,fn)-1) : d.balance/fn;
+                  const extra6=Math.round(Math.max(0,fp-(d.payment||0)));
+                  aceleracion=extra6>500?extra6:null;
+                  // Fecha objetivo
+                  if (d.targetDate) {
+                    const tgt=new Date(d.targetDate+"T00:00:00");
+                    const tgtM=Math.max(1,Math.round((tgt-today)/(30.44*24*60*60*1000)));
+                    const tp=r>0 ? d.balance*r*Math.pow(1+r,tgtM)/(Math.pow(1+r,tgtM)-1) : d.balance/tgtM;
+                    const extra=Math.round(tp-(d.payment||0));
+                    targetStatus={ onTrack:months<=tgtM, extra };
+                  }
+                }
+                const creditCap = (d.payment||0)*30;
+
                 return (
                   <div key={d.id} style={{ marginBottom:10,background:"#EF444408",borderRadius:8,border:`1px solid #EF444422`,overflow:"hidden" }}>
-                    {/* Header deuda */}
+
+                    {/* Info principal */}
                     <div style={{ padding:"10px 12px" }}>
                       <div style={{ display:"flex",justifyContent:"space-between",marginBottom:5 }}>
                         <span style={{ color:WHITE,fontSize:12,fontWeight:700 }}>{d.name}</span>
                         <button onClick={()=>onUpdate({finance:{...finance,debts:debts.filter(x=>x.id!==d.id)}})}
                           style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:14,opacity:0.5 }}>×</button>
                       </div>
-                      <div style={{ display:"flex",gap:10,fontSize:11,color:GRAY,flexWrap:"wrap",marginBottom:5 }}>
+                      <div style={{ display:"flex",gap:10,fontSize:11,color:GRAY,flexWrap:"wrap",marginBottom:6 }}>
                         <span>Saldo: <span style={{ color:"#EF4444",fontWeight:700 }}>{fmtCOP(d.balance)}</span></span>
-                        {d.rate>0  && <span>Tasa: <span style={{ color:"#F59E0B" }}>{d.rate}%/mes</span></span>}
-                        {d.payment>0 && (()=>{
-                          const {months:m2}=calcDebt(d.balance,d.rate,d.payment);
-                          return <span>Cuota: <span style={{ color:WHITE }}>{fmtCOP(d.payment)}</span>{m2&&<span style={{ color:GRAY }}> · {m2} pagos</span>}</span>;
-                        })()}
+                        {d.rate>0 && <span>Tasa: <span style={{ color:"#F59E0B" }}>{d.rate}%/mes</span></span>}
+                        {d.payment>0 && <span>Cuota: <span style={{ color:WHITE }}>{fmtCOP(d.payment)}</span></span>}
                         {totalAbonado>0 && <span>Abonado: <span style={{ color:"#22C55E",fontWeight:700 }}>{fmtCOP(totalAbonado)}</span></span>}
                       </div>
-                      {noAlcanza ? (
-                        <div style={{ color:"#EF4444",fontSize:11,fontWeight:700 }}>⚠ La cuota no cubre los intereses — nunca termina</div>
-                      ) : months ? (
-                        <div style={{ background:"#111113",borderRadius:6,padding:"6px 10px",display:"flex",gap:14,flexWrap:"wrap" }}>
-                          <span style={{ fontSize:11 }}><span style={{ color:GRAY }}>Plazo: </span><span style={{ color:"#F59E0B",fontWeight:700 }}>{months} cuotas ({(months/12).toFixed(1)}a)</span></span>
-                          <span style={{ fontSize:11 }}><span style={{ color:GRAY }}>Intereses: </span><span style={{ color:"#EF4444",fontWeight:700 }}>{fmtCOP(totalInterest)}</span></span>
-                          <span style={{ fontSize:11 }}><span style={{ color:GRAY }}>Total: </span><span style={{ color:WHITE,fontWeight:700 }}>{fmtCOP(totalPaid)}</span></span>
-                        </div>
-                      ):null}
+
+                      {noAlcanza && <div style={{ color:"#EF4444",fontSize:11,fontWeight:700,marginBottom:6 }}>⚠ La cuota no cubre los intereses — nunca termina</div>}
 
                       {/* Abono rápido */}
-                      <div style={{ display:"flex",gap:5,marginTop:8 }}>
+                      <div style={{ display:"flex",gap:5 }}>
                         <input type="date" value={abonoDate[d.id]||new Date().toISOString().slice(0,10)}
                           onChange={e=>setAbonoDate(p=>({...p,[d.id]:e.target.value}))}
                           style={{ background:"#0e0e10",border:`1px solid ${BORDER}`,borderRadius:5,padding:"5px 7px",color:GRAY,fontSize:10,outline:"none",width:115 }} />
@@ -4990,18 +5003,77 @@ function FinanzasSection({ personal, onUpdate }) {
                           onKeyDown={e=>e.key==="Enter"&&doAbono()}
                           style={{ flex:1,background:"#0e0e10",border:`1px solid #22C55E44`,borderRadius:5,padding:"5px 8px",color:WHITE,fontSize:11,outline:"none" }} />
                         <button onClick={doAbono}
-                          style={{ padding:"5px 12px",background:"#22C55E",color:"#111",border:"none",borderRadius:5,cursor:"pointer",fontWeight:800,fontSize:12,whiteSpace:"nowrap" }}>
-                          ↓ Abonar
-                        </button>
+                          style={{ padding:"5px 12px",background:"#22C55E",color:"#111",border:"none",borderRadius:5,cursor:"pointer",fontWeight:800,fontSize:12,whiteSpace:"nowrap" }}>↓ Abonar</button>
                       </div>
                     </div>
 
-                    {/* Historial de abonos */}
+                    {/* ── Proyección & crédito ── */}
+                    {payoffStr && (
+                      <div style={{ borderTop:`1px solid #22C55E22`,padding:"10px 12px",background:"#22C55E05" }}>
+                        <div style={{ color:"#22C55E",fontSize:9,fontWeight:700,letterSpacing:1.5,marginBottom:8 }}>PROYECCIÓN & ACCESO A CRÉDITO</div>
+
+                        {/* Fecha objetivo input */}
+                        <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
+                          <span style={{ color:GRAY,fontSize:11,whiteSpace:"nowrap" }}>Fecha objetivo:</span>
+                          <input type="date" value={d.targetDate||""}
+                            onChange={e=>onUpdate({finance:{...finance,debts:debts.map(x=>x.id===d.id?{...x,targetDate:e.target.value}:x)}})}
+                            style={{ background:"#0e0e10",border:`1px solid ${BORDER}`,borderRadius:4,padding:"3px 6px",color:WHITE,fontSize:11,outline:"none" }} />
+                        </div>
+
+                        {/* 3 chips */}
+                        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:8 }}>
+                          <div style={{ background:"#111113",borderRadius:6,padding:"7px 9px" }}>
+                            <div style={{ color:GRAY,fontSize:9,marginBottom:3 }}>Liquidación estimada</div>
+                            <div style={{ color:WHITE,fontSize:12,fontWeight:700,lineHeight:1.2 }}>{payoffStr}</div>
+                            <div style={{ color:GRAY,fontSize:10,marginTop:2 }}>{months} cuotas · {(months/12).toFixed(1)}a</div>
+                          </div>
+                          <div style={{ background:"#111113",borderRadius:6,padding:"7px 9px" }}>
+                            <div style={{ color:GRAY,fontSize:9,marginBottom:3 }}>Flujo liberado/mes</div>
+                            <div style={{ color:"#22C55E",fontSize:12,fontWeight:700 }}>{fmtCOP(d.payment||0)}</div>
+                            <div style={{ color:GRAY,fontSize:10,marginTop:2 }}>al terminar la deuda</div>
+                          </div>
+                          <div style={{ background:"#111113",borderRadius:6,padding:"7px 9px" }}>
+                            <div style={{ color:GRAY,fontSize:9,marginBottom:3 }}>Capacidad crédito est.</div>
+                            <div style={{ color:GOLD,fontSize:12,fontWeight:700 }}>{fmtCOP(creditCap)}</div>
+                            <div style={{ color:GRAY,fontSize:10,marginTop:2 }}>~30× cuota liberada</div>
+                          </div>
+                        </div>
+
+                        {/* Estado vs fecha objetivo */}
+                        {targetStatus && (
+                          <div style={{ padding:"6px 9px",borderRadius:5,marginBottom:6,
+                            background:targetStatus.onTrack?"#22C55E15":"#EF444415",
+                            border:`1px solid ${targetStatus.onTrack?"#22C55E33":"#EF444433"}` }}>
+                            {targetStatus.onTrack
+                              ? <span style={{ color:"#22C55E",fontSize:11,fontWeight:600 }}>✓ Vas en ritmo — terminas antes de la fecha objetivo</span>
+                              : <span style={{ color:"#EF4444",fontSize:11 }}>Para llegar a la fecha objetivo necesitas <span style={{ fontWeight:700 }}>{fmtCOP(targetStatus.extra)}/mes extra</span></span>
+                            }
+                          </div>
+                        )}
+
+                        {/* Tip aceleración */}
+                        {aceleracion && (
+                          <div style={{ color:GRAY,fontSize:10 }}>
+                            ↑ Agrega <span style={{ color:"#F59E0B",fontWeight:700 }}>{fmtCOP(aceleracion)}/mes</span> y terminas 6 meses antes — ahorras en intereses y abres cupo de crédito antes
+                          </div>
+                        )}
+
+                        {/* Total costo */}
+                        {totalPaid && (
+                          <div style={{ marginTop:6,display:"flex",gap:16,fontSize:10 }}>
+                            <span style={{ color:GRAY }}>Intereses totales: <span style={{ color:"#EF4444",fontWeight:600 }}>{fmtCOP(totalInterest)}</span></span>
+                            <span style={{ color:GRAY }}>Costo total: <span style={{ color:WHITE,fontWeight:600 }}>{fmtCOP(totalPaid)}</span></span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── Historial de abonos ── */}
                     {payments.length>0 && (
                       <div style={{ borderTop:`1px solid #EF444422` }}>
                         <div onClick={()=>setExpandedDebt(expD?null:d.id)}
                           style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 12px",cursor:"pointer",userSelect:"none" }}>
-                          <span style={{ color:GRAY,fontSize:10,fontWeight:700,letterSpacing:1 }}>HISTORIAL ({payments.length} abonos)</span>
+                          <span style={{ color:GRAY,fontSize:10,fontWeight:700,letterSpacing:1 }}>HISTORIAL · {payments.length} abonos · {fmtCOP(totalAbonado)} total</span>
                           <span style={{ color:GRAY,fontSize:10 }}>{expD?"▲":"▼"}</span>
                         </div>
                         {expD && (
@@ -5011,8 +5083,8 @@ function FinanzasSection({ personal, onUpdate }) {
                                 <span style={{ color:GRAY,fontSize:11,flex:1 }}>{p.date}</span>
                                 <span style={{ color:"#22C55E",fontSize:11,fontWeight:700 }}>-{fmtCOP(p.amount)}</span>
                                 <button onClick={()=>{
-                                  const restored = d.balance + parseFloat(p.amount);
-                                  onUpdate({finance:{...finance, debts:debts.map(x=>x.id===d.id?{...x,balance:restored,payments:payments.filter(pp=>pp.id!==p.id)}:x)}});
+                                  const restored = d.balance+parseFloat(p.amount);
+                                  onUpdate({finance:{...finance,debts:debts.map(x=>x.id===d.id?{...x,balance:restored,payments:payments.filter(pp=>pp.id!==p.id)}:x)}});
                                 }} style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:12,opacity:0.4,padding:0 }}>×</button>
                               </div>
                             ))}
@@ -5023,7 +5095,7 @@ function FinanzasSection({ personal, onUpdate }) {
                   </div>
                 );
               })}
-              <div style={{ display:"grid",gridTemplateColumns:"1fr 80px 50px 80px 36px",gap:4,marginTop:8,alignItems:"center" }}>
+              <div style={{ display:"grid",gridTemplateColumns:"1fr 80px 50px 80px 110px 36px",gap:4,marginTop:8,alignItems:"center" }}>
                 <input value={debtName} onChange={e=>setDebtName(e.target.value)} placeholder="Acreedor..."
                   style={{ background:"#111113",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 7px",color:WHITE,fontSize:11,outline:"none" }} />
                 <input value={debtBal} onChange={e=>setDebtBal(e.target.value)} placeholder="Saldo" type="number"
@@ -5032,10 +5104,12 @@ function FinanzasSection({ personal, onUpdate }) {
                   style={{ background:"#111113",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 7px",color:WHITE,fontSize:11,outline:"none" }} />
                 <input value={debtPmt} onChange={e=>setDebtPmt(e.target.value)} placeholder="Cuota" type="number"
                   style={{ background:"#111113",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 7px",color:WHITE,fontSize:11,outline:"none" }} />
-                <button onClick={()=>{ if(!debtName.trim()||!debtBal)return; onUpdate({finance:{...finance,debts:[...debts,{id:"d_"+Date.now(),name:debtName.trim(),balance:parseFloat(debtBal),rate:parseFloat(debtRate)||0,payment:parseFloat(debtPmt)||0}]}}); setDebtName("");setDebtBal("");setDebtRate("");setDebtPmt(""); }}
+                <input value={debtTarget||""} onChange={e=>setDebtTarget(e.target.value)} type="date" title="Fecha objetivo de pago"
+                  style={{ background:"#111113",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 7px",color:GRAY,fontSize:10,outline:"none" }} />
+                <button onClick={()=>{ if(!debtName.trim()||!debtBal)return; onUpdate({finance:{...finance,debts:[...debts,{id:"d_"+Date.now(),name:debtName.trim(),balance:parseFloat(debtBal),rate:parseFloat(debtRate)||0,payment:parseFloat(debtPmt)||0,targetDate:debtTarget||""}]}}); setDebtName("");setDebtBal("");setDebtRate("");setDebtPmt("");setDebtTarget(""); }}
                   style={{ padding:"5px 8px",background:"#EF4444",color:"#fff",border:"none",borderRadius:6,cursor:"pointer",fontWeight:700,fontSize:13 }}>+</button>
               </div>
-              <div style={{ color:GRAY,fontSize:10,marginTop:5 }}>Saldo · % tasa mensual · Cuota mensual</div>
+              <div style={{ color:GRAY,fontSize:10,marginTop:5 }}>Acreedor · Saldo · % tasa mensual · Cuota mensual · Fecha objetivo (opcional)</div>
             </div>
           </div>
 
