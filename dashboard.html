@@ -4286,6 +4286,10 @@ function FinanzasSection({ personal, onUpdate }) {
     commissionFloor:  0,
     upsellPrice:      2000000,
     meetingsPerClose: 3,
+    currentClients:   0,
+    cacUSD:           100,
+    adsPct:           50,
+    usdRate:          4200,
   };
   const updateSC = (patch) => onUpdate({ finance:{ ...finance, salesConfig:{ ...salesConfig, ...patch } } });
 
@@ -4512,6 +4516,87 @@ function FinanzasSection({ personal, onUpdate }) {
                   </div>
                 )}
 
+                {/* ── Estado actual + CAC ── */}
+                {(()=>{
+                  const cc    = salesConfig.currentClients || 0;
+                  const cacUSD= salesConfig.cacUSD  || 100;
+                  const adsPct= salesConfig.adsPct  || 50;
+                  const usdR  = salesConfig.usdRate || 4200;
+                  const cacCOP= cacUSD * usdR;
+                  const curRev= cc * revPC;
+                  const gap   = cltsN ? Math.max(0, cltsN - cc) : null;
+                  const gapMt = gap ? gap * (salesConfig.meetingsPerClose||3) : 0;
+                  const prog  = cltsN ? Math.min(100, Math.round(cc/cltsN*100)) : 0;
+                  const byAds = gap ? Math.round(gap * adsPct/100) : 0;
+                  const byOrg = gap ? gap - byAds : 0;
+                  const adsBudget = byAds * cacUSD;
+                  const adsBudgetCOP = adsBudget * usdR;
+                  const paybackDays = revPC>0 ? Math.round(cacCOP/(revPC/30)) : null;
+                  const roi12 = revPC>0 ? (revPC*12/cacCOP).toFixed(1) : null;
+                  return (
+                  <div style={{ marginBottom:12 }}>
+                    {/* Barra de progreso */}
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                      <div style={{ color:GRAY, fontSize:10 }}>
+                        <span style={{ color:WHITE, fontWeight:700, fontSize:14 }}>{cc}</span>
+                        <span style={{ color:GRAY }}> / </span>
+                        <span style={{ color:GOLD, fontWeight:700 }}>{cltsN||"?"}</span>
+                        <span style={{ color:GRAY }}> clientes activos</span>
+                      </div>
+                      <div style={{ color:GRAY, fontSize:10 }}>
+                        Revenue actual: <span style={{ color:"#22C55E", fontWeight:700 }}>{fmtCOP(curRev)}</span>
+                        {cltsN&&cc<cltsN&&<span style={{ color:"#EF4444" }}> · faltan {gap} clientes</span>}
+                        {cc>=cltsN&&cltsN>0&&<span style={{ color:"#22C55E" }}> · ¡Meta alcanzada!</span>}
+                      </div>
+                    </div>
+                    <div style={{ background:"#111113", borderRadius:20, height:6, marginBottom:12 }}>
+                      <div style={{ background: prog>=100?"#22C55E":GOLD, height:6, borderRadius:20, width:`${prog}%`, transition:"width .3s" }}/>
+                    </div>
+
+                    {/* CAC + proyección */}
+                    {gap>0 && (
+                    <div style={{ background:"#111113", borderRadius:8, padding:"10px 12px", border:`1px solid #3B82F622`, marginBottom:10 }}>
+                      <div style={{ color:"#60A5FA", fontSize:9, fontWeight:700, letterSpacing:1.5, marginBottom:8 }}>ADQUISICIÓN PARA CERRAR GAP · {gap} CLIENTES</div>
+
+                      {/* Split cards */}
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:8, marginBottom:8 }}>
+                        <div style={{ background:"#0e0e10", borderRadius:6, padding:"8px 10px", border:`1px solid #3B82F633` }}>
+                          <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>Vía Ads ({adsPct}%)</div>
+                          <div style={{ color:"#60A5FA", fontWeight:800, fontSize:16 }}>{byAds}</div>
+                          <div style={{ color:GRAY, fontSize:9 }}>clientes</div>
+                        </div>
+                        <div style={{ background:"#0e0e10", borderRadius:6, padding:"8px 10px", border:`1px solid #22C55E33` }}>
+                          <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>Vía Orgánico ({100-adsPct}%)</div>
+                          <div style={{ color:"#22C55E", fontWeight:800, fontSize:16 }}>{byOrg}</div>
+                          <div style={{ color:GRAY, fontSize:9 }}>clientes</div>
+                        </div>
+                        <div style={{ background:"#0e0e10", borderRadius:6, padding:"8px 10px", border:`1px solid #F59E0B33` }}>
+                          <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>Presupuesto ads</div>
+                          <div style={{ color:"#F59E0B", fontWeight:800, fontSize:14 }}>${adsBudget.toLocaleString()} USD</div>
+                          <div style={{ color:GRAY, fontSize:9 }}>{fmtCOP(adsBudgetCOP)}</div>
+                        </div>
+                        <div style={{ background:"#0e0e10", borderRadius:6, padding:"8px 10px", border:`1px solid #8B5CF633` }}>
+                          <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>Reuniones pendientes</div>
+                          <div style={{ color:"#8B5CF6", fontWeight:800, fontSize:16 }}>{gapMt}</div>
+                          <div style={{ color:GRAY, fontSize:9 }}>para cerrar el gap</div>
+                        </div>
+                      </div>
+
+                      {/* ROI row */}
+                      {paybackDays && (
+                      <div style={{ display:"flex", gap:20, padding:"6px 8px", background:"#22C55E0A", borderRadius:6, border:`1px solid #22C55E22`, flexWrap:"wrap" }}>
+                        <span style={{ fontSize:11, color:GRAY }}>CAC: <span style={{ color:WHITE, fontWeight:700 }}>${cacUSD} USD</span> = <span style={{ color:WHITE, fontWeight:700 }}>{fmtCOP(cacCOP)}</span></span>
+                        <span style={{ fontSize:11, color:GRAY }}>Payback: <span style={{ color:"#22C55E", fontWeight:700 }}>{paybackDays} días</span></span>
+                        <span style={{ fontSize:11, color:GRAY }}>ROI 12 meses: <span style={{ color:GOLD, fontWeight:700 }}>{roi12}×</span></span>
+                        <span style={{ fontSize:11, color:GRAY }}>Revenue/CAC: <span style={{ color:"#22C55E", fontWeight:700 }}>cada cliente genera {fmtCOP(revPC*12)} en el año vs {fmtCOP(cacCOP)} de costo</span></span>
+                      </div>
+                      )}
+                    </div>
+                    )}
+                  </div>
+                  );
+                })()}
+
                 {/* Parámetros editables */}
                 <div style={{ borderTop:`1px solid ${BORDER}33`, paddingTop:12 }}>
                   <div style={{ color:GRAY, fontSize:9, fontWeight:700, letterSpacing:1.5, textTransform:"uppercase", marginBottom:8 }}>Parámetros</div>
@@ -4524,13 +4609,17 @@ function FinanzasSection({ personal, onUpdate }) {
                       ["Piso comisión — ventas mín.",      "commissionFloor",  salesConfig.commissionFloor||0, 1],
                       ["Precio upsell / adicional",        "upsellPrice",      salesConfig.upsellPrice,       1],
                       ["Reuniones para 1 cierre",          "meetingsPerClose", salesConfig.meetingsPerClose,  0.1],
+                      ["Clientes activos ahora",           "currentClients",   salesConfig.currentClients||0, 1],
+                      ["CAC (USD / cliente)",              "cacUSD",           salesConfig.cacUSD||100,       1],
+                      ["% clientes por ads",               "adsPct",           salesConfig.adsPct||50,        1],
+                      ["TRM (COP / USD)",                  "usdRate",          salesConfig.usdRate||4200,     1],
                     ].map(([label,key,val,step])=>(
                       <div key={key}>
                         <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>{label}</div>
                         <input type="number" value={val||""} step={step}
                           placeholder={key==="avgClientSales"?"Ej: 100000000":""}
                           onChange={e=>updateSC({[key]:parseFloat(e.target.value)||0})}
-                          style={{ width:"100%", background:"#0e0e10", border:`1px solid ${key==="avgClientSales"&&!val?`${GOLD}55`:BORDER}`, borderRadius:6, padding:"5px 8px", color:GOLD, fontSize:12, outline:"none", fontWeight:700, boxSizing:"border-box" }} />
+                          style={{ width:"100%", background:"#0e0e10", border:`1px solid ${key==="currentClients"?`#22C55E44`:key==="avgClientSales"&&!val?`${GOLD}55`:BORDER}`, borderRadius:6, padding:"5px 8px", color:key==="currentClients"?"#22C55E":GOLD, fontSize:12, outline:"none", fontWeight:700, boxSizing:"border-box" }} />
                       </div>
                     ))}
                   </div>
