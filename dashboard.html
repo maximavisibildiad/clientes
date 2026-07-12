@@ -4463,6 +4463,19 @@ function FinanzasSection({ personal, onUpdate }) {
             const cltsN    = revPC > 0 ? Math.ceil(target/revPC) : null;
             const meetN    = cltsN ? cltsN * (salesConfig.meetingsPerClose||3) : null;
             const convRate = Math.round(100/(salesConfig.meetingsPerClose||3));
+            // Stats por mes (clientes únicos + revenue real)
+            const MONTHS_SHORT = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+            const monthStats = Array.from({length:12},(_,m)=>{
+              const md = getMD(m);
+              const ingresos = md.ingresos||[];
+              const uniqueClients = [...new Set(ingresos.map(i=>i.client||"").filter(Boolean))].length;
+              const rev = getCashCollected(m);
+              const gap = cltsN ? Math.max(0, cltsN - uniqueClients) : null;
+              const hasData = rev>0||uniqueClients>0;
+              return { m, label:MONTHS_SHORT[m], clients:uniqueClients, rev, gap, hasData };
+            });
+            const todayM = new Date().getMonth();
+            const curStats = monthStats[todayM];
             return (
               <div style={{ background:"#0a0a0b", border:`1px solid ${GOLD}33`, borderRadius:12, padding:18, marginBottom:16, borderLeft:`4px solid ${GOLD}` }}>
                 {/* Header */}
@@ -4516,79 +4529,111 @@ function FinanzasSection({ personal, onUpdate }) {
                   </div>
                 )}
 
-                {/* ── Estado actual + CAC ── */}
+                {/* ── Estado mes actual + CAC ── */}
                 {(()=>{
-                  const cc    = salesConfig.currentClients || 0;
                   const cacUSD= salesConfig.cacUSD  || 100;
                   const adsPct= salesConfig.adsPct  || 50;
                   const usdR  = salesConfig.usdRate || 4200;
                   const cacCOP= cacUSD * usdR;
-                  const curRev= cc * revPC;
+                  const cc    = curStats.clients;
+                  const curRev= curStats.rev;
                   const gap   = cltsN ? Math.max(0, cltsN - cc) : null;
                   const gapMt = gap ? gap * (salesConfig.meetingsPerClose||3) : 0;
                   const prog  = cltsN ? Math.min(100, Math.round(cc/cltsN*100)) : 0;
                   const byAds = gap ? Math.round(gap * adsPct/100) : 0;
                   const byOrg = gap ? gap - byAds : 0;
-                  const adsBudget = byAds * cacUSD;
+                  const adsBudget    = byAds * cacUSD;
                   const adsBudgetCOP = adsBudget * usdR;
-                  const paybackDays = revPC>0 ? Math.round(cacCOP/(revPC/30)) : null;
-                  const roi12 = revPC>0 ? (revPC*12/cacCOP).toFixed(1) : null;
+                  const paybackDays  = revPC>0 ? Math.round(cacCOP/(revPC/30)) : null;
+                  const roi12        = revPC>0 ? (revPC*12/cacCOP).toFixed(1) : null;
                   return (
                   <div style={{ marginBottom:12 }}>
-                    {/* Barra de progreso */}
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-                      <div style={{ color:GRAY, fontSize:10 }}>
+                    {/* Barra progreso mes actual */}
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:5 }}>
+                      <div style={{ fontSize:10, color:GRAY }}>
                         <span style={{ color:WHITE, fontWeight:700, fontSize:14 }}>{cc}</span>
-                        <span style={{ color:GRAY }}> / </span>
+                        <span> / </span>
                         <span style={{ color:GOLD, fontWeight:700 }}>{cltsN||"?"}</span>
-                        <span style={{ color:GRAY }}> clientes activos</span>
+                        <span> clientes · {MONTHS_SHORT[todayM]}</span>
                       </div>
-                      <div style={{ color:GRAY, fontSize:10 }}>
-                        Revenue actual: <span style={{ color:"#22C55E", fontWeight:700 }}>{fmtCOP(curRev)}</span>
-                        {cltsN&&cc<cltsN&&<span style={{ color:"#EF4444" }}> · faltan {gap} clientes</span>}
-                        {cc>=cltsN&&cltsN>0&&<span style={{ color:"#22C55E" }}> · ¡Meta alcanzada!</span>}
+                      <div style={{ fontSize:10, color:GRAY }}>
+                        Revenue: <span style={{ color:"#22C55E", fontWeight:700 }}>{fmtCOP(curRev)}</span>
+                        {gap>0&&<span style={{ color:"#EF4444" }}> · faltan {gap}</span>}
+                        {gap===0&&cc>0&&<span style={{ color:"#22C55E" }}> · ¡Meta!</span>}
                       </div>
                     </div>
-                    <div style={{ background:"#111113", borderRadius:20, height:6, marginBottom:12 }}>
-                      <div style={{ background: prog>=100?"#22C55E":GOLD, height:6, borderRadius:20, width:`${prog}%`, transition:"width .3s" }}/>
+                    <div style={{ background:"#111113", borderRadius:20, height:5, marginBottom:10 }}>
+                      <div style={{ background:prog>=100?"#22C55E":GOLD, height:5, borderRadius:20, width:`${prog}%`, transition:"width .3s" }}/>
                     </div>
 
-                    {/* CAC + proyección */}
+                    {/* Tabla mensual */}
+                    <div style={{ marginBottom:10, background:"#111113", borderRadius:8, overflow:"hidden", border:`1px solid ${BORDER}33` }}>
+                      <div style={{ display:"grid", gridTemplateColumns:"40px 1fr 1fr 1fr 50px", padding:"5px 10px", borderBottom:`1px solid ${BORDER}33` }}>
+                        {["Mes","Clientes","Revenue","vs Meta","Gap"].map(h=>(
+                          <div key={h} style={{ color:GRAY, fontSize:9, fontWeight:700, letterSpacing:1 }}>{h}</div>
+                        ))}
+                      </div>
+                      {monthStats.map(({m:mi,label,clients,rev,gap:g,hasData})=>{
+                        const isCur = mi===todayM;
+                        const pct   = target>0 ? Math.min(100,Math.round(rev/target*100)) : 0;
+                        const ok    = g===0&&hasData;
+                        return (
+                          <div key={mi} style={{ display:"grid", gridTemplateColumns:"40px 1fr 1fr 1fr 50px", padding:"5px 10px",
+                            background: isCur?"#22C55E08":hasData?"#FFFFFF04":"transparent",
+                            borderLeft: isCur?`2px solid ${GOLD}`:"2px solid transparent",
+                            borderBottom:`1px solid ${BORDER}22` }}>
+                            <div style={{ color:isCur?GOLD:GRAY, fontSize:10, fontWeight:isCur?700:400 }}>{label}</div>
+                            <div style={{ color:hasData?WHITE:GRAY, fontSize:10, fontWeight:hasData?700:400 }}>{clients>0?clients:"—"}</div>
+                            <div style={{ color:rev>0?"#22C55E":GRAY, fontSize:10, fontWeight:rev>0?700:400 }}>{rev>0?fmtCOP(rev):"—"}</div>
+                            <div style={{ fontSize:10 }}>
+                              {hasData ? (
+                                <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                                  <div style={{ background:ok?"#22C55E33":"#EF444433", borderRadius:10, height:4, width:40 }}>
+                                    <div style={{ background:ok?"#22C55E":pct>60?"#F59E0B":"#EF4444", height:4, borderRadius:10, width:`${pct}%` }}/>
+                                  </div>
+                                  <span style={{ color:ok?"#22C55E":GRAY }}>{pct}%</span>
+                                </div>
+                              ):<span style={{ color:GRAY }}>—</span>}
+                            </div>
+                            <div style={{ color:g===0&&hasData?"#22C55E":g>0?"#EF4444":GRAY, fontSize:10, fontWeight:700 }}>
+                              {hasData ? (g===0?"✓":`-${g}`) : "—"}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* CAC del mes */}
                     {gap>0 && (
-                    <div style={{ background:"#111113", borderRadius:8, padding:"10px 12px", border:`1px solid #3B82F622`, marginBottom:10 }}>
-                      <div style={{ color:"#60A5FA", fontSize:9, fontWeight:700, letterSpacing:1.5, marginBottom:8 }}>ADQUISICIÓN PARA CERRAR GAP · {gap} CLIENTES</div>
-
-                      {/* Split cards */}
+                    <div style={{ background:"#111113", borderRadius:8, padding:"10px 12px", border:`1px solid #3B82F622`, marginBottom:8 }}>
+                      <div style={{ color:"#60A5FA", fontSize:9, fontWeight:700, letterSpacing:1.5, marginBottom:8 }}>ADQUISICIÓN ESTE MES · {gap} CLIENTES FALTANTES</div>
                       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:8, marginBottom:8 }}>
                         <div style={{ background:"#0e0e10", borderRadius:6, padding:"8px 10px", border:`1px solid #3B82F633` }}>
-                          <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>Vía Ads ({adsPct}%)</div>
+                          <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>Ads ({adsPct}%)</div>
                           <div style={{ color:"#60A5FA", fontWeight:800, fontSize:16 }}>{byAds}</div>
                           <div style={{ color:GRAY, fontSize:9 }}>clientes</div>
                         </div>
                         <div style={{ background:"#0e0e10", borderRadius:6, padding:"8px 10px", border:`1px solid #22C55E33` }}>
-                          <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>Vía Orgánico ({100-adsPct}%)</div>
+                          <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>Orgánico ({100-adsPct}%)</div>
                           <div style={{ color:"#22C55E", fontWeight:800, fontSize:16 }}>{byOrg}</div>
                           <div style={{ color:GRAY, fontSize:9 }}>clientes</div>
                         </div>
                         <div style={{ background:"#0e0e10", borderRadius:6, padding:"8px 10px", border:`1px solid #F59E0B33` }}>
                           <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>Presupuesto ads</div>
-                          <div style={{ color:"#F59E0B", fontWeight:800, fontSize:14 }}>${adsBudget.toLocaleString()} USD</div>
+                          <div style={{ color:"#F59E0B", fontWeight:800, fontSize:13 }}>${adsBudget.toLocaleString()} USD</div>
                           <div style={{ color:GRAY, fontSize:9 }}>{fmtCOP(adsBudgetCOP)}</div>
                         </div>
                         <div style={{ background:"#0e0e10", borderRadius:6, padding:"8px 10px", border:`1px solid #8B5CF633` }}>
                           <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>Reuniones pendientes</div>
                           <div style={{ color:"#8B5CF6", fontWeight:800, fontSize:16 }}>{gapMt}</div>
-                          <div style={{ color:GRAY, fontSize:9 }}>para cerrar el gap</div>
+                          <div style={{ color:GRAY, fontSize:9 }}>para cerrar</div>
                         </div>
                       </div>
-
-                      {/* ROI row */}
                       {paybackDays && (
-                      <div style={{ display:"flex", gap:20, padding:"6px 8px", background:"#22C55E0A", borderRadius:6, border:`1px solid #22C55E22`, flexWrap:"wrap" }}>
-                        <span style={{ fontSize:11, color:GRAY }}>CAC: <span style={{ color:WHITE, fontWeight:700 }}>${cacUSD} USD</span> = <span style={{ color:WHITE, fontWeight:700 }}>{fmtCOP(cacCOP)}</span></span>
+                      <div style={{ display:"flex", gap:16, padding:"6px 8px", background:"#22C55E0A", borderRadius:6, border:`1px solid #22C55E22`, flexWrap:"wrap" }}>
+                        <span style={{ fontSize:11, color:GRAY }}>CAC: <span style={{ color:WHITE, fontWeight:700 }}>${cacUSD} USD = {fmtCOP(cacCOP)}</span></span>
                         <span style={{ fontSize:11, color:GRAY }}>Payback: <span style={{ color:"#22C55E", fontWeight:700 }}>{paybackDays} días</span></span>
-                        <span style={{ fontSize:11, color:GRAY }}>ROI 12 meses: <span style={{ color:GOLD, fontWeight:700 }}>{roi12}×</span></span>
-                        <span style={{ fontSize:11, color:GRAY }}>Revenue/CAC: <span style={{ color:"#22C55E", fontWeight:700 }}>cada cliente genera {fmtCOP(revPC*12)} en el año vs {fmtCOP(cacCOP)} de costo</span></span>
+                        <span style={{ fontSize:11, color:GRAY }}>ROI 12m: <span style={{ color:GOLD, fontWeight:700 }}>{roi12}×</span></span>
                       </div>
                       )}
                     </div>
@@ -4609,7 +4654,6 @@ function FinanzasSection({ personal, onUpdate }) {
                       ["Piso comisión — ventas mín.",      "commissionFloor",  salesConfig.commissionFloor||0, 1],
                       ["Precio upsell / adicional",        "upsellPrice",      salesConfig.upsellPrice,       1],
                       ["Reuniones para 1 cierre",          "meetingsPerClose", salesConfig.meetingsPerClose,  0.1],
-                      ["Clientes activos ahora",           "currentClients",   salesConfig.currentClients||0, 1],
                       ["CAC (USD / cliente)",              "cacUSD",           salesConfig.cacUSD||100,       1],
                       ["% clientes por ads",               "adsPct",           salesConfig.adsPct||50,        1],
                       ["TRM (COP / USD)",                  "usdRate",          salesConfig.usdRate||4200,     1],
