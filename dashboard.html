@@ -4568,8 +4568,8 @@ function FinanzasSection({ personal, onUpdate }) {
 
                     {/* Tabla mensual */}
                     <div style={{ marginBottom:10, background:"#111113", borderRadius:8, overflow:"hidden", border:`1px solid ${BORDER}33` }}>
-                      <div style={{ display:"grid", gridTemplateColumns:"40px 1fr 1fr 1fr 50px", padding:"5px 10px", borderBottom:`1px solid ${BORDER}33` }}>
-                        {["Mes","Clientes","Revenue","vs Meta","Gap"].map(h=>(
+                      <div style={{ display:"grid", gridTemplateColumns:"40px 60px 1fr 1fr 1fr", padding:"5px 10px", borderBottom:`1px solid ${BORDER}33` }}>
+                        {["Mes","Clientes","Ingresos","% de la meta","¿Llegaste?"].map(h=>(
                           <div key={h} style={{ color:GRAY, fontSize:9, fontWeight:700, letterSpacing:1 }}>{h}</div>
                         ))}
                       </div>
@@ -4578,7 +4578,7 @@ function FinanzasSection({ personal, onUpdate }) {
                         const pct   = target>0 ? Math.min(100,Math.round(rev/target*100)) : 0;
                         const ok    = g===0&&hasData;
                         return (
-                          <div key={mi} style={{ display:"grid", gridTemplateColumns:"40px 1fr 1fr 1fr 50px", padding:"5px 10px",
+                          <div key={mi} style={{ display:"grid", gridTemplateColumns:"40px 60px 1fr 1fr 1fr", padding:"5px 10px",
                             background: isCur?"#22C55E08":hasData?"#FFFFFF04":"transparent",
                             borderLeft: isCur?`2px solid ${GOLD}`:"2px solid transparent",
                             borderBottom:`1px solid ${BORDER}22` }}>
@@ -4596,7 +4596,7 @@ function FinanzasSection({ personal, onUpdate }) {
                               ):<span style={{ color:GRAY }}>—</span>}
                             </div>
                             <div style={{ color:g===0&&hasData?"#22C55E":g>0?"#EF4444":GRAY, fontSize:10, fontWeight:700 }}>
-                              {hasData ? (g===0?"✓":`-${g}`) : "—"}
+                              {hasData ? (g===0?"Completo":`Faltan ${g}`) : "—"}
                             </div>
                           </div>
                         );
