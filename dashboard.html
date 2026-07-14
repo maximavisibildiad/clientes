@@ -2657,6 +2657,81 @@ function LaunchTab({ client, onChange, globalLaunchPhases, globalMvpSteps, globa
   );
 }
 
+// ─── METODOLOGIA TAB ──────────────────────────────────────────────────────────
+const METODO_SECTIONS = [
+  { id:"contexto",  label:"Contexto del Cliente",    icon:"🏢", hint:"Quiénes son, qué venden, a quién le venden. ICP del cliente final." },
+  { id:"servicios", label:"Servicios y Catálogo",     icon:"📋", hint:"Lista de servicios u productos con precios. Incluye combos o paquetes." },
+  { id:"pagos",     label:"Métodos de Pago",          icon:"💳", hint:"Cómo puede pagar el cliente final. Ej: contado, financiación, crédito externo." },
+  { id:"crm",       label:"Flujo CRM",                icon:"🔄", hint:"Etapas del pipeline desde lead hasta cierre. Automatizaciones y handoffs." },
+  { id:"setter",    label:"Guión — Setter",           icon:"📞", hint:"Speech de contactabilidad, calificación y agenda de cita.", copy:true },
+  { id:"closer1",   label:"Guión — Closer 1",         icon:"🎯", hint:"Presentación, manejo de objeciones y cierre parcial.", copy:true },
+  { id:"closer2",   label:"Guión — Closer 2 / 3",     icon:"🏆", hint:"Seguimiento, cierre final y referidos.", copy:true },
+  { id:"roles",     label:"Roles del Equipo",         icon:"👥", hint:"Qué hace cada cargo día a día. Horarios, responsabilidades y métricas." },
+  { id:"reportes",  label:"Protocolo de Reportes",    icon:"📊", hint:"Qué reporta cada cargo, a quién y con qué frecuencia." },
+];
+
+function MetodologiaTab({ client, onChange }) {
+  const met = client.metodologia || {};
+  const set = (key, val) => onChange({ ...client, metodologia: { ...met, [key]: val } });
+  const [copied, setCopied] = React.useState(null);
+
+  const copyText = (id, text) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(id);
+      setTimeout(() => setCopied(null), 1800);
+    });
+  };
+
+  return (
+    <div style={{ maxWidth:720 }}>
+      <div style={{ marginBottom:20, padding:"12px 16px", background:`${GOLD}10`, border:`1px solid ${GOLD}30`, borderRadius:10 }}>
+        <div style={{ fontSize:12, color:GOLD, fontWeight:600, marginBottom:2 }}>Metodología del Cliente</div>
+        <div style={{ fontSize:11, color:GRAY }}>Documenta aquí el método de ventas específico de este cliente: guiones, flujo CRM, roles y reportes.</div>
+      </div>
+
+      <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+        {METODO_SECTIONS.map(sec => {
+          const val = met[sec.id] || "";
+          const isEmpty = !val.trim();
+          return (
+            <div key={sec.id} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, overflow:"hidden" }}>
+              {/* Section header */}
+              <div style={{ padding:"12px 16px", borderBottom:`1px solid ${BORDER}`, display:"flex", alignItems:"center", gap:10, justifyContent:"space-between" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontSize:15 }}>{sec.icon}</span>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:700, color:WHITE }}>{sec.label}</div>
+                    <div style={{ fontSize:10, color:GRAY, marginTop:1 }}>{sec.hint}</div>
+                  </div>
+                </div>
+                {sec.copy && (
+                  <button
+                    onClick={() => copyText(sec.id, val)}
+                    disabled={isEmpty}
+                    style={{ padding:"5px 12px", borderRadius:7, border:`1px solid ${isEmpty ? BORDER : GOLD+"60"}`, background:isEmpty ? "transparent" : `${GOLD}12`,
+                      color: isEmpty ? GRAY : GOLD, fontSize:11, fontWeight:600, cursor: isEmpty ? "default" : "pointer", transition:"all 0.2s", letterSpacing:0.3 }}>
+                    {copied === sec.id ? "✓ Copiado" : "Copiar"}
+                  </button>
+                )}
+              </div>
+              {/* Textarea */}
+              <textarea
+                value={val}
+                onChange={e => set(sec.id, e.target.value)}
+                placeholder={`${sec.hint}\n\nEscribe aquí...`}
+                style={{ width:"100%", minHeight: sec.copy ? 160 : 100, background:"transparent", border:"none", padding:"14px 16px",
+                  color: isEmpty ? GRAY : WHITE, fontSize:12.5, lineHeight:1.6, resize:"vertical", outline:"none", boxSizing:"border-box",
+                  fontFamily:"inherit" }}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ClientDetail({ client, team, onBack, onChange, apiKey, flowTemplates, onSaveTemplate, onDeleteTemplate, globalMvpSteps, globalFullSteps, globalLaunchPhases }) {
   const [subTab, setSubTab] = useState("perfil");
   const pct = overallPct(client.tasks);
@@ -2678,7 +2753,7 @@ function ClientDetail({ client, team, onBack, onChange, apiKey, flowTemplates, o
 
       {/* Sub tabs */}
       <div style={{ display:"flex", gap:0, marginBottom:20, borderBottom:`1px solid ${BORDER}` }}>
-        {[["perfil","Perfil"],["lanzamiento","🎯 Lanzamiento"],["ejecucion","Ejecución"],["proceso","Proceso Comercial"]].map(([id,label]) => (
+        {[["perfil","Perfil"],["lanzamiento","🎯 Lanzamiento"],["metodologia","📖 Metodología"],["ejecucion","Ejecución"],["proceso","Proceso Comercial"]].map(([id,label]) => (
           <button key={id} className={`gp-nav-tab${subTab===id?" active":""}`} onClick={()=>setSubTab(id)}>
             {label}
           </button>
@@ -2687,6 +2762,7 @@ function ClientDetail({ client, team, onBack, onChange, apiKey, flowTemplates, o
 
       {subTab === "perfil" && <PerfilTab client={client} onChange={onChange} />}
       {subTab === "lanzamiento" && <LaunchTab client={client} onChange={onChange} globalLaunchPhases={globalLaunchPhases} globalMvpSteps={globalMvpSteps} globalFullSteps={globalFullSteps} />}
+      {subTab === "metodologia" && <MetodologiaTab client={client} onChange={onChange} />}
       {subTab === "ejecucion" && <EjecucionTab client={client} team={team} onChange={onChange} />}
       {subTab === "proceso" && <ProcesoComercialTab client={client} onChange={onChange} apiKey={apiKey} flowTemplates={flowTemplates} onSaveTemplate={onSaveTemplate} onDeleteTemplate={onDeleteTemplate} />}
     </div>
