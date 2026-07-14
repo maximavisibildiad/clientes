@@ -530,24 +530,36 @@ const FULL_STEPS = [
 
 // ─── LAUNCH PHASES (cronograma) ───────────────────────────────────────────────
 const LAUNCH_PHASES = [
-  { id:"claridad",    group:"pre",  name:"Sesión de Claridad",          offset:-21, defaultOwner:"Setter",   color:"#60A5FA" },
-  { id:"diagnostico", group:"pre",  name:"Diagnóstico de Viabilidad",    offset:-18, defaultOwner:"Setter",   color:"#60A5FA" },
-  { id:"proyeccion",  group:"pre",  name:"Proyección Financiera",        offset:-14, defaultOwner:"Traffic",  color:"#60A5FA" },
-  { id:"revision",    group:"pre",  name:"Revisión de Promedio",         offset:-12, defaultOwner:"Setter",   color:"#60A5FA" },
-  { id:"acuerdo",     group:"pre",  name:"Claridad del Acuerdo",         offset:-7,  defaultOwner:"Legal",    color:"#60A5FA" },
-  { id:"firma",       group:"pre",  name:"Firma del Acuerdo",            offset:-3,  defaultOwner:"Legal",    color:"#60A5FA" },
-  { id:"arranque",    group:"sem1", name:"Sesión de Arranque",           offset:0,   defaultOwner:"Setter",   color:"#D4AF37" },
-  { id:"estrategia",  group:"sem1", name:"Estrategia de Venta",          offset:2,   defaultOwner:"Traffic",  color:"#D4AF37" },
-  { id:"oferta",      group:"sem2", name:"Oferta Irresistible",          offset:7,   defaultOwner:"Setter",   color:"#F59E0B" },
-  { id:"ads",         group:"sem2", name:"Grabación de Ads",             offset:10,  defaultOwner:"Setter",   color:"#F59E0B" },
-  { id:"closers",     group:"sem3", name:"Entrenamiento Closers",        offset:14,  defaultOwner:"Director", color:"#22C55E" },
-  { id:"maquinaria",  group:"sem3", name:"Lanzamiento Maquinaria",       offset:21,  defaultOwner:"Director", color:"#22C55E" },
+  // Pre-lanzamiento (antes de startDate)
+  { id:"claridad",    group:"pre",  type:"ext", name:"Sesión de Claridad",                    offset:-21, defaultOwner:"Setter",   color:"#60A5FA", note:"" },
+  { id:"diagnostico", group:"pre",  type:"ext", name:"Diagnóstico de Viabilidad",              offset:-18, defaultOwner:"Setter",   color:"#60A5FA", note:"" },
+  { id:"proyeccion",  group:"pre",  type:"ext", name:"Proyección Financiera",                  offset:-14, defaultOwner:"Traffic",  color:"#60A5FA", note:"Va con reunión interna antes" },
+  { id:"revision",    group:"pre",  type:"ext", name:"Revisión de Promedio",                   offset:-12, defaultOwner:"Setter",   color:"#60A5FA", note:"" },
+  { id:"acuerdo",     group:"pre",  type:"ext", name:"Claridad del Acuerdo",                   offset:-7,  defaultOwner:"Legal",    color:"#60A5FA", note:"" },
+  { id:"firma",       group:"pre",  type:"ext", name:"Firma del Acuerdo",                      offset:-3,  defaultOwner:"Legal",    color:"#60A5FA", note:"" },
+  // Semana 1 (startDate = Día 0)
+  { id:"arranque",    group:"sem1", type:"ext", name:"Sesión de Arranque",                     offset:0,   defaultOwner:"Setter",   color:"#D4AF37", note:"" },
+  { id:"estrategia",  group:"sem1", type:"int", name:"Sesión Estrategia General",              offset:2,   defaultOwner:"Traffic",  color:"#D4AF37", note:"" },
+  { id:"oferta",      group:"sem1", type:"int", name:"Creación Oferta Irresistible y Guiones", offset:4,   defaultOwner:"Setter",   color:"#D4AF37", note:"" },
+  // Semana 2
+  { id:"ads",         group:"sem2", type:"ext", name:"Grabación Ads",                          offset:7,   defaultOwner:"Setter",   color:"#F59E0B", note:"" },
+  { id:"metodologia", group:"sem2", type:"int", name:"Creación Metodología Base",              offset:10,  defaultOwner:"Director", color:"#F59E0B", note:"" },
+  { id:"crm",         group:"sem2", type:"int", name:"Automatizar CRM",                        offset:12,  defaultOwner:"Director", color:"#F59E0B", note:"" },
+  // Semana 3 — Lanzamiento
+  { id:"closers",     group:"sem3", type:"ext", name:"Entrenamiento Closers",                  offset:14,  defaultOwner:"Director", color:"#22C55E", note:"1-3 días de inducción con paso a paso" },
+  { id:"campanas",    group:"sem3", type:"int", name:"Lanzamiento Campañas",                   offset:18,  defaultOwner:"Traffic",  color:"#22C55E", note:"" },
+  { id:"maquinaria",  group:"sem3", type:"ext", name:"Lanzamiento Maquinaria",                 offset:21,  defaultOwner:"Director", color:"#22C55E", note:"" },
+  // Post-lanzamiento
+  { id:"resumen1",    group:"post", type:"int", name:"Resumen Operativo — 1 semana",           offset:28,  defaultOwner:"Legal",    color:"#A78BFA", note:"Va con reunión interna antes" },
+  { id:"resumen3",    group:"post", type:"int", name:"Resumen Operativo — 3 semanas",          offset:42,  defaultOwner:"Legal",    color:"#A78BFA", note:"Va con reunión interna antes" },
+  { id:"informe1m",   group:"post", type:"int", name:"Informe 1 mes + Proyección Trimestre",   offset:60,  defaultOwner:"Director", color:"#A78BFA", note:"Va con reunión interna antes" },
 ];
 const LAUNCH_GROUPS = [
   { id:"pre",  label:"Pre-Lanzamiento",        color:"#60A5FA", tag:"Antes del inicio" },
   { id:"sem1", label:"Semana 1",               color:"#D4AF37", tag:"Días 0 – 7" },
   { id:"sem2", label:"Semana 2",               color:"#F59E0B", tag:"Días 7 – 14" },
   { id:"sem3", label:"Semana 3 · Lanzamiento", color:"#22C55E", tag:"Días 14 – 21" },
+  { id:"post", label:"Post-Lanzamiento",       color:"#A78BFA", tag:"Seguimiento operativo" },
 ];
 
 // ─── SEED DATA ────────────────────────────────────────────────────────────────
@@ -663,6 +675,7 @@ function getInitialData(savedOverride) {
     globalTasks: GEMA_TASKS.map(t => ({...t, id:"gt_"+t.n})),
     globalMvpSteps: MVP_STEPS.map(s => ({...s, id:"mvp_"+s.n})),
     globalFullSteps: FULL_STEPS.map(s => ({...s, id:"full_"+s.n})),
+    globalLaunchPhases: LAUNCH_PHASES,
     teamFlow: { id: "team_flow", name: "Organigrama del equipo", nodes: [], edges: [] },
   };
   const saved = savedOverride || storageGet();
@@ -674,6 +687,7 @@ function getInitialData(savedOverride) {
       globalTasks: saved.globalTasks || defaults.globalTasks,
       globalMvpSteps: saved.globalMvpSteps || defaults.globalMvpSteps,
       globalFullSteps: saved.globalFullSteps || defaults.globalFullSteps,
+      globalLaunchPhases: saved.globalLaunchPhases || defaults.globalLaunchPhases,
       teamFlow: saved.teamFlow || defaults.teamFlow,
     };
   }
@@ -727,6 +741,16 @@ function syncTasksToClients(clients, globalTasks) {
       return { ...gt, id: uid(), globalId: gt.id, done: false, assigneeId: null, doneAt: null };
     });
     return { ...client, tasks: [...newTasks, ...customTasks] };
+  });
+}
+
+function syncPhasesToClients(clients, globalPhases) {
+  const validIds = new Set(globalPhases.map(p => p.id));
+  return clients.map(client => {
+    const existing = client.launchPhases || {};
+    const cleaned = {};
+    validIds.forEach(id => { cleaned[id] = existing[id] || { done: false, date: "", owner: "" }; });
+    return { ...client, launchPhases: cleaned };
   });
 }
 
@@ -2404,7 +2428,8 @@ function ProcesoComercialTab({ client, onChange, apiKey, flowTemplates, onSaveTe
 
 // ─── CLIENT DETAIL ────────────────────────────────────────────────────────────
 // ─── LAUNCH TAB ──────────────────────────────────────────────────────────────
-function LaunchTab({ client, onChange, globalMvpSteps, globalFullSteps }) {
+function LaunchTab({ client, onChange, globalLaunchPhases, globalMvpSteps, globalFullSteps }) {
+  const phases = globalLaunchPhases || LAUNCH_PHASES;
   const mvpSteps = client.customMvpSteps || globalMvpSteps || MVP_STEPS;
   const fullSteps = client.customFullSteps || globalFullSteps || FULL_STEPS;
   const [showTasks, setShowTasks] = useState(false);
@@ -2435,9 +2460,9 @@ function LaunchTab({ client, onChange, globalMvpSteps, globalFullSteps }) {
     return `${+d} ${MM}${+y !== thisY ? " '" + String(y).slice(2) : ""}`;
   };
 
-  const doneCount = LAUNCH_PHASES.filter(p => getP(p.id).done).length;
-  const pct = Math.round(doneCount / LAUNCH_PHASES.length * 100);
-  const activeIdx = LAUNCH_PHASES.findIndex(p => !getP(p.id).done);
+  const doneCount = phases.filter(p => getP(p.id).done).length;
+  const pct = Math.round(doneCount / phases.length * 100);
+  const activeIdx = phases.findIndex(p => !getP(p.id).done);
   const tasksDone = [...mvpSteps,...fullSteps].filter(s => (client.mvpChecks||{})[s.n]||(client.fullChecks||{})[s.n]).length;
 
   return (
@@ -2450,7 +2475,7 @@ function LaunchTab({ client, onChange, globalMvpSteps, globalFullSteps }) {
             <div style={{ color:WHITE, fontWeight:800, fontSize:15 }}>Plan de Lanzamiento</div>
           </div>
           <div style={{ textAlign:"right" }}>
-            <div style={{ color:GOLD, fontWeight:800, fontSize:22, lineHeight:1 }}>{doneCount}/{LAUNCH_PHASES.length}</div>
+            <div style={{ color:GOLD, fontWeight:800, fontSize:22, lineHeight:1 }}>{doneCount}/{phases.length}</div>
             <div style={{ color:GRAY, fontSize:11, marginTop:2 }}>{pct}% completado</div>
           </div>
         </div>
@@ -2471,7 +2496,7 @@ function LaunchTab({ client, onChange, globalMvpSteps, globalFullSteps }) {
 
       {/* Timeline */}
       {LAUNCH_GROUPS.map((grp) => {
-        const grpPhases = LAUNCH_PHASES.filter(p => p.group === grp.id);
+        const grpPhases = phases.filter(p => p.group === grp.id);
         const grpDone = grpPhases.filter(p => getP(p.id).done).length;
         const grpFromDate = grp.id !== "pre" ? fmtD(addOffset(grpPhases[0].offset)) : null;
 
@@ -2492,7 +2517,7 @@ function LaunchTab({ client, onChange, globalMvpSteps, globalFullSteps }) {
             <div style={{ position:"relative", borderLeft:`2px solid ${BORDER}`, marginLeft:20 }}>
               {grpPhases.map((phase, idx) => {
                 const ph = getP(phase.id);
-                const globalIdx = LAUNCH_PHASES.indexOf(phase);
+                const globalIdx = phases.indexOf(phase);
                 const isActive = globalIdx === activeIdx;
                 const dateVal = ph.date || addOffset(phase.offset);
                 const isLast = idx === grpPhases.length - 1;
@@ -2522,14 +2547,23 @@ function LaunchTab({ client, onChange, globalMvpSteps, globalFullSteps }) {
                       borderRadius:8, padding:"8px 12px", cursor:"pointer", transition:"all 0.15s",
                     }}>
                       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8 }}>
-                        <span style={{ fontSize:12, fontWeight:600, color: ph.done ? GRAY : WHITE, textDecoration: ph.done ? "line-through" : "none" }}>
-                          {phase.name}
+                        <div style={{ display:"flex", alignItems:"center", gap:6, minWidth:0, flexWrap:"wrap" }}>
+                          {/* Tipo badge */}
+                          <span style={{ fontSize:9, padding:"1px 6px", borderRadius:4, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", flexShrink:0,
+                            background: phase.type==="ext" ? "#60A5FA18" : "#F59E0B18",
+                            color: phase.type==="ext" ? "#60A5FA" : "#F59E0B",
+                            border: `1px solid ${phase.type==="ext" ? "#60A5FA44" : "#F59E0B44"}` }}>
+                            {phase.type==="ext" ? "Externo" : "Interno"}
+                          </span>
+                          <span style={{ fontSize:12, fontWeight:600, color: ph.done ? GRAY : WHITE, textDecoration: ph.done ? "line-through" : "none" }}>
+                            {phase.name}
+                          </span>
                           {isActive && !ph.done && (
-                            <span style={{ marginLeft:8, fontSize:9, padding:"1px 7px", borderRadius:10, background:phase.color+"22", color:phase.color, fontWeight:700, letterSpacing:0.8, textTransform:"uppercase", verticalAlign:"middle" }}>
+                            <span style={{ fontSize:9, padding:"1px 7px", borderRadius:10, background:phase.color+"22", color:phase.color, fontWeight:700, letterSpacing:0.8, textTransform:"uppercase", flexShrink:0 }}>
                               En curso
                             </span>
                           )}
-                        </span>
+                        </div>
                         <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
                           {/* Date — click to edit */}
                           {editingDate === phase.id ? (
@@ -2554,8 +2588,9 @@ function LaunchTab({ client, onChange, globalMvpSteps, globalFullSteps }) {
                           </span>
                         </div>
                       </div>
-                      <div style={{ fontSize:10, color:phase.color+"99", marginTop:3 }}>
-                        {ph.owner || phase.defaultOwner}
+                      <div style={{ marginTop:4, display:"flex", alignItems:"center", gap:10 }}>
+                        <span style={{ fontSize:10, color:phase.color+"99" }}>{ph.owner || phase.defaultOwner}</span>
+                        {phase.note && <span style={{ fontSize:10, color:GRAY, fontStyle:"italic" }}>{phase.note}</span>}
                       </div>
                     </div>
                   </div>
@@ -2622,7 +2657,7 @@ function LaunchTab({ client, onChange, globalMvpSteps, globalFullSteps }) {
   );
 }
 
-function ClientDetail({ client, team, onBack, onChange, apiKey, flowTemplates, onSaveTemplate, onDeleteTemplate, globalMvpSteps, globalFullSteps }) {
+function ClientDetail({ client, team, onBack, onChange, apiKey, flowTemplates, onSaveTemplate, onDeleteTemplate, globalMvpSteps, globalFullSteps, globalLaunchPhases }) {
   const [subTab, setSubTab] = useState("perfil");
   const pct = overallPct(client.tasks);
   const done = client.tasks.filter(t=>t.done).length;
@@ -2651,7 +2686,7 @@ function ClientDetail({ client, team, onBack, onChange, apiKey, flowTemplates, o
       </div>
 
       {subTab === "perfil" && <PerfilTab client={client} onChange={onChange} />}
-      {subTab === "lanzamiento" && <LaunchTab client={client} onChange={onChange} globalMvpSteps={globalMvpSteps} globalFullSteps={globalFullSteps} />}
+      {subTab === "lanzamiento" && <LaunchTab client={client} onChange={onChange} globalLaunchPhases={globalLaunchPhases} globalMvpSteps={globalMvpSteps} globalFullSteps={globalFullSteps} />}
       {subTab === "ejecucion" && <EjecucionTab client={client} team={team} onChange={onChange} />}
       {subTab === "proceso" && <ProcesoComercialTab client={client} onChange={onChange} apiKey={apiKey} flowTemplates={flowTemplates} onSaveTemplate={onSaveTemplate} onDeleteTemplate={onDeleteTemplate} />}
     </div>
@@ -5826,13 +5861,11 @@ function StepsEditor({ steps, color, onUpdate, onDelete, onAdd, onReset }) {
 }
 
 function MetodoTab({ data, onChange }) {
-  const gMvp  = data.globalMvpSteps  || MVP_STEPS.map(s=>({...s, id:"mvp_"+s.n}));
-  const gFull = data.globalFullSteps || FULL_STEPS.map(s=>({...s, id:"full_"+s.n}));
-  const gTasks = data.globalTasks    || GEMA_TASKS.map(t=>({...t, id:"gt_"+t.n}));
+  const gTasks = data.globalTasks || GEMA_TASKS.map(t=>({...t, id:"gt_"+t.n}));
+  const gPhases = data.globalLaunchPhases || LAUNCH_PHASES;
 
-  const [localMvp,   setLocalMvp]   = useState(() => gMvp);
-  const [localFull,  setLocalFull]  = useState(() => gFull);
-  const [localTasks, setLocalTasks] = useState(() => gTasks);
+  const [localTasks,  setLocalTasks]  = useState(() => gTasks);
+  const [localPhases, setLocalPhases] = useState(() => gPhases);
   const [section, setSection] = useState("launch");
   const [dirty, setDirty] = useState(false);
   const [taskSearch, setTaskSearch] = useState("");
@@ -5840,22 +5873,22 @@ function MetodoTab({ data, onChange }) {
   const mark = fn => (...args) => { fn(...args); setDirty(true); };
 
   const applyChanges = () => {
-    const syncedClients = syncTasksToClients(data.clients, localTasks);
-    onChange({ ...data, globalTasks: localTasks, globalMvpSteps: localMvp, globalFullSteps: localFull, clients: syncedClients });
+    const syncedClients = syncTasksToClients(
+      syncPhasesToClients(data.clients, localPhases),
+      localTasks
+    );
+    onChange({ ...data, globalTasks: localTasks, globalLaunchPhases: localPhases, clients: syncedClients });
     setDirty(false);
   };
 
-  // MVP steps handlers
-  const mvpUpdate = mark((idx, patch) => setLocalMvp(s => s.map((x,i)=>i===idx?{...x,...patch}:x)));
-  const mvpDelete = mark((idx)        => setLocalMvp(s => s.filter((_,i)=>i!==idx)));
-  const mvpAdd    = mark(()           => { const n=Math.max(...localMvp.map(s=>s.n||0),0)+1; setLocalMvp(s=>[...s,{n,id:uid(),title:"Nuevo paso MVP",desc:""}]); });
-  const mvpReset  = ()                => { setLocalMvp(MVP_STEPS.map(s=>({...s,id:"mvp_"+s.n}))); setDirty(true); };
-
-  // Full steps handlers
-  const fullUpdate = mark((idx, patch) => setLocalFull(s => s.map((x,i)=>i===idx?{...x,...patch}:x)));
-  const fullDelete = mark((idx)        => setLocalFull(s => s.filter((_,i)=>i!==idx)));
-  const fullAdd    = mark(()           => { const n=Math.max(...localFull.map(s=>s.n||0),0)+1; setLocalFull(s=>[...s,{n,id:uid(),title:"Nuevo paso Full",desc:""}]); });
-  const fullReset  = ()                => { setLocalFull(FULL_STEPS.map(s=>({...s,id:"full_"+s.n}))); setDirty(true); };
+  // Launch phase handlers
+  const phaseUpdate = mark((id, patch) => setLocalPhases(ps => ps.map(p => p.id===id ? {...p,...patch} : p)));
+  const phaseDelete = mark((id)        => setLocalPhases(ps => ps.filter(p => p.id!==id)));
+  const phaseAdd    = mark((grpId)     => {
+    const grp = LAUNCH_GROUPS.find(g=>g.id===grpId) || LAUNCH_GROUPS[0];
+    setLocalPhases(ps => [...ps, { id:"ph_"+uid(), group:grpId, type:"ext", name:"Nueva fase", offset:0, defaultOwner:"", color:grp.color, note:"" }]);
+  });
+  const phaseReset  = ()               => { setLocalPhases(LAUNCH_PHASES); setDirty(true); };
 
   // Task handlers
   const taskAdd    = mark((area, week) => { const n=Math.max(...localTasks.map(t=>t.n||0),0)+1; setLocalTasks(ts=>[...ts,{n,id:uid(),area,week,title:"Nueva tarea",owner:"TUYO"}]); });
@@ -5879,11 +5912,8 @@ function MetodoTab({ data, onChange }) {
           </div>
         </div>
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-          {dirty && (
-            <span style={{ fontSize:11, color:GOLD, opacity:0.8, fontWeight:500 }}>Cambios sin aplicar</span>
-          )}
-          <button onClick={applyChanges}
-            className={dirty ? "gp-btn-gold" : ""}
+          {dirty && <span style={{ fontSize:11, color:GOLD, opacity:0.8, fontWeight:500 }}>Cambios sin aplicar</span>}
+          <button onClick={applyChanges} className={dirty ? "gp-btn-gold" : ""}
             style={{ padding:"10px 20px", background: dirty ? GOLD : "#222225", color: dirty ? "#141414" : GRAY, border:`1px solid ${dirty ? GOLD : BORDER}`, borderRadius:8, cursor: dirty ? "pointer" : "default", fontWeight:700, fontSize:13 }}>
             ⚡ Aplicar a todos los clientes
           </button>
@@ -5892,29 +5922,84 @@ function MetodoTab({ data, onChange }) {
 
       {/* Section tabs */}
       <div style={{ display:"flex", gap:0, marginBottom:24, borderBottom:`1px solid ${BORDER}` }}>
-        {[["launch","🎯 Lanzamiento (15 pasos)"],["tasks","📋 Tareas del Método ("+localTasks.length+")"]].map(([id,label]) => (
-          <button key={id} className={`gp-nav-tab${section===id?" active":""}`} onClick={()=>setSection(id)}>
-            {label}
-          </button>
+        {[["launch","🎯 Cronograma ("+localPhases.length+" fases)"],["tasks","📋 Tareas del Método ("+localTasks.length+")"]].map(([id,label]) => (
+          <button key={id} className={`gp-nav-tab${section===id?" active":""}`} onClick={()=>setSection(id)}>{label}</button>
         ))}
       </div>
 
       {section === "launch" && (
-        <div style={{ maxWidth:720 }}>
-          <div style={{ marginBottom:28 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
-              <span style={{ color:GOLD, fontWeight:700, fontSize:15 }}>🎯 Mínimo Viable</span>
-              <span style={{ fontSize:11, color:GRAY }}>{localMvp.length} pasos · Semana 2</span>
+        <div style={{ maxWidth:760 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+            <div style={{ color:GRAY, fontSize:12 }}>
+              Define las fases del cronograma de lanzamiento. Se aplican a todos los clientes al guardar.
             </div>
-            <StepsEditor steps={localMvp} onUpdate={mvpUpdate} onDelete={mvpDelete} onAdd={mvpAdd} onReset={mvpReset} />
+            <button onClick={phaseReset}
+              style={{ padding:"5px 12px", background:"transparent", color:GRAY, border:`1px solid ${BORDER}`, borderRadius:6, cursor:"pointer", fontSize:11 }}>
+              ↺ Restaurar defaults
+            </button>
           </div>
-          <div style={{ borderTop:`1px solid ${BORDER}`, paddingTop:24 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
-              <span style={{ color:GREEN, fontWeight:700, fontSize:15 }}>🚀 Full Launch</span>
-              <span style={{ fontSize:11, color:GRAY }}>{localFull.length} pasos · Semana 3</span>
-            </div>
-            <StepsEditor steps={localFull} onUpdate={fullUpdate} onDelete={fullDelete} onAdd={fullAdd} onReset={fullReset} />
-          </div>
+
+          {LAUNCH_GROUPS.map(grp => {
+            const grpPhases = localPhases.filter(p => p.group === grp.id);
+            return (
+              <div key={grp.id} style={{ marginBottom:24 }}>
+                {/* Group header */}
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <div style={{ width:3, height:20, background:grp.color, borderRadius:2 }} />
+                    <span style={{ fontSize:11, fontWeight:700, color:grp.color, textTransform:"uppercase", letterSpacing:0.8 }}>{grp.label}</span>
+                    <span style={{ fontSize:10, color:GRAY }}>{grpPhases.length} fases</span>
+                  </div>
+                  <button onClick={() => phaseAdd(grp.id)}
+                    style={{ padding:"3px 10px", background:"transparent", color:grp.color, border:`1px solid ${grp.color}44`, borderRadius:5, cursor:"pointer", fontSize:10, fontWeight:600 }}>
+                    + Fase
+                  </button>
+                </div>
+
+                {/* Phase rows */}
+                <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                  {grpPhases.map((phase) => (
+                    <div key={phase.id} style={{ display:"flex", gap:6, alignItems:"center", background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, padding:"8px 10px" }}>
+                      {/* Type toggle */}
+                      <button onClick={() => phaseUpdate(phase.id, { type: phase.type==="ext"?"int":"ext" })}
+                        title="Externo / Interno"
+                        style={{ padding:"2px 7px", borderRadius:4, border:`1px solid ${phase.type==="ext"?"#60A5FA44":"#F59E0B44"}`,
+                          background: phase.type==="ext" ? "#60A5FA18" : "#F59E0B18",
+                          color: phase.type==="ext" ? "#60A5FA" : "#F59E0B",
+                          fontSize:9, fontWeight:700, cursor:"pointer", textTransform:"uppercase", letterSpacing:0.6, flexShrink:0 }}>
+                        {phase.type==="ext" ? "EXT" : "INT"}
+                      </button>
+                      {/* Name */}
+                      <input value={phase.name}
+                        onChange={e => phaseUpdate(phase.id, { name: e.target.value })}
+                        style={{ flex:2, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:5, padding:"4px 8px", color:WHITE, fontSize:12, outline:"none", minWidth:0 }} />
+                      {/* Owner */}
+                      <input value={phase.defaultOwner || ""}
+                        onChange={e => phaseUpdate(phase.id, { defaultOwner: e.target.value })}
+                        placeholder="Propietario"
+                        style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:5, padding:"4px 8px", color:GRAY, fontSize:11, outline:"none", minWidth:60 }} />
+                      {/* Offset */}
+                      <input type="number" value={phase.offset}
+                        onChange={e => phaseUpdate(phase.id, { offset: parseInt(e.target.value)||0 })}
+                        title="Días desde startDate"
+                        style={{ width:52, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:5, padding:"4px 6px", color:GRAY, fontSize:11, outline:"none", textAlign:"center" }} />
+                      {/* Note */}
+                      <input value={phase.note || ""}
+                        onChange={e => phaseUpdate(phase.id, { note: e.target.value })}
+                        placeholder="Nota..."
+                        style={{ flex:1.5, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:5, padding:"4px 8px", color:GRAY, fontSize:11, outline:"none", minWidth:80 }} />
+                      {/* Delete */}
+                      <button onClick={() => phaseDelete(phase.id)}
+                        style={{ padding:"3px 8px", borderRadius:5, border:`1px solid ${RED}44`, color:RED, background:"transparent", fontSize:11, cursor:"pointer", flexShrink:0 }}>✕</button>
+                    </div>
+                  ))}
+                  {grpPhases.length === 0 && (
+                    <div style={{ padding:"10px 12px", color:GRAY, fontSize:11, fontStyle:"italic" }}>Sin fases — usa + Fase para agregar</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -6583,7 +6668,7 @@ function MetodoGrowthPartner() {
             apiKey={data.settings?.apiKey || ""}
             flowTemplates={data.flowTemplates||[]}
             onSaveTemplate={saveTemplate} onDeleteTemplate={deleteTemplate}
-            globalMvpSteps={data.globalMvpSteps} globalFullSteps={data.globalFullSteps}
+            globalLaunchPhases={data.globalLaunchPhases} globalMvpSteps={data.globalMvpSteps} globalFullSteps={data.globalFullSteps}
           />
         ) : (
           <>
