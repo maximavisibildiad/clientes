@@ -5937,7 +5937,11 @@ function StepsEditor({ steps, color, onUpdate, onDelete, onAdd, onReset }) {
 }
 
 function MetodoTab({ data, onChange }) {
-  const gTasks = data.globalTasks || GEMA_TASKS.map(t=>({...t, id:"gt_"+t.n}));
+  const rawTasks = data.globalTasks || GEMA_TASKS.map(t=>({...t, id:"gt_"+t.n}));
+  const gTasks = rawTasks.map(t => {
+    const base = GEMA_TASKS.find(g => g.n === t.n);
+    return base ? { ...t, area: t.area || base.area, week: t.week || base.week } : t;
+  });
   const gPhases = data.globalLaunchPhases || LAUNCH_PHASES;
 
   const [localTasks,       setLocalTasks]       = useState(() => gTasks);
@@ -6091,13 +6095,17 @@ function MetodoTab({ data, onChange }) {
               ↺ Restaurar defaults ({GEMA_TASKS.length} tareas)
             </button>
           </div>
-          {AREAS.map(area => {
-            const areaTasks = filteredTasks.filter(t=>t.area===area);
+          {[...AREAS, "__sin_area__"].map(area => {
+            const areaTasks = area === "__sin_area__"
+              ? filteredTasks.filter(t => !t.area || !AREAS.includes(t.area))
+              : filteredTasks.filter(t=>t.area===area);
+            if (area === "__sin_area__" && areaTasks.length === 0) return null;
+            const areaLabel = area === "__sin_area__" ? "⚠️ Sin área asignada" : area;
             return (
               <div key={area} style={{ marginBottom:24 }}>
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                    <span style={{ color:GOLD, fontWeight:700, fontSize:13, textTransform:"uppercase", letterSpacing:1 }}>{area}</span>
+                    <span style={{ color: area==="__sin_area__" ? RED : GOLD, fontWeight:700, fontSize:13, textTransform:"uppercase", letterSpacing:1 }}>{areaLabel}</span>
                     <span style={{ fontSize:11, color:GRAY }}>({areaTasks.length} tareas)</span>
                     {AREA_AGENT[area] && (
                       <span style={{ fontSize:10, padding:"2px 7px", borderRadius:4, background:`${AREA_AGENT[area].color}20`, color:AREA_AGENT[area].color, border:`1px solid ${AREA_AGENT[area].color}55`, fontWeight:600 }}>
@@ -6121,10 +6129,14 @@ function MetodoTab({ data, onChange }) {
                     <div key={week} style={{ marginBottom:10 }}>
                       <div style={{ fontSize:10, color:GOLD_DIM, fontWeight:700, marginBottom:6, textTransform:"uppercase", letterSpacing:0.5 }}>{week}</div>
                       {wt.map(task => (
-                        <div key={task.id} style={{ display:"flex", gap:8, alignItems:"center", marginBottom:3, padding:"6px 10px", background:CARD, borderRadius:6, border:`1px solid ${BORDER}` }}>
-                          <span style={{ fontSize:10, color:GRAY, minWidth:26, fontFamily:"monospace" }}>#{task.n}</span>
+                        <div key={task.id} style={{ display:"flex", gap:6, alignItems:"center", marginBottom:3, padding:"6px 10px", background:CARD, borderRadius:6, border:`1px solid ${BORDER}` }}>
+                          <span style={{ fontSize:10, color:GRAY, minWidth:26, fontFamily:"monospace", flexShrink:0 }}>#{task.n}</span>
                           <input value={task.title} onChange={e=>taskUpdate(task.id,{title:e.target.value})}
-                            style={{ flex:1, background:"transparent", border:"none", color:WHITE, fontSize:12, outline:"none" }} />
+                            style={{ flex:1, background:"transparent", border:"none", color:WHITE, fontSize:12, outline:"none", minWidth:0 }} />
+                          <select value={task.area||""} onChange={e=>taskUpdate(task.id,{area:e.target.value})}
+                            style={{ background:"#222225", border:`1px solid ${BORDER}`, color:GOLD_DIM, fontSize:10, borderRadius:4, padding:"2px 4px", maxWidth:110 }}>
+                            {AREAS.map(a=><option key={a} value={a}>{a}</option>)}
+                          </select>
                           <select value={task.owner||"TUYO"} onChange={e=>taskUpdate(task.id,{owner:e.target.value})}
                             style={{ background:"#222225", border:`1px solid ${BORDER}`, color:GRAY, fontSize:10, borderRadius:4, padding:"2px 6px" }}>
                             <option value="TUYO">TUYO</option>
