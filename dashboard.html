@@ -2670,7 +2670,21 @@ const METODO_SECTIONS = [
   { id:"reportes",  label:"Protocolo de Reportes",    icon:"📊", hint:"Qué reporta cada cargo, a quién y con qué frecuencia." },
 ];
 
-function MetodologiaTab({ metodologia, onChange }) {
+function orgToRolesSummary(org) {
+  if (!org || !org.areas) return "";
+  const lines = [];
+  if (org.ceo) lines.push(`${org.ceo.name} — ${org.ceo.title}`);
+  org.areas.forEach(a => {
+    lines.push(`\n${a.name.toUpperCase()} (${a.pct})`);
+    a.roles.forEach(r => {
+      const icon = r.status==="active" ? "✅" : r.status==="outsourced" ? "🔗" : "⏳";
+      lines.push(`  ${icon} ${r.name}: ${r.desc}`);
+    });
+  });
+  return lines.join("\n");
+}
+
+function MetodologiaTab({ metodologia, onChange, organigrama }) {
   const met = metodologia || {};
   const set = (key, val) => onChange({ ...met, [key]: val });
   const [copied, setCopied] = React.useState(null);
@@ -2705,15 +2719,25 @@ function MetodologiaTab({ metodologia, onChange }) {
                     <div style={{ fontSize:10, color:GRAY, marginTop:1 }}>{sec.hint}</div>
                   </div>
                 </div>
-                {sec.copy && (
-                  <button
-                    onClick={() => copyText(sec.id, val)}
-                    disabled={isEmpty}
-                    style={{ padding:"5px 12px", borderRadius:7, border:`1px solid ${isEmpty ? BORDER : GOLD+"60"}`, background:isEmpty ? "transparent" : `${GOLD}12`,
-                      color: isEmpty ? GRAY : GOLD, fontSize:11, fontWeight:600, cursor: isEmpty ? "default" : "pointer", transition:"all 0.2s", letterSpacing:0.3 }}>
-                    {copied === sec.id ? "✓ Copiado" : "Copiar"}
-                  </button>
-                )}
+                <div style={{ display:"flex", gap:6 }}>
+                  {sec.id === "roles" && organigrama && (
+                    <button
+                      onClick={() => set("roles", orgToRolesSummary(organigrama))}
+                      style={{ padding:"5px 12px", borderRadius:7, border:`1px solid ${GOLD}44`, background:`${GOLD}10`,
+                        color:GOLD, fontSize:11, fontWeight:600, cursor:"pointer", letterSpacing:0.3 }}>
+                      ↺ Del organigrama
+                    </button>
+                  )}
+                  {sec.copy && (
+                    <button
+                      onClick={() => copyText(sec.id, val)}
+                      disabled={isEmpty}
+                      style={{ padding:"5px 12px", borderRadius:7, border:`1px solid ${isEmpty ? BORDER : GOLD+"60"}`, background:isEmpty ? "transparent" : `${GOLD}12`,
+                        color: isEmpty ? GRAY : GOLD, fontSize:11, fontWeight:600, cursor: isEmpty ? "default" : "pointer", transition:"all 0.2s", letterSpacing:0.3 }}>
+                      {copied === sec.id ? "✓ Copiado" : "Copiar"}
+                    </button>
+                  )}
+                </div>
               </div>
               {/* Textarea */}
               <textarea
@@ -2732,7 +2756,7 @@ function MetodologiaTab({ metodologia, onChange }) {
   );
 }
 
-function ClientDetail({ client, team, onBack, onChange, apiKey, flowTemplates, onSaveTemplate, onDeleteTemplate, globalMvpSteps, globalFullSteps, globalLaunchPhases }) {
+function ClientDetail({ client, team, onBack, onChange, apiKey, flowTemplates, onSaveTemplate, onDeleteTemplate, globalMvpSteps, globalFullSteps, globalLaunchPhases, globalOrganigrama }) {
   const [subTab, setSubTab] = useState("perfil");
   const pct = overallPct(client.tasks);
   const done = client.tasks.filter(t=>t.done).length;
@@ -2762,7 +2786,7 @@ function ClientDetail({ client, team, onBack, onChange, apiKey, flowTemplates, o
 
       {subTab === "perfil" && <PerfilTab client={client} onChange={onChange} />}
       {subTab === "lanzamiento" && <LaunchTab client={client} onChange={onChange} globalLaunchPhases={globalLaunchPhases} globalMvpSteps={globalMvpSteps} globalFullSteps={globalFullSteps} />}
-      {subTab === "metodologia" && <MetodologiaTab metodologia={client.metodologia} onChange={met => onChange({ ...client, metodologia: met })} />}
+      {subTab === "metodologia" && <MetodologiaTab metodologia={client.metodologia} onChange={met => onChange({ ...client, metodologia: met })} organigrama={globalOrganigrama} />}
       {subTab === "ejecucion" && <EjecucionTab client={client} team={team} onChange={onChange} />}
       {subTab === "proceso" && <ProcesoComercialTab client={client} onChange={onChange} apiKey={apiKey} flowTemplates={flowTemplates} onSaveTemplate={onSaveTemplate} onDeleteTemplate={onDeleteTemplate} />}
     </div>
@@ -3053,88 +3077,16 @@ function ClientsList({ clients, onSelect, onCreate, onDelete, teamPin }) {
 
 // ─── TEAM TAB ─────────────────────────────────────────────────────────────────
 function TeamTab({ data, onChange }) {
-  const [newMember, setNewMember] = useState("");
-  const [newRole, setNewRole] = useState("");
-  const [showDiagram, setShowDiagram] = useState(false);
-
-  const addMember = () => {
-    if (!newMember.trim()) return;
-    onChange({ ...data, team: [...data.team, { id:uid(), name:newMember.trim() }] });
-    setNewMember("");
-  };
-  const removeMember = (id) => onChange({ ...data, team: data.team.filter(m=>m.id!==id) });
-
-  const addRole = () => {
-    if (!newRole.trim()) return;
-    onChange({ ...data, roles: [...data.roles, { id:uid(), name:newRole.trim() }] });
-    setNewRole("");
-  };
-  const removeRole = (id) => onChange({ ...data, roles: data.roles.filter(r=>r.id!==id) });
-
-  const teamFlow = data.teamFlow || { id: "team_flow", name: "Organigrama del equipo", nodes: [], edges: [] };
-  const updateTeamFlow = (updated) => onChange({ ...data, teamFlow: updated });
-  const apiKey = data.settings?.apiKey || "";
-
   return (
-    <div style={{ maxWidth:900 }}>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24, maxWidth:700, marginBottom:28 }}>
-        <div>
-          <h3 style={{ color:WHITE, fontSize:15, fontWeight:600, marginBottom:14 }}>Equipo</h3>
-          <div style={{ display:"flex", gap:8, marginBottom:12 }}>
-            <input value={newMember} onChange={e=>setNewMember(e.target.value)} placeholder="Nombre"
-              onKeyDown={e=>e.key==="Enter"&&addMember()}
-              style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"7px 10px", color:WHITE, fontSize:13, outline:"none" }} />
-            <button onClick={addMember} style={{ padding:"7px 14px", background:GOLD, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700 }}>+</button>
-          </div>
-          {data.team.map(m => (
-            <div key={m.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 10px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, marginBottom:6 }}>
-              <span style={{ color:WHITE, fontSize:13 }}>{m.name}</span>
-              <button onClick={()=>removeMember(m.id)} style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:13 }}>×</button>
-            </div>
-          ))}
-        </div>
-        <div>
-          <h3 style={{ color:WHITE, fontSize:15, fontWeight:600, marginBottom:14 }}>Roles</h3>
-          <div style={{ display:"flex", gap:8, marginBottom:12 }}>
-            <input value={newRole} onChange={e=>setNewRole(e.target.value)} placeholder="Rol"
-              onKeyDown={e=>e.key==="Enter"&&addRole()}
-              style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"7px 10px", color:WHITE, fontSize:13, outline:"none" }} />
-            <button onClick={addRole} style={{ padding:"7px 14px", background:GOLD, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700 }}>+</button>
-          </div>
-          {data.roles.map(r => (
-            <div key={r.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 10px", background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, marginBottom:6 }}>
-              <span style={{ color:WHITE, fontSize:13 }}>{r.name}</span>
-              <button onClick={()=>removeRole(r.id)} style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:13 }}>×</button>
-            </div>
-          ))}
-        </div>
+    <div>
+      <div style={{ marginBottom:20, padding:"12px 16px", background:"rgba(167,139,250,0.07)", border:"1px solid rgba(167,139,250,0.25)", borderRadius:10 }}>
+        <div style={{ fontSize:12, color:"#A78BFA", fontWeight:600, marginBottom:2 }}>🔒 Equipo Growth Partner · Privado</div>
+        <div style={{ fontSize:11, color:GRAY }}>Los cambios aquí se conectan con el Método (botón "↺ Del organigrama" en la sección Roles del Equipo). Edita roles, estados y descripciones · click en el badge de estado para cambiar · todos los campos son editables.</div>
       </div>
-
-      {/* Internal diagram */}
-      <div style={{ borderTop:`1px solid ${BORDER}`, paddingTop:20 }}>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-          <div>
-            <h3 style={{ color:WHITE, fontSize:15, fontWeight:600, margin:0 }}>Diagrama interno</h3>
-            <div style={{ color:GRAY, fontSize:12, marginTop:3 }}>Organigrama, flujos de operación, estructura del equipo</div>
-          </div>
-          <button onClick={()=>setShowDiagram(s=>!s)}
-            style={{ padding:"7px 16px", borderRadius:8, fontSize:12, cursor:"pointer", border:`1px solid ${showDiagram ? GOLD : BORDER}`, background:showDiagram?"rgba(212,175,55,0.1)":"transparent", color:showDiagram?GOLD:GRAY, fontWeight:600 }}>
-            {showDiagram ? "✕ Cerrar" : "🗂 Abrir diagrama"}
-          </button>
-        </div>
-        {showDiagram && (
-          <div style={{ border:`1px solid ${BORDER}`, borderRadius:10, overflow:"hidden", height:520 }}>
-            <FlowCanvas
-              flow={teamFlow}
-              clientName="Equipo GP"
-              clientProfile={{}}
-              clientTasks={[]}
-              onUpdate={updateTeamFlow}
-              apiKey={apiKey}
-            />
-          </div>
-        )}
-      </div>
+      <OrganigramaTab
+        org={data.globalOrganigrama}
+        onChange={newOrg => onChange({ ...data, globalOrganigrama: newOrg })}
+      />
     </div>
   );
 }
@@ -6162,7 +6114,6 @@ function MetodoTab({ data, onChange }) {
   const [localTasks,       setLocalTasks]       = useState(() => gTasks);
   const [localPhases,      setLocalPhases]      = useState(() => gPhases);
   const [localMetodologia, setLocalMetodologia] = useState(() => data.globalMetodologia || {});
-  const [localOrganigrama, setLocalOrganigrama] = useState(() => (data.globalOrganigrama && data.globalOrganigrama.areas) ? data.globalOrganigrama : ORGANIGRAMA_DEFAULT);
   const [section, setSection] = useState("launch");
   const [dirty, setDirty] = useState(false);
   const [taskSearch, setTaskSearch] = useState("");
@@ -6174,7 +6125,7 @@ function MetodoTab({ data, onChange }) {
       syncPhasesToClients(data.clients, localPhases),
       localTasks
     );
-    onChange({ ...data, globalTasks: localTasks, globalLaunchPhases: localPhases, globalMetodologia: localMetodologia, globalOrganigrama: localOrganigrama, clients: syncedClients });
+    onChange({ ...data, globalTasks: localTasks, globalLaunchPhases: localPhases, globalMetodologia: localMetodologia, clients: syncedClients });
     setDirty(false);
   };
 
@@ -6219,7 +6170,7 @@ function MetodoTab({ data, onChange }) {
 
       {/* Section tabs */}
       <div style={{ display:"flex", gap:0, marginBottom:24, borderBottom:`1px solid ${BORDER}` }}>
-        {[["launch","🎯 Cronograma ("+localPhases.length+" fases)"],["tasks","📋 Tareas del Método ("+localTasks.length+")"],["metodologia","📖 Metodología"],["organigrama","👥 Organigrama"]].map(([id,label]) => (
+        {[["launch","🎯 Cronograma ("+localPhases.length+" fases)"],["tasks","📋 Tareas del Método ("+localTasks.length+")"],["metodologia","📖 Metodología"]].map(([id,label]) => (
           <button key={id} className={`gp-nav-tab${section===id?" active":""}`} onClick={()=>setSection(id)}>{label}</button>
         ))}
       </div>
@@ -6375,12 +6326,7 @@ function MetodoTab({ data, onChange }) {
         <MetodologiaTab
           metodologia={localMetodologia}
           onChange={met => { setLocalMetodologia(met); setDirty(true); }}
-        />
-      )}
-      {section === "organigrama" && (
-        <OrganigramaTab
-          org={localOrganigrama}
-          onChange={o => { setLocalOrganigrama(o); setDirty(true); }}
+          organigrama={data.globalOrganigrama}
         />
       )}
     </div>
@@ -6987,6 +6933,7 @@ function MetodoGrowthPartner() {
             flowTemplates={data.flowTemplates||[]}
             onSaveTemplate={saveTemplate} onDeleteTemplate={deleteTemplate}
             globalLaunchPhases={data.globalLaunchPhases} globalMvpSteps={data.globalMvpSteps} globalFullSteps={data.globalFullSteps}
+            globalOrganigrama={data.globalOrganigrama}
           />
         ) : (
           <>
