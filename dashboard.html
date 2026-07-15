@@ -2659,16 +2659,619 @@ function LaunchTab({ client, onChange, globalLaunchPhases, globalMvpSteps, globa
 
 // ─── METODOLOGIA TAB ──────────────────────────────────────────────────────────
 const METODO_SECTIONS = [
-  { id:"contexto",  label:"Contexto del Cliente",    icon:"🏢", hint:"Quiénes son, qué venden, a quién le venden. ICP del cliente final." },
-  { id:"servicios", label:"Servicios y Catálogo",     icon:"📋", hint:"Lista de servicios u productos con precios. Incluye combos o paquetes." },
-  { id:"pagos",     label:"Métodos de Pago",          icon:"💳", hint:"Cómo puede pagar el cliente final. Ej: contado, financiación, crédito externo." },
-  { id:"crm",       label:"Flujo CRM",                icon:"🔄", hint:"Etapas del pipeline desde lead hasta cierre. Automatizaciones y handoffs." },
-  { id:"setter",    label:"Guión — Setter",           icon:"📞", hint:"Speech de contactabilidad, calificación y agenda de cita.", copy:true },
-  { id:"closer1",   label:"Guión — Closer 1",         icon:"🎯", hint:"Presentación, manejo de objeciones y cierre parcial.", copy:true },
-  { id:"closer2",   label:"Guión — Closer 2 / 3",     icon:"🏆", hint:"Seguimiento, cierre final y referidos.", copy:true },
-  { id:"roles",     label:"Roles del Equipo",         icon:"👥", hint:"Qué hace cada cargo día a día. Horarios, responsabilidades y métricas." },
-  { id:"reportes",  label:"Protocolo de Reportes",    icon:"📊", hint:"Qué reporta cada cargo, a quién y con qué frecuencia." },
+  { id:"contexto",      label:"Contexto del Cliente",               icon:"🏢", hint:"Quiénes son, qué venden, precio, equipo actual, CRM y fecha de inicio con GP." },
+  { id:"nicho",         label:"Nicho & ICP del Mercado",            icon:"🎯", hint:"Comportamiento del comprador ideal, objeciones reales, competencia y riesgos del nicho." },
+  { id:"servicios",     label:"Servicios y Catálogo",               icon:"📋", hint:"Catálogo completo con precios, combos, producto de mayor margen y upsell natural." },
+  { id:"pagos",         label:"Métodos de Pago + Orden de Oferta",  icon:"💳", hint:"Métodos disponibles y la secuencia obligatoria: financiación primero, contado al final." },
+  { id:"flujo_ventas",  label:"Flujo Macro de Ventas",              icon:"🔁", hint:"Mapa completo de anuncio a cierre: tiempos críticos, handoffs y puntos de quiebre." },
+  { id:"crm",           label:"Flujo CRM + Automatización",         icon:"🔄", hint:"Etapas del pipeline, reglas de CRM, bots activos y árbol de decisión de automatización." },
+  { id:"tipos_cliente", label:"Tipos de Cliente & Contactabilidad", icon:"👤", hint:"4 casos según cómo llegó el lead + protocolo exacto de reintentos por caso." },
+  { id:"setter",        label:"Guión — Setter",                     icon:"📞", hint:"Pre-contacto, apertura, calificación, handoff al Closer y nota de CRM.", copy:true },
+  { id:"closer1",       label:"Guión — Closer 1",                   icon:"🎯", hint:"5 pasos: Intro → Transición → Indagación → Oferta → Cierre parcial + objeciones.", copy:true },
+  { id:"closer2",       label:"Guión — Closer 2 / 3",               icon:"🏆", hint:"Seguimiento 24-48h (C2) y último intento personal (C3) antes de mover a RMK.", copy:true },
+  { id:"roles",         label:"Roles + Cronograma por Cargo",       icon:"👥", hint:"Funciones detalladas por cargo + cronograma con 1, 2 o 3 asesores." },
+  { id:"jornada",       label:"Instrucciones de Jornada",           icon:"⏱️", hint:"Secuencia exacta del día: inicio, bloques de llamadas, reportes de mediodía y cierre." },
+  { id:"reportes",      label:"Reportes + Excel + Tipificación",    icon:"📊", hint:"Grupos de WhatsApp, columnas del Excel, tipificación de ventas y métricas clave." },
 ];
+
+const METODOLOGIA_BASE = {
+  contexto: `NOMBRE DEL CLIENTE:
+CIUDAD / PAÍS:
+SERVICIO QUE VENDE:
+PRECIO PROMEDIO DE VENTA: $
+TICKET MÍNIMO / MÁXIMO: $ — $
+MODELO DE NEGOCIO: [Servicios presenciales / E-commerce / Híbrido]
+ANTIGÜEDAD DEL NEGOCIO:
+EQUIPO COMERCIAL ACTUAL: [#] setter(s) + [#] closer(s)
+CRM ACTIVO: GHL / HubSpot / Otro
+WHATSAPP API ACTIVO: Sí / No
+PIXEL META ACTIVO: Sí / No
+FECHA INICIO CON GP: [DD/MM/AAAA]
+OBJETIVO PRINCIPAL MES 1: [revenue / leads / estructura del equipo]`,
+
+  nicho: `PERFIL DEL COMPRADOR IDEAL
+──────────────────────────────────────────
+Edad:
+Género predominante:
+Nivel socioeconómico:
+Ciudad / zona geográfica:
+Estado emocional cuando busca: [urgencia / consideración / impulso]
+Qué lo mueve a buscar:
+Por qué NO compra (objeciones frecuentes):
+  - Precio:
+  - Tiempo / proceso:
+  - Confianza en el proveedor:
+  - Factor externo (pareja, jefe, familia):
+
+COMPORTAMIENTO EN EL MERCADO
+──────────────────────────────────────────
+Cómo nos encuentra: [Instagram Ads / Facebook Ads / Referidos / Google / Orgánico]
+Tiempo de decisión promedio: [inmediato / 1-3 días / 1 semana o más]
+Quién toma la decisión final: [solo / pareja / familia / jefe]
+Cuándo es más activo (horario de mayor respuesta):
+
+COMPETENCIA DIRECTA
+──────────────────────────────────────────
+Competidor 1: ________________________ — Qué ofrecen diferente:
+Competidor 2: ________________________ — Qué ofrecen diferente:
+Por qué el cliente gana frente a ellos:
+
+RIESGOS DEL NICHO
+──────────────────────────────────────────
+- Riesgo 1:
+- Riesgo 2:
+- Riesgo 3:`,
+
+  servicios: `CATÁLOGO DE SERVICIOS / PRODUCTOS
+──────────────────────────────────────────
+Servicio 1: ________________________ | Precio: $________ | Duración/entrega: ________
+Servicio 2: ________________________ | Precio: $________ | Duración/entrega: ________
+Servicio 3: ________________________ | Precio: $________ | Duración/entrega: ________
+
+COMBOS / PAQUETES
+──────────────────────────────────────────
+Paquete A: ________________________ | Precio: $________ | Incluye: ________________
+Paquete B: ________________________ | Precio: $________ | Incluye: ________________
+
+PRODUCTO DE MAYOR MARGEN: ________________________
+PRODUCTO MÁS FÁCIL DE CERRAR: ________________________
+UPSELL / CROSS-SELL NATURAL: ________________________
+
+RESTRICCIONES
+──────────────────────────────────────────
+- Disponibilidad: [horarios, cupos limitados, lista de espera]
+- Requisitos del comprador: [documentos, edad mínima, condición de salud, etc.]
+- Zonas de cobertura o exclusión: [si aplica]
+- Tiempo mínimo de anticipación para agendar:`,
+
+  pagos: `MÉTODOS DISPONIBLES
+──────────────────────────────────────────
+[ ] Financiación A: ________________________ | Requisitos: ________________ | Cupo máx: $
+[ ] Financiación B: ________________________ | Requisitos: ________________ | Cupo máx: $
+[ ] Cuotas propias (50/50): Primera cuota al agendar, segunda al completar el servicio
+[ ] Contado-Relámpago: ____% de descuento si paga completo en el momento
+[ ] Transferencia bancaria / PSE
+[ ] Efectivo en punto físico
+
+ORDEN DE OFERTA — OBLIGATORIO, NO SALTARSE
+──────────────────────────────────────────
+REGLA: Ofrecer siempre en este orden. El primer método reduce la fricción del precio.
+No ir al contado si hay financiación disponible — el cliente dice SÍ más fácil con cuotas.
+
+1° → Financiación A (la más accesible, menos documentos): ________________________
+2° → Financiación B (alternativa si A no califica): ________________________
+3° → Cuotas propias 50/50 (sin terceros, sin validación de crédito): ________________________
+4° → Contado-Relámpago (descuento real por pago inmediato, genera urgencia): ________________________
+5° → Contado sin descuento (si el cliente ya lo decidió así): ________________________
+
+SCRIPT DE TRANSICIÓN ENTRE OPCIONES
+──────────────────────────────────────────
+Al ofrecer financiación A: "¿Tiene su cédula a la mano? Lo validamos en 30 segundos con [financiación A]."
+Si no califica para A: "No hay problema, también tenemos [financiación B] que funciona diferente — ¿probamos?"
+Si rechaza financiación: "Podemos dividirlo en dos partes: una ahora y otra al terminar. ¿Le acomoda eso?"
+Si quiere contado: "Si lo hace hoy mismo le aplico un descuento de ____%. ¿Le interesa?"`,
+
+  flujo_ventas: `MAPA COMPLETO DEL EMBUDO — DE ANUNCIO A CIERRE
+──────────────────────────────────────────
+
+[ANUNCIO] → Instagram / Facebook → Click o mensaje directo (DM)
+    |
+    v
+[PRIMER CONTACTO AUTOMÁTICO] → WhatsApp / Instagram DM
+    → Bot de bienvenida activo 24/7
+    → Precalifica categoría del lead (qué servicio/producto busca)
+    → Registra en CRM con etiqueta de origen de campaña
+    |
+    v
+[SETTER] → Recibe el lead desde CRM una vez clasificado
+    → Objetivo: confirmar interés real, resolver duda inicial, calificar
+    → NO cerrar — clasificar y calentar para que el Closer tenga contexto
+    → Tiempo máximo para asumir un lead nuevo: 30 minutos
+    |
+    v
+[CLOSER 1] → Primera llamada real de venta
+    → Objetivo: presentar, indagar, ofrecer pago en orden, cerrar o dejar agendado
+    → Tiempo máximo para llamar desde que Setter lo pasa: 2 horas
+    |
+    v
+    ¿Cerró en Closer 1?
+    SÍ → Proceso de pago
+    NO → Closer 2 en 24 horas exactas
+    |
+    v
+[CLOSER 2] → Seguimiento 24-48h después de C1
+    → Nunca tratar como lead nuevo — referenciar la conversación anterior siempre
+    → Objetivo: remover la última objeción o crear urgencia genuina
+    |
+    v
+[CLOSER 3] → Último intento personal (día 3-4)
+    → Si no cierra aquí → lead pasa a campaña de RMK masivo
+    → No más seguimientos 1:1 después de C3
+    |
+    v
+[PAGO / REGISTRO]
+    → Confirmación del método de pago elegido
+    → Envío de link / validación de crédito / recibo de voucher o comprobante
+    → Registro en Excel de ventas el mismo día, sin excepción
+    |
+    v
+[POSTVENTA]
+    → Confirmación de turno / cita / inicio de servicio
+    → Reporte al grupo [Ventas] con detalle de la venta
+    → Tipificación de canal y categoría en Excel
+
+TIEMPOS CRÍTICOS — NO NEGOCIABLES
+──────────────────────────────────────────
+Lead nuevo → Bot de bienvenida: máximo 5 minutos
+Bot → Setter asume: máximo 30 minutos
+Setter pasa → Closer 1 llama: máximo 2 horas
+C1 no cierra → C2 contacta: 24 horas exactas
+C2 no cierra → C3 último intento: día 3 o 4
+Cierre confirmado → registrado en Excel: mismo día, antes del reporte de cierre`,
+
+  crm: `ETAPAS DEL PIPELINE
+──────────────────────────────────────────
+1. Bienvenida          → Lead entró, bot disparó, pendiente de asignación al Setter
+2. En Conversación     → Respondió y está activo en chat — Setter lo atiende
+3. Calificado          → Setter confirmó interés real — listo para Closer 1
+4. Agendado            → Cita o llamada con Closer confirmada con fecha y hora exacta
+5. En Proceso de Pago  → Tramitando financiación, transfiriendo o pagando en caja
+6. Venta Confirmada    → Pago validado, registro completo, postventa activa
+7. Recuperar           → No cerró en ciclos normales — entra a RMK masivo
+8. Sin Interés         → Respondió que no quiere — cerrar etapa, no contactar más
+9. Venta Perdida       → Cerró con la competencia o no calificó definitivamente
+
+REGLAS DE CRM — OBLIGATORIAS
+──────────────────────────────────────────
+Toda conversación tiene nota. Si no hay nota, la acción no existió.
+Toda etapa activa tiene tarea asignada con fecha. Lead sin tarea = lead muerto.
+Lead sin movimiento en 48h → alerta manual al supervisor.
+Retargeting masivo solo a etapas: En Conversación, Calificado y Recuperar.
+Nunca incluir a "Sin Interés" ni "Venta Perdida" en campañas activas.
+
+BOTS Y AUTOMATIZACIÓN ACTIVA
+──────────────────────────────────────────
+Bot Bienvenida: Activo 24/7 → saluda, precalifica por categoría, registra en CRM
+Bot Categoría A: Si elige [servicio 1] → rama A (info + preguntas específicas)
+Bot Categoría B: Si elige [servicio 2] → rama B (info + preguntas específicas)
+Bot Reactivación: Si lead no responde en 24h → mensaje automático de seguimiento
+Bot RMK (etapa Recuperar): Secuencia de 3 mensajes en 72h, uno cada 24h
+
+ÁRBOL DE DECISIÓN DE BOTS
+──────────────────────────────────────────
+Lead entra → Bot Bienvenida → ¿Responde?
+  SÍ → ¿Qué servicio busca? → Bot Categoría correspondiente → Setter asume
+  NO (24h) → Bot Reactivación → ¿Responde?
+    SÍ → Setter asume
+    NO → Mover a "Recuperar" → Bot RMK (3 mensajes / 72h)
+
+FORMATO ESTÁNDAR DE NOTA EN CRM
+──────────────────────────────────────────
+[CARGO] | DD/MM | Resultado: [Calificado / Agendado / Sin respuesta / Rechazó precio / Consulta pareja]
+Próxima acción: [quién hace qué y para cuándo exacto]`,
+
+  tipos_cliente: `CASO 1 — LEAD FRÍO
+Llegó por campaña de interacción — primer contacto, sin urgencia inmediata.
+──────────────────────────────────────────
+Señal: Respondió el anuncio o hizo clic pero no preguntó precio directamente.
+Protocolo: Bot → Setter califica → Closer 1 llama dentro de 2h.
+
+Ciclo de contactabilidad:
+  Intento 1 → Llamada al entrar al CRM
+  Intento 2 → Si no contesta → WhatsApp texto 30 min después
+  Intento 3 → Llamada al día siguiente, horario diferente
+  Intento 4 → Nota de voz personalizada si no respondió en 48h
+  Intento 5 → Último intento en el día 3
+  Sin respuesta en 5 intentos → mover a "Recuperar" y entrar al RMK masivo
+
+CASO 2 — LEAD TIBIO
+Retargeting — ya interactuó antes con el negocio pero no cerró.
+──────────────────────────────────────────
+Señal: El CRM muestra conversación previa o contacto anterior sin cierre.
+Protocolo: NO tratar como lead nuevo. Referenciar la interacción anterior siempre.
+Apertura: "Hola [nombre], hace unos días hablaste con nosotros sobre [servicio]. ¿Tuviste oportunidad de pensarlo?"
+Urgencia: Este lead ya fue educado — si no cierra aquí, la probabilidad baja mucho.
+Ciclo máximo: 2 ciclos (6 días) antes de mover a RMK masivo.
+
+CASO 3 — LEAD CALIENTE
+Llegó preguntando precio, referido, o con intención de compra directa.
+──────────────────────────────────────────
+Señal: Pregunta precio directo, ya conoce el servicio, o viene recomendado.
+Protocolo: NO usar bot largo. Setter responde en menos de 2 minutos. Closer 1 llama en menos de 1 hora.
+ERROR MÁS COMÚN: Tratar al lead caliente como frío y demorar la respuesta. El lead caliente se enfría en horas.
+Script del Setter: Ir directo. "¿Para cuándo lo necesita?" — no presentar el servicio desde cero.
+Ciclo máximo: 1 ciclo (3 días). Si no cierra → era más tibio de lo que parecía → RMK.
+
+CASO 4 — LEAD INACTIVO
+Más de 7 días sin respuesta, probablemente está con la competencia.
+──────────────────────────────────────────
+Señal: Está en CRM sin movimiento por más de 7 días, con intentos previos sin respuesta.
+Protocolo: Campaña de RMK masivo — no contacto 1:1 desde el equipo comercial.
+Frecuencia: 1 mensaje cada 5-7 días. Máximo 3 mensajes antes de cerrar definitivamente.
+Si responde al RMK: Setter lo asume como Caso 1 fresco — no asumir que recuerda todo lo anterior.
+
+REGLA UNIVERSAL DE CONTACTABILIDAD
+──────────────────────────────────────────
+1 ciclo = 2 llamadas + 1 WhatsApp texto + 1 nota de voz
+Máximo 3 ciclos por lead (9 días activos) antes de mover a RMK masivo
+NUNCA contactar más de 2 veces en el mismo día al mismo lead
+NUNCA llamar después de las 8pm ni antes de las 8am`,
+
+  setter: `SETTER — PROTOCOLO DE PRIMER CONTACTO ACTIVO
+
+OBJETIVO: No es cerrar. Es clasificar si el lead merece el tiempo de un Closer
+y entregar ese lead con contexto completo. Un Setter que trata de cerrar pierde la venta.
+
+PRE-CONTACTO — QUÉ REVISAR ANTES DE MARCAR
+──────────────────────────────────────────
+[ ] ¿De qué campaña vino? (interacción directa / retargeting / referido / orgánico)
+[ ] ¿Qué respondió en el bot? (¿dio información o solo hizo clic?)
+[ ] ¿Tiene conversación previa en CRM? (¿ya habló con nosotros antes?)
+[ ] ¿Qué categoría o servicio preguntó?
+[ ] ¿Cuánto tiempo lleva en el CRM sin contacto?
+
+PRIMER CONTACTO — WHATSAPP (si el lead llegó por mensaje)
+──────────────────────────────────────────
+"Hola [nombre], soy [nombre del Setter] de [nombre del cliente].
+Vi que preguntaste por [servicio]. ¿Tienes un momento para contarte cómo funciona?"
+
+Si no responde en 30 min → llamar directamente.
+
+APERTURA EN LLAMADA
+──────────────────────────────────────────
+"Hola, ¿[nombre]? Te llamo de [nombre del cliente].
+Me llegó tu consulta sobre [servicio] — llamo para darte la información y resolver tus dudas.
+¿Estás en un momento donde puedas hablar un par de minutos?"
+
+CALIFICACIÓN — MÁXIMO 3 PREGUNTAS, CONVERSACIONAL, NO INTERROGATORIO
+──────────────────────────────────────────
+1. "¿Qué es lo que más te interesa de [servicio]?" → Identifica la necesidad real.
+2. "¿Lo buscas para [parámetro clave del nicho]?" → Confirma categoría y quién decide.
+3. "¿Lo buscas para pronto o lo estás evaluando para más adelante?" → Mide urgencia.
+
+SI CALIFICÓ (hay interés real + alguna urgencia)
+──────────────────────────────────────────
+"Perfecto, te conecto con [nombre del Closer] que te explica todo con detalle y puede ayudarte
+a avanzar hoy mismo si quieres. Te llama en los próximos [15-30] minutos. ¿A este mismo número?"
+
+Nota en CRM inmediata:
+"Calificado. Interés en [X]. Urgencia: [inmediata / media / baja].
+Sabe el precio: [sí / no / preguntó y no le dije]. Quién decide: [solo / pareja / jefe]."
+→ Asignar a Closer 1 con tarea en menos de 2 horas.
+
+SI NO CALIFICÓ (curiosidad sin intención, fuera de presupuesto, no decide)
+──────────────────────────────────────────
+"Perfecto, cuando lo tengas más claro cuéntame y con gusto te ayudo."
+→ Mover a etapa correcta (Recuperar / Sin Interés) con tarea en 10-15 días para Caso 1.
+→ Nota en CRM: "No calificó. Motivo: [precio muy lejos / no es quien decide / no hay urgencia real]."`,
+
+  closer1: `CLOSER 1 — PRIMERA LLAMADA REAL
+
+OBJETIVO: Presentar, generar confianza, indagar profundo, ofrecer pago en el orden correcto
+y cerrar. Si no cierra, dejar con cita o fecha de seguimiento concreta para Closer 2.
+
+REGLA DE ORO: El cliente habla el 60-70% de la llamada. Si el Closer habla más, está perdiendo.
+SEGUNDO PRINCIPIO: Nunca empezar la oferta sin haber escuchado. La oferta sin contexto es un disparo al aire.
+
+PASO 1 — INTRO / SALUDO (30 segundos máximo)
+──────────────────────────────────────────
+"Hola [nombre], soy [nombre del Closer] de [nombre del cliente].
+[Setter] me comentó que estabas preguntando por [servicio]. ¿Cómo estás?"
+[Esperar. Escuchar. No continuar con el pitch todavía.]
+
+PASO 2 — TRANSICIÓN A INDAGACIÓN
+──────────────────────────────────────────
+"Antes de contarte todo, ¿me permites hacerte un par de preguntas para entender
+bien tu situación y darte la información que realmente te sirve?"
+[Esta frase avisa que lo que sigue va a ser relevante para él — no un guión genérico.]
+
+PASO 3 — INDAGACIÓN PROFUNDA (2-4 minutos)
+──────────────────────────────────────────
+"¿Cuánto tiempo llevas buscando una solución para esto?"
+"¿Qué has intentado antes / qué no te funcionó?"
+"¿Qué sería para ti el resultado ideal?"
+"Si avanzas con esto, ¿cuándo te gustaría tenerlo listo?"
+"¿Hay algo específico que te tenga dudando en este momento?"
+[Las objeciones reales salen aquí, no al final. Escuchar sin interrumpir.]
+
+PASO 4 — OFERTA (basada en las palabras exactas del lead)
+──────────────────────────────────────────
+"Escuchándote, creo que lo que más te conviene es [servicio X] porque [razón usando sus propias palabras].
+El valor es $[precio]. La buena noticia es que no tiene que ser de contado —
+tenemos [primera opción de pago según el orden de oferta] que funciona así: [explicar brevemente].
+¿Tiene su [documento/dato] a mano para revisarlo ahora?"
+[Si dice sí → iniciar proceso. Si no → siguiente opción de pago en el orden.]
+
+PASO 5 — CIERRE PARCIAL (si no cerró en la llamada)
+──────────────────────────────────────────
+"¿Qué necesitaría para poder avanzar hoy o esta semana?"
+"¿Qué es lo que puntualmente lo tiene más dudando?"
+[Si hay objeción → rebatirla y volver a la oferta]
+"¿Agendamos para mañana a esta hora o prefiere por la tarde?"
+[Siempre dar dos opciones — nunca preguntar "¿quiere que lo llame de nuevo?"]
+
+MANEJO DE OBJECIONES
+──────────────────────────────────────────
+"Está muy caro" / "No tengo plata ahora"
+→ "Entiendo. ¿Cuánto podría invertir sin que le afecte? [Escuchar]
+   Con [método de pago] le quedaría en $X al [mes / quincena]. ¿Eso le cuadra mejor?"
+
+"Lo tengo que pensar" / "Lo tengo que consultar"
+→ "¿Qué es puntualmente lo que necesita pensar o consultar? [Escuchar — no interrumpir]
+   Si resolvemos eso, ¿avanzaría esta semana o hay algo más que le preocupa?"
+
+"Lo consulto con mi pareja / familiar"
+→ "Tiene todo el sentido. ¿Cuándo podrían verlo juntos?
+   Podríamos hablar los tres al mismo tiempo para que no queden dudas. ¿Mañana a las [hora] sirve?"
+
+CIERRE DIRECTO (cuando hay intención clara)
+──────────────────────────────────────────
+No preguntar si quiere avanzar. Preguntar CÓMO avanzar.
+"Entonces seguimos con [método de pago elegido]. Para validarlo necesito [dato].
+¿Lo tiene a mano o me lo puede mandar en este momento?"`,
+
+  closer2: `CLOSER 2 — SEGUIMIENTO 24-48H DESPUÉS DE CLOSER 1
+
+CONTEXTO: El lead escuchó la propuesta pero no cerró en la primera llamada.
+Sabe quién somos, sabe el precio, tiene la información. Lo que falta es quitar la última fricción.
+
+APERTURA
+──────────────────────────────────────────
+"Hola [nombre], soy [nombre] de [cliente]. Ayer hablamos de [servicio].
+¿Pudo pensarlo / consultarlo con [pareja / familia / jefe]?"
+
+[Esperar la respuesta sin agregar nada más. Lo que diga es la objeción real que quedó pendiente.]
+
+SI AVANZÓ (trae una decisión)
+──────────────────────────────────────────
+"Perfecto, seguimos con [método de pago que eligió o sugirió]. Para activarlo necesito [dato]."
+→ Ir directo al proceso de pago. No volver a presentar el servicio desde cero.
+
+SI TODAVÍA DUDA
+──────────────────────────────────────────
+"¿Qué es puntualmente lo que lo tiene frenado?"
+[Escuchar sin interrumpir. Dejar que termine.]
+
+Objeción precio:
+→ "¿Y si lo hacemos así: [variante de pago diferente a lo que ya le ofrecieron]?
+   Así no tiene que desembolsar todo junto."
+
+Objeción tiempo / proceso:
+→ "¿Cuándo le cuadraría mejor? Podemos reservar desde ahora y el turno
+   queda a su nombre sin compromiso hasta [fecha concreta]."
+
+Objeción confianza / seguridad:
+→ "¿Le puedo compartir un par de casos de personas que pasaron por esto y el resultado que tuvieron?"
+   [Tener casos reales listos para enviar en ese momento — no improvisar]
+
+URGENCIA GENUINA (solo si es real — nunca presión falsa)
+──────────────────────────────────────────
+"Le cuento que los [turnos / cupos / espacios] para [fecha próxima] están casi llenos.
+Si lo dejamos para la próxima semana probablemente tenga que esperar hasta [fecha real]."
+IMPORTANTE: Solo usar si es verdad. Una urgencia inventada destruye la confianza y la venta.
+
+═══════════════════════════════════════════
+
+CLOSER 3 — ÚLTIMO INTENTO PERSONAL (día 3-4)
+
+OBJETIVO: Cierre definitivo o liberar el lead para RMK masivo.
+Este es el último contacto 1:1. Después de este no hay más seguimiento personal.
+
+APERTURA
+──────────────────────────────────────────
+"Hola [nombre], soy [nombre] de [cliente].
+Sé que ya hemos hablado antes y no quiero ser molesto —
+esta sería la última vez que lo contacto personalmente.
+¿Finalmente pudo tomar una decisión?"
+
+SI CIERRA (aunque sea tardío)
+──────────────────────────────────────────
+Ir directo al proceso de pago — sin presentar de nuevo.
+"Perfecto, retomamos donde quedamos. Para [método de pago] necesito [dato]. ¿Lo tiene ahora?"
+
+SI NO CIERRA
+──────────────────────────────────────────
+"Perfecto, lo entiendo completamente. ¿Hay algo que podamos hacer diferente para que encaje mejor?
+[Escuchar] Si no, quedo a su disposición cuando lo necesite."
+→ Mover a "Recuperar" → entra a RMK masivo.
+→ Nota en CRM: "C3 completado. Motivo de no cierre: [razón final]. Pasa a RMK."
+→ Cerrar etapa en CRM. No volver a contactar 1:1 hasta que responda al RMK.`,
+
+  roles: `[Usar el botón "↺ Del organigrama" para importar la estructura de cargos del equipo GP]
+
+FUNCIONES DETALLADAS POR CARGO
+──────────────────────────────────────────
+
+SETTER
+Inicio de jornada:
+  [ ] Abrir CRM — revisar leads nuevos desde el cierre del día anterior
+  [ ] Clasificar por caso (1: frío / 2: tibio / 3: caliente / 4: inactivo)
+  [ ] Primer contacto a leads nuevos en menos de 30 minutos
+
+Durante la jornada:
+  [ ] Máximo 2 intentos de contacto por lead por día
+  [ ] Nota en CRM después de cada contacto — sin excepción
+  [ ] Leads calificados → pasar a Closer 1 con nota completa, tarea asignada en menos de 2h
+
+Cierre de jornada:
+  [ ] Ningún lead activo sin nota y sin tarea con fecha
+  [ ] Reporte de cierre enviado al grupo [Ventas]
+
+CLOSER 1
+  [ ] Recibir leads del Setter con nota de calificación leída antes de llamar
+  [ ] Llamar dentro de 2h desde la asignación
+  [ ] Objetivo por llamada: cerrar o dejar con cita / seguimiento concreto
+  [ ] Si no cierra: nota completa + tarea asignada a Closer 2 para 24h después
+  [ ] Reporte de cierre: ventas del día, leads activos, objeciones más frecuentes
+
+CLOSER 2 / CLOSER 3
+  [ ] Asumir leads que C1 no cerró, leyendo la nota antes de contactar
+  [ ] Seguimiento en 24-48h con referencia explícita a la conversación anterior
+  [ ] Máximo 3 ciclos totales por lead antes de mover a RMK
+  [ ] Actualizar etapa en CRM después de cada intento
+
+CRONOGRAMA CON 1 ASESOR (hace Setter + Closer al mismo tiempo)
+──────────────────────────────────────────
+08:00–09:00 → Depurar CRM + clasificar leads nuevos del día
+09:00–11:00 → Bloque de llamadas activas (mayor tasa de respuesta)
+11:00–12:00 → Seguimientos + WhatsApp pendientes
+12:00–12:30 → Reporte de mediodía al grupo [Ventas]
+14:00–16:00 → Bloque de llamadas tarde + cierres del día
+16:00–17:00 → Actualizar CRM + tipificar en Excel
+17:00       → Reporte de cierre al grupo [Ventas]
+
+CRONOGRAMA CON 2 ASESORES
+──────────────────────────────────────────
+Asesor A → Setter full time (clasificación + primer contacto + calificación)
+Asesor B → Closer 1 + 2 (llamadas de venta + seguimientos)
+Reunión de 10 min al mediodía para evaluar el pipeline del día.
+
+CRONOGRAMA CON 3 ASESORES O MÁS
+──────────────────────────────────────────
+Asesor A → Setter puro (nunca cierra)
+Asesor B → Closer 1 (primer contacto calificado)
+Asesor C → Closer 2 + 3 (seguimientos + cierres tardíos + RMK por llamada)`,
+
+  jornada: `INSTRUCCIONES DE JORNADA — SECUENCIA EXACTA DEL DÍA
+
+INICIO DE JORNADA (08:00–08:30) — OBLIGATORIO
+──────────────────────────────────────────
+[ ] Confirmar llegada en el grupo [Horario]
+[ ] Abrir CRM — revisar todos los leads con tarea para hoy
+[ ] Verificar los agendados del día (citas confirmadas de ayer para hoy)
+[ ] Enviar mensaje de confirmación a TODOS los agendados de hoy:
+    "Hola [nombre], le confirmo su cita hoy a las [hora] con [nombre del negocio].
+     ¿Sigue en pie? Quedamos a la espera."
+[ ] Revisar mensajes de WhatsApp que llegaron fuera de horario
+[ ] Priorizar: Caso 3 (calientes) → Caso 2 (tibios) → Caso 1 nuevos del día
+
+BLOQUE DE MAÑANA (08:30–12:00) — PRODUCCIÓN ALTA
+──────────────────────────────────────────
+[ ] Llamadas a leads calientes primero (Caso 3), luego leads nuevos (Caso 1)
+[ ] Seguimientos de Closer 2 / 3 pendientes
+[ ] Mover etapas en CRM después de cada llamada — no al final del día
+[ ] Nota en CRM después de cada contacto — nunca acumular para después
+[ ] Si un lead pide "llamarme más tarde" → crear tarea con hora exacta, no genérica
+
+REPORTE DE MEDIODÍA (12:00–12:30) — OBLIGATORIO TODOS LOS DÍAS HÁBILES
+──────────────────────────────────────────
+Formato exacto — copiar y completar:
+"[Nombre] | Mediodía [DD/MM]
+ Contactados: X
+ Calificados: X
+ Agendados: X
+ Ventas cerradas: X
+ En proceso de pago: X
+ Bloqueo del día: [ej: muchos sin respuesta / objeción frecuente / problema con CRM]"
+→ Enviar al grupo [Ventas] antes de las 12:30.
+
+BLOQUE DE TARDE (14:00–17:00)
+──────────────────────────────────────────
+[ ] Segunda ronda de llamadas a leads que no contestaron en la mañana
+[ ] Confirmar citas / agendados que no respondieron al mensaje de la mañana
+[ ] Tramitar pagos activos: validar financiaciones, confirmar transferencias, recibir vouchers
+[ ] Enviar links de pago / datos bancarios a leads en proceso
+[ ] Actualizar Excel con cierres del día
+
+CIERRE DE JORNADA (17:00–17:30) — OBLIGATORIO
+──────────────────────────────────────────
+[ ] Depurar CRM: ningún lead activo puede quedar sin nota + sin tarea con fecha
+[ ] Tipificar en Excel TODAS las ventas del día (canal, categoría, responsable, valor, método)
+[ ] Enviar reporte de cierre al grupo [Ventas]
+
+Formato exacto del reporte de cierre:
+"[Nombre] | Cierre [DD/MM]
+ Ventas del día: X | Valor total acumulado hoy: $
+ En proceso de pago (pendientes de confirmar): X
+ Leads calificados sin cerrar (pasan a mañana): X
+ Agendados confirmados para mañana: X
+ Observación: [algo que necesite atención del supervisor o situación inusual]"
+→ Enviar al grupo [Ventas] antes de las 17:30.
+→ Confirmar salida en el grupo [Horario]
+
+CONEXIÓN NOCTURNA (si el negocio opera fuera de horario)
+──────────────────────────────────────────
+[ ] Revisar mensajes que llegaron después de las 17:00
+[ ] Responder SOLO si el lead está en Caso 3 (caliente con urgencia real)
+[ ] No abrir conversaciones nuevas en horario nocturno — quedan para mañana
+[ ] No llamar después de las 8:00pm bajo ninguna circunstancia`,
+
+  reportes: `GRUPOS DE WHATSAPP — ESTRUCTURA Y USO CORRECTO
+──────────────────────────────────────────
+Grupo [Ventas / Agencia]: Reportes mediodía + cierre + ventas confirmadas del día
+Grupo [Horario]:          Confirmación de entrada y salida del equipo
+Grupo [Enrolamiento]:     Registro de nuevos clientes / proceso de acceso al servicio
+Grupo [Voucher / Pagos]:  Comprobantes de pago + validación de financiaciones
+Grupo [Contabilidad]:     Cierres del mes, facturas, cuadre de caja
+Regla: Nada va al grupo equivocado. Contabilidad no va a Ventas. Vouchers no van a Enrolamiento.
+
+EXCEL DE VENTAS — HOJA BASE (columnas obligatorias)
+──────────────────────────────────────────
+Canal | Categoría | Responsable | Fecha | Producto/Servicio | Titular | Valor | Método de pago | Estado
+
+Canal (de dónde vino el lead):
+  Facebook Ads / Instagram Ads / Messenger / Venta Interna / Referido / Orgánico
+
+Categoría (tipo de campaña o segmento):
+  Interacción Directa / Retargeting (RTG) / RMK CRM / Asociado / Referido / Orgánico
+
+Estado de la venta:
+  Confirmado / En proceso (pago pendiente) / Caído / Devuelto
+
+EXCEL DE VENTAS — HOJA DE PAGOS (para ventas con cuotas o financiación)
+──────────────────────────────────────────
+Titular | Fecha pago 1 | Monto 1 | Fecha pago 2 | Monto 2 | Saldo pendiente | Observación
+
+TIPIFICACIÓN — REGLAS FIJAS
+──────────────────────────────────────────
+Toda venta se tipifica el mismo día que se cierra — nunca al día siguiente.
+El responsable registrado es quien cerró la venta, no quien prospectó.
+Si hay duda del canal → preguntar al lead "¿cómo nos conoció?" antes de cerrar.
+Sin tipificación, la venta no cuenta para los reportes de eficiencia por canal.
+
+REPORTES FORMALES — FRECUENCIA Y DESTINATARIOS
+──────────────────────────────────────────
+Reporte mediodía     → Diario (días hábiles) → Grupo [Ventas] → 12:00-12:30
+Reporte cierre       → Diario (días hábiles) → Grupo [Ventas] → 17:00-17:30
+Reporte semanal      → Lunes de cada semana  → GP + dueño    → Resumen 7 días: leads / ventas / CPL / ROAS
+Reporte de inversión → Viernes               → GP interno    → Inversión Meta / leads / CPL / ventas / ROAS
+
+MÉTRICAS CLAVE — TRACKEAR SEMANA A SEMANA
+──────────────────────────────────────────
+CPL (Costo por Lead):       Inversión total / leads totales
+Tasa de contactabilidad:    Leads contactados / leads totales × 100
+Tasa de calificación:       Leads calificados / leads contactados × 100
+Tasa de cierre:             Ventas / leads calificados × 100
+Ticket promedio:            Valor total vendido / número de ventas
+ROAS:                       Ingresos atribuibles a Meta / inversión Meta × 100
+
+METAS MÍNIMAS DE EFICIENCIA (referencia GP — ajustar por cliente y nicho)
+──────────────────────────────────────────
+Contactabilidad: > 60% de los leads reciben al menos 1 contacto real
+Calificación:    > 40% de los contactados avanzan a Closer
+Cierre:          > 20% de los calificados se convierten en ventas
+ROAS mínimo:     5x sobre la inversión publicitaria`
+};
 
 function orgToRolesSummary(org) {
   if (!org || !org.areas) return "";
@@ -2706,7 +3309,7 @@ function MetodologiaTab({ metodologia, onChange, organigrama }) {
 
       <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
         {METODO_SECTIONS.map(sec => {
-          const val = met[sec.id] || "";
+          const val = met[sec.id] || METODOLOGIA_BASE[sec.id] || "";
           const isEmpty = !val.trim();
           return (
             <div key={sec.id} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, overflow:"hidden" }}>
@@ -2744,7 +3347,7 @@ function MetodologiaTab({ metodologia, onChange, organigrama }) {
                 value={val}
                 onChange={e => set(sec.id, e.target.value)}
                 placeholder={`${sec.hint}\n\nEscribe aquí...`}
-                style={{ width:"100%", minHeight: sec.copy ? 160 : 100, background:"transparent", border:"none", padding:"14px 16px",
+                style={{ width:"100%", minHeight: sec.copy ? 320 : 220, background:"transparent", border:"none", padding:"14px 16px",
                   color: isEmpty ? GRAY : WHITE, fontSize:12.5, lineHeight:1.6, resize:"vertical", outline:"none", boxSizing:"border-box",
                   fontFamily:"inherit" }}
               />
@@ -5910,15 +6513,15 @@ const ORGANIGRAMA_DEFAULT = {
       ]
     },
     {
-      id:"trafico", name:"Tráfico y Sistemas", pct:"25%", color:"#60A5FA",
-      desc_internal:"Campañas, automatizaciones, CRM, producción audiovisual y sistemas técnicos.",
-      desc_method:"Montar → Optimizar → Automatizar. Las campañas corren, el CRM funciona y los creativos salen a tiempo.",
+      id:"trafico", name:"Tráfico y Sistemas + Comunicaciones", pct:"25%", color:"#60A5FA",
+      desc_internal:"Campañas (Tráfico), automatizaciones CRM (CAIO), producción audiovisual y RRSS (Comunicaciones).",
+      desc_method:"Montar → Optimizar → Automatizar. Campañas vivas, CRM activo, creativos saliendo y perfiles configurados desde el día 1.",
       hire_priority:2, hire_note:"Contratar: Editor en planta + CAIO formalizar",
       roles:[
-        {id:"r3",num:"ROL 3",name:"Media Buyer",status:"active",desc:"Montaje, optimización diaria, nuevos ángulos, facturas e informes mensuales."},
-        {id:"r2",num:"ROL 2",name:"CAIO — Head of Technology",status:"active",desc:"CRM y herramientas: creación, ejecución y seguimiento de automatizaciones."},
-        {id:"r7",num:"ROL 7",name:"Editor / Diseño Audiovisual",status:"outsourced",desc:"Producción audiovisual, piezas gráficas, WhatsApp API. Tarifa: $300+$200."},
-        {id:"r4",num:"ROL 4",name:"Estratega",status:"active",desc:"Brief publicitario, ángulos por nicho, scripts del bot y del equipo cliente. Medio tiempo."},
+        {id:"r3",num:"ROL 3",name:"Media Buyer",status:"active",desc:"Lanza y optimiza campañas diariamente. Fan Page, píxel, accesos FB/IG, dominio. Reportes e informes mensuales. (≡ Tráfico)"},
+        {id:"r2",num:"ROL 2",name:"CAIO — Automatización",status:"active",desc:"CRM, bots de bienvenida y seguimiento, WhatsApp API, integraciones FB/IG/Calendar. Copys de comentarios. (≡ Tráfico + parte de Comercial)"},
+        {id:"r7",num:"ROL 7",name:"Editor / Comunicaciones",status:"outsourced",desc:"Piezas gráficas, video ads, VSL. Google My Business, perfil IG/FB, historias destacadas, foto de portada. (≡ Comunicaciones) Tarifa: $300+$200."},
+        {id:"r4",num:"ROL 4",name:"Estratega",status:"active",desc:"Oferta irresistible, speech de venta, brief publicitario, ángulos por nicho. (≡ Reunión estrategia ventas) Medio tiempo."},
       ]
     },
     {
@@ -5927,11 +6530,11 @@ const ORGANIGRAMA_DEFAULT = {
       desc_method:"Sostener → Controlar → Escalar. Flujo de caja positivo, contratos firmados y operaciones en orden.",
       hire_priority:null, hire_note:"",
       roles:[
-        {id:"r1",num:"ROL 1",name:"COO — Head of Operations",status:"pending",desc:"Coordina la entrega, reportes y contacto con el cliente."},
-        {id:"r10",num:"ROL 10",name:"Bookkeeper",status:"pending",desc:"Cuentas de cobro, comisiones, contratos. P&L y accounting mensual."},
-        {id:"r8",num:"ROL 8",name:"CSM — Customer Success",status:"pending",desc:"Semáforo semanal por cliente. Detecta problemas antes que lleguen al CEO."},
-        {id:"r9",num:"ROL 9",name:"VA — Asistente Virtual",status:"pending",desc:"Soporte administrativo al CEO. Agenda, seguimiento, tareas operativas."},
-        {id:"r19",num:"ROL 19",name:"Manager de Operaciones",status:"pending",desc:"Activa a escala completa. Coordina VA + Bookkeeper."},
+        {id:"r1",num:"ROL 1",name:"COO — Supervisión",status:"pending",desc:"Crea empresa en Drive/Airtable, coordina la entrega, abre espacios internos. (≡ Supervisión) Apoya al CEO en acuerdos comerciales y contratos."},
+        {id:"r10",num:"ROL 10",name:"Bookkeeper",status:"pending",desc:"Envía cuentas de cobro, revisa comisiones, gestiona contratos. P&L mensual."},
+        {id:"r8",num:"ROL 8",name:"CSM — Customer Success",status:"pending",desc:"Semáforo semanal por cliente. Agenda supervisiones y reuniones de seguimiento. (≡ Comité General)"},
+        {id:"r9",num:"ROL 9",name:"VA — Asistente Virtual",status:"pending",desc:"Soporte administrativo al CEO. Agenda reuniones de diagnóstico, presentaciones y comités. (≡ Reunión)"},
+        {id:"r19",num:"ROL 19",name:"Manager de Operaciones",status:"pending",desc:"Activa a escala completa. Coordina VA + Bookkeeper. Lidera Comité Directivo interno."},
       ]
     }
   ],
@@ -5956,37 +6559,39 @@ function OrganigramaTab({ org, onChange }) {
   const delRole = (aid,rid) => upd({ ...d, areas: d.areas.map(a => a.id===aid ? {...a, roles:a.roles.filter(r=>r.id!==rid)} : a) });
   const cycleStatus = (aid,rid,cur) => { const nxt={active:"pending",pending:"outsourced",outsourced:"active"}; setRole(aid,rid,{status:nxt[cur]||"pending"}); };
 
+  // Light theme palette — white background within the dark dashboard
+  const L = { bg:"#FFFFFF", surface:"#F6F5F2", border:"#E4E3DF", text:"#1A1A1C", gray:"#5A5A5E", faint:"#9B9B9F" };
+
   const STAT = {
-    active:     {lbl:"✅ Activo",      c:"#4CAF7D", bg:"rgba(76,175,125,0.15)",  bd:"rgba(76,175,125,0.4)"},
-    pending:    {lbl:"⏳ Pendiente",   c:"#F59E0B", bg:"rgba(245,158,11,0.15)",  bd:"rgba(245,158,11,0.4)"},
-    outsourced: {lbl:"🔗 Tercerizado", c:"#60A5FA", bg:"rgba(96,165,250,0.15)",  bd:"rgba(96,165,250,0.4)"},
+    active:     {lbl:"✅ Activo",      c:"#15803D", bg:"#F0FDF4", bd:"#86EFAC"},
+    pending:    {lbl:"⏳ Pendiente",   c:"#92400E", bg:"#FFFBEB", bd:"#FCD34D"},
+    outsourced: {lbl:"🔗 Tercerizado", c:"#1E40AF", bg:"#EFF6FF", bd:"#93C5FD"},
   };
-  const INP = (v,cb,sx) => <input value={v} onChange={e=>cb(e.target.value)} style={{background:"transparent",border:"none",outline:"none",fontFamily:"inherit",color:WHITE,...sx}} />;
-  const TXA = (v,cb,rows,sx) => <textarea value={v} onChange={e=>cb(e.target.value)} rows={rows||2} style={{width:"100%",background:"transparent",border:"none",outline:"none",fontFamily:"inherit",resize:"none",lineHeight:1.5,...sx}} />;
+  const INP = (v,cb,sx) => <input value={v} onChange={e=>cb(e.target.value)} style={{background:"transparent",border:"none",outline:"none",fontFamily:"inherit",color:L.text,...sx}} />;
+  const TXA = (v,cb,rows,sx) => <textarea value={v} onChange={e=>cb(e.target.value)} rows={rows||2} style={{width:"100%",background:"transparent",border:"none",outline:"none",fontFamily:"inherit",resize:"none",lineHeight:1.6,color:L.gray,...sx}} />;
 
   return (
-    <div style={{maxWidth:960}}>
+    <div style={{background:L.bg,borderRadius:14,padding:24,border:`1px solid ${L.border}`,boxShadow:"0 2px 16px rgba(0,0,0,0.10)"}}>
       {/* Legend */}
-      <div style={{display:"flex",gap:16,marginBottom:20,flexWrap:"wrap",paddingBottom:14,borderBottom:`1px solid ${BORDER}`,alignItems:"center"}}>
-        <span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,color:GRAY}}>Leyenda:</span>
+      <div style={{display:"flex",gap:10,marginBottom:20,paddingBottom:14,borderBottom:`1px solid ${L.border}`,alignItems:"center",flexWrap:"wrap"}}>
+        <span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,color:L.faint}}>Estado:</span>
         {Object.entries(STAT).map(([k,v])=>(
-          <span key={k} style={{fontSize:10,color:v.c,display:"flex",alignItems:"center",gap:5}}>
-            <span style={{width:7,height:7,borderRadius:"50%",background:v.c,display:"inline-block",flexShrink:0}} />
+          <span key={k} style={{fontSize:10,color:v.c,display:"flex",alignItems:"center",gap:5,background:v.bg,padding:"2px 10px",borderRadius:20,border:`1px solid ${v.bd}`,fontWeight:600}}>
             {v.lbl}
           </span>
         ))}
-        <span style={{fontSize:10,color:GRAY,marginLeft:"auto"}}>Click en el badge de estado para cambiar · todos los campos son editables</span>
+        <span style={{fontSize:10,color:L.faint,marginLeft:"auto"}}>Click en el badge para cambiar · todos los campos son editables</span>
       </div>
 
       {/* CEO Block */}
-      <div style={{background:"rgba(212,175,55,0.07)",border:"1px solid rgba(212,175,55,0.25)",borderTop:"3px solid #D4AF37",borderRadius:10,padding:"16px 20px",marginBottom:20}}>
-        <div style={{fontSize:9,fontWeight:700,letterSpacing:2.5,textTransform:"uppercase",color:GOLD_DIM,marginBottom:8}}>Fundador · Cerebro del sistema</div>
-        <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:10,flexWrap:"wrap"}}>
-          {INP(d.ceo.name,v=>setCeo({name:v}),{fontSize:18,fontWeight:800,color:GOLD})}
-          <span style={{color:GOLD_DIM,fontSize:14}}>·</span>
-          {INP(d.ceo.title,v=>setCeo({title:v}),{fontSize:13,fontWeight:600,color:GOLD_DIM,flex:1,minWidth:120})}
+      <div style={{background:"#FFFEF5",border:"1px solid #E9D96B",borderLeft:"4px solid #D4AF37",borderRadius:10,padding:"16px 20px",marginBottom:24}}>
+        <div style={{fontSize:9,fontWeight:700,letterSpacing:2.5,textTransform:"uppercase",color:"#8A7420",marginBottom:8}}>Fundador · CEO · Estrategia · Reunión · Gerencia</div>
+        <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
+          {INP(d.ceo.name,v=>setCeo({name:v}),{fontSize:18,fontWeight:800,color:"#1A1202"})}
+          <span style={{color:"#C4A428",fontSize:14}}>·</span>
+          {INP(d.ceo.title,v=>setCeo({title:v}),{fontSize:13,fontWeight:600,color:"#8A7420",flex:1,minWidth:120})}
         </div>
-        {TXA(d.ceo.note,v=>setCeo({note:v}),2,{color:GRAY,fontSize:11})}
+        {TXA(d.ceo.note,v=>setCeo({note:v}),2,{color:"#6B5E10",fontSize:11})}
       </div>
 
       {/* 3 Columns */}
@@ -5996,31 +6601,31 @@ function OrganigramaTab({ org, onChange }) {
           return (
             <div key={area.id} style={{flex:"1 1 270px",minWidth:250,display:"flex",flexDirection:"column",gap:8}}>
               {/* Area header */}
-              <div style={{background:`${area.color}18`,border:`1px solid ${area.color}55`,borderTop:`3px solid ${area.color}`,borderRadius:10,padding:"14px 16px"}}>
+              <div style={{background:`${area.color}10`,border:`1px solid ${area.color}35`,borderLeft:`4px solid ${area.color}`,borderRadius:10,padding:"14px 16px"}}>
                 <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:10,flexWrap:"wrap"}}>
                   {INP(area.pct,v=>setArea(area.id,{pct:v}),{fontSize:26,fontWeight:800,color:area.color,width:70})}
-                  {INP(area.name,v=>setArea(area.id,{name:v}),{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:0.3,color:area.color,flex:1})}
+                  {INP(area.name,v=>setArea(area.id,{name:v}),{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:0.3,color:area.color,flex:1})}
                 </div>
-                <div style={{marginBottom:8,paddingBottom:8,borderBottom:`1px solid ${area.color}22`}}>
-                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,color:GOLD_DIM,marginBottom:3}}>Equipo interno</div>
-                  {TXA(area.desc_internal,v=>setArea(area.id,{desc_internal:v}),2,{color:GRAY,fontSize:10})}
+                <div style={{marginBottom:8,paddingBottom:8,borderBottom:`1px solid ${area.color}20`}}>
+                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,color:L.faint,marginBottom:3}}>Equipo interno</div>
+                  {TXA(area.desc_internal,v=>setArea(area.id,{desc_internal:v}),2,{fontSize:10})}
                 </div>
                 <div>
-                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,color:area.color,marginBottom:3}}>En el método · qué hace para el cliente</div>
-                  {TXA(area.desc_method,v=>setArea(area.id,{desc_method:v}),2,{color:WHITE,fontSize:10})}
+                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,color:area.color,marginBottom:3}}>En el método · entrega al cliente</div>
+                  {TXA(area.desc_method,v=>setArea(area.id,{desc_method:v}),2,{color:L.text,fontSize:10})}
                 </div>
-                <div style={{marginTop:10,fontSize:9,color:GRAY}}>{activeN}/{area.roles.length} activos</div>
+                <div style={{marginTop:10,fontSize:9,color:L.faint,fontWeight:600}}>{activeN}/{area.roles.length} activos</div>
               </div>
 
-              {/* Hire priority banner */}
+              {/* Hire priority */}
               {area.hire_priority && (
                 <div style={{borderRadius:7,padding:"7px 12px",
-                  background:area.hire_priority===1?"rgba(224,108,108,0.1)":"rgba(245,158,11,0.08)",
-                  border:`1px solid ${area.hire_priority===1?"rgba(224,108,108,0.3)":"rgba(245,158,11,0.25)"}`,
+                  background:area.hire_priority===1?"#FEF2F2":"#FFFBEB",
+                  border:`1px solid ${area.hire_priority===1?"#FECACA":"#FDE68A"}`,
                   display:"flex",gap:8,alignItems:"center"}}>
-                  <span style={{fontSize:9,fontWeight:800,padding:"1px 6px",borderRadius:4,
-                    background:area.hire_priority===1?RED:"#F59E0B",color:"#141414",flexShrink:0}}>#{area.hire_priority}</span>
-                  {INP(area.hire_note,v=>setArea(area.id,{hire_note:v}),{fontSize:10,fontWeight:600,color:area.hire_priority===1?RED:"#F59E0B",flex:1})}
+                  <span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:4,
+                    background:area.hire_priority===1?"#EF4444":"#F59E0B",color:"#FFFFFF",flexShrink:0}}>#{area.hire_priority}</span>
+                  {INP(area.hire_note,v=>setArea(area.id,{hire_note:v}),{fontSize:10,fontWeight:600,color:area.hire_priority===1?"#DC2626":"#92400E",flex:1})}
                 </div>
               )}
 
@@ -6028,11 +6633,11 @@ function OrganigramaTab({ org, onChange }) {
               {area.roles.map(role=>{
                 const s = STAT[role.status] || STAT.pending;
                 return (
-                  <div key={role.id} style={{background:"#1C1C20",border:`1px solid ${BORDER}`,borderLeft:`3px solid ${s.c}`,borderRadius:8,padding:"10px 12px"}}>
+                  <div key={role.id} style={{background:L.bg,border:`1px solid ${L.border}`,borderLeft:`3px solid ${s.c}`,borderRadius:8,padding:"10px 12px",boxShadow:"0 1px 3px rgba(0,0,0,0.05)"}}>
                     <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:6,marginBottom:5}}>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:5}}>
-                          {INP(role.num,v=>setRole(area.id,role.id,{num:v}),{fontSize:9,color:GRAY,fontFamily:"monospace",width:44,flexShrink:0})}
+                          {INP(role.num,v=>setRole(area.id,role.id,{num:v}),{fontSize:9,color:L.faint,fontFamily:"monospace",width:44,flexShrink:0})}
                           {INP(role.name,v=>setRole(area.id,role.id,{name:v}),{fontSize:12,fontWeight:700,flex:1})}
                         </div>
                         <button onClick={()=>cycleStatus(area.id,role.id,role.status)}
@@ -6042,16 +6647,16 @@ function OrganigramaTab({ org, onChange }) {
                         </button>
                       </div>
                       <button onClick={()=>delRole(area.id,role.id)}
-                        style={{background:"none",border:"none",color:RED,cursor:"pointer",fontSize:15,opacity:0.5,flexShrink:0,lineHeight:1,paddingTop:2}}>×</button>
+                        style={{background:"none",border:"none",color:"#EF4444",cursor:"pointer",fontSize:15,opacity:0.4,flexShrink:0,lineHeight:1,paddingTop:2}}>×</button>
                     </div>
-                    {TXA(role.desc,v=>setRole(area.id,role.id,{desc:v}),2,{color:GRAY,fontSize:10,marginTop:4})}
+                    {TXA(role.desc,v=>setRole(area.id,role.id,{desc:v}),2,{fontSize:10,marginTop:4})}
                   </div>
                 );
               })}
 
               {/* Add role */}
               <button onClick={()=>addRole(area.id)}
-                style={{padding:"7px",borderRadius:7,border:`1px dashed ${area.color}55`,color:area.color,
+                style={{padding:"7px",borderRadius:7,border:`1px dashed ${area.color}60`,color:area.color,
                   background:"transparent",cursor:"pointer",fontSize:11,fontWeight:600}}>
                 + Agregar rol
               </button>
@@ -6061,38 +6666,39 @@ function OrganigramaTab({ org, onChange }) {
       </div>
 
       {/* Method task map */}
-      <div style={{marginTop:24,border:`1px solid ${BORDER}`,borderRadius:10,overflow:"hidden"}}>
-        <div style={{padding:"10px 16px",borderBottom:`1px solid ${BORDER}`,fontSize:10,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:GRAY}}>
-          Tareas del Método por Área · 261 total
+      <div style={{marginTop:24,border:`1px solid ${L.border}`,borderRadius:10,overflow:"hidden"}}>
+        <div style={{padding:"10px 16px",borderBottom:`1px solid ${L.border}`,fontSize:10,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:L.faint,background:L.surface}}>
+          Tareas del Método por Área · 261 total · equivalencia con método simplificado
         </div>
-        <div style={{display:"flex",flexWrap:"wrap"}}>
+        <div style={{display:"flex",flexWrap:"wrap",background:L.bg}}>
           {[
-            {area:"Estrategia",        count:18, col:GOLD,      roles:"JP Mesa · ROL 4 Estratega"},
-            {area:"Comercial",         count:80, col:"#F59E0B", roles:"ROL 11 Closer · ROL 12 Dir. Ventas · ROL 5 AM · ROL 2 (bots)"},
-            {area:"Tráfico y Sistemas",count:96, col:"#60A5FA", roles:"ROL 3 Media Buyer · ROL 2 CAIO · ROL 7 Editor"},
-            {area:"Administrativo",    count:67, col:"#A78BFA", roles:"JP Mesa (hoy) · ROL 1 COO · ROL 10 Bookkeeper · ROL 9 VA"},
+            {area:"Estrategia",         count:18, col:"#B8860B", roles:"CEO · ROL 4 Estratega",                         old:"CEO + Reunión estrategia"},
+            {area:"Comercial",          count:80, col:"#B45309", roles:"ROL 11 · ROL 12 · ROL 5 AM · ROL 2 bots",      old:"Comercial + Reunión + Comité"},
+            {area:"Tráfico + Comun.",   count:96, col:"#1D4ED8", roles:"ROL 3 Media Buyer · ROL 2 CAIO · ROL 7 Editor", old:"Tráfico + Comunicaciones"},
+            {area:"Administrativo",     count:67, col:"#6D28D9", roles:"CEO hoy · ROL 1 COO · ROL 10 · ROL 9 VA",      old:"Gerencia + Supervisión + Comité Dir."},
           ].map((m,i)=>(
-            <div key={m.area} style={{flex:"1 1 140px",padding:"14px 16px",borderRight:i<3?`1px solid ${BORDER}`:"none",borderTop:i>0?"none":"none"}}>
-              <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,color:m.col,marginBottom:4}}>{m.area}</div>
-              <div style={{fontSize:22,fontWeight:800,color:m.col,letterSpacing:-0.5,marginBottom:4}}>{m.count}</div>
-              <div style={{fontSize:9,color:GRAY,lineHeight:1.6}}>{m.roles}</div>
+            <div key={m.area} style={{flex:"1 1 140px",padding:"14px 16px",borderRight:i<3?`1px solid ${L.border}`:"none"}}>
+              <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,color:m.col,marginBottom:3}}>{m.area}</div>
+              <div style={{fontSize:22,fontWeight:800,color:m.col,letterSpacing:-0.5,marginBottom:3}}>{m.count}</div>
+              <div style={{fontSize:9,color:L.gray,lineHeight:1.6,marginBottom:3}}>{m.roles}</div>
+              <div style={{fontSize:8,color:L.faint,fontStyle:"italic"}}>≡ {m.old}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Expansion roles */}
-      <div style={{marginTop:12,background:CARD,border:`1px solid ${BORDER}`,borderRadius:10,padding:"14px 16px"}}>
-        <div style={{fontSize:9,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:GRAY,marginBottom:10}}>
-          Roles por activar según cuello de botella · no contratar antes de T37
+      {/* Expansion */}
+      <div style={{marginTop:12,background:L.surface,border:`1px solid ${L.border}`,borderRadius:10,padding:"14px 16px"}}>
+        <div style={{fontSize:9,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:L.faint,marginBottom:10}}>
+          Roles que se activan por cuello de botella · no contratar antes de T37
         </div>
         <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
           {d.expansion.map(r=>(
-            <div key={r.id} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:20,background:"#1E1E24",border:`1px solid ${BORDER}`}}>
-              <span style={{fontSize:9,color:GRAY,fontFamily:"monospace",flexShrink:0}}>{r.num}</span>
+            <div key={r.id} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:20,background:L.bg,border:`1px solid ${L.border}`}}>
+              <span style={{fontSize:9,color:L.faint,fontFamily:"monospace",flexShrink:0}}>{r.num}</span>
               {INP(r.name,v=>upd({...d,expansion:d.expansion.map(x=>x.id===r.id?{...x,name:v}:x)}),{fontSize:10})}
-              <span style={{fontSize:9,color:GRAY,flexShrink:0}}>→</span>
-              {INP(r.trigger,v=>upd({...d,expansion:d.expansion.map(x=>x.id===r.id?{...x,trigger:v}:x)}),{fontSize:9,color:GRAY,minWidth:80})}
+              <span style={{fontSize:9,color:L.faint,flexShrink:0}}>→</span>
+              {INP(r.trigger,v=>upd({...d,expansion:d.expansion.map(x=>x.id===r.id?{...x,trigger:v}:x)}),{fontSize:9,color:L.gray,minWidth:80})}
             </div>
           ))}
         </div>
@@ -6113,7 +6719,10 @@ function MetodoTab({ data, onChange }) {
 
   const [localTasks,       setLocalTasks]       = useState(() => gTasks);
   const [localPhases,      setLocalPhases]      = useState(() => gPhases);
-  const [localMetodologia, setLocalMetodologia] = useState(() => data.globalMetodologia || {});
+  const [localMetodologia, setLocalMetodologia] = useState(() => {
+    const ex = data.globalMetodologia || {};
+    return { ...METODOLOGIA_BASE, ...ex };
+  });
   const [section, setSection] = useState("launch");
   const [dirty, setDirty] = useState(false);
   const [taskSearch, setTaskSearch] = useState("");
