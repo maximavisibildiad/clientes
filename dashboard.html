@@ -2670,9 +2670,9 @@ const METODO_SECTIONS = [
   { id:"reportes",  label:"Protocolo de Reportes",    icon:"📊", hint:"Qué reporta cada cargo, a quién y con qué frecuencia." },
 ];
 
-function MetodologiaTab({ client, onChange }) {
-  const met = client.metodologia || {};
-  const set = (key, val) => onChange({ ...client, metodologia: { ...met, [key]: val } });
+function MetodologiaTab({ metodologia, onChange }) {
+  const met = metodologia || {};
+  const set = (key, val) => onChange({ ...met, [key]: val });
   const [copied, setCopied] = React.useState(null);
 
   const copyText = (id, text) => {
@@ -2686,8 +2686,8 @@ function MetodologiaTab({ client, onChange }) {
   return (
     <div style={{ maxWidth:720 }}>
       <div style={{ marginBottom:20, padding:"12px 16px", background:`${GOLD}10`, border:`1px solid ${GOLD}30`, borderRadius:10 }}>
-        <div style={{ fontSize:12, color:GOLD, fontWeight:600, marginBottom:2 }}>Metodología del Cliente</div>
-        <div style={{ fontSize:11, color:GRAY }}>Documenta aquí el método de ventas específico de este cliente: guiones, flujo CRM, roles y reportes.</div>
+        <div style={{ fontSize:12, color:GOLD, fontWeight:600, marginBottom:2 }}>Metodología General GP</div>
+        <div style={{ fontSize:11, color:GRAY }}>Método de ventas del sistema GP: guiones, flujo CRM, roles y reportes. Aplica a todos los clientes.</div>
       </div>
 
       <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
@@ -2762,7 +2762,7 @@ function ClientDetail({ client, team, onBack, onChange, apiKey, flowTemplates, o
 
       {subTab === "perfil" && <PerfilTab client={client} onChange={onChange} />}
       {subTab === "lanzamiento" && <LaunchTab client={client} onChange={onChange} globalLaunchPhases={globalLaunchPhases} globalMvpSteps={globalMvpSteps} globalFullSteps={globalFullSteps} />}
-      {subTab === "metodologia" && <MetodologiaTab client={client} onChange={onChange} />}
+      {subTab === "metodologia" && <MetodologiaTab metodologia={client.metodologia} onChange={met => onChange({ ...client, metodologia: met })} />}
       {subTab === "ejecucion" && <EjecucionTab client={client} team={team} onChange={onChange} />}
       {subTab === "proceso" && <ProcesoComercialTab client={client} onChange={onChange} apiKey={apiKey} flowTemplates={flowTemplates} onSaveTemplate={onSaveTemplate} onDeleteTemplate={onDeleteTemplate} />}
     </div>
@@ -5940,8 +5940,9 @@ function MetodoTab({ data, onChange }) {
   const gTasks = data.globalTasks || GEMA_TASKS.map(t=>({...t, id:"gt_"+t.n}));
   const gPhases = data.globalLaunchPhases || LAUNCH_PHASES;
 
-  const [localTasks,  setLocalTasks]  = useState(() => gTasks);
-  const [localPhases, setLocalPhases] = useState(() => gPhases);
+  const [localTasks,       setLocalTasks]       = useState(() => gTasks);
+  const [localPhases,      setLocalPhases]      = useState(() => gPhases);
+  const [localMetodologia, setLocalMetodologia] = useState(() => data.globalMetodologia || {});
   const [section, setSection] = useState("launch");
   const [dirty, setDirty] = useState(false);
   const [taskSearch, setTaskSearch] = useState("");
@@ -5953,7 +5954,7 @@ function MetodoTab({ data, onChange }) {
       syncPhasesToClients(data.clients, localPhases),
       localTasks
     );
-    onChange({ ...data, globalTasks: localTasks, globalLaunchPhases: localPhases, clients: syncedClients });
+    onChange({ ...data, globalTasks: localTasks, globalLaunchPhases: localPhases, globalMetodologia: localMetodologia, clients: syncedClients });
     setDirty(false);
   };
 
@@ -5998,7 +5999,7 @@ function MetodoTab({ data, onChange }) {
 
       {/* Section tabs */}
       <div style={{ display:"flex", gap:0, marginBottom:24, borderBottom:`1px solid ${BORDER}` }}>
-        {[["launch","🎯 Cronograma ("+localPhases.length+" fases)"],["tasks","📋 Tareas del Método ("+localTasks.length+")"]].map(([id,label]) => (
+        {[["launch","🎯 Cronograma ("+localPhases.length+" fases)"],["tasks","📋 Tareas del Método ("+localTasks.length+")"],["metodologia","📖 Metodología"]].map(([id,label]) => (
           <button key={id} className={`gp-nav-tab${section===id?" active":""}`} onClick={()=>setSection(id)}>{label}</button>
         ))}
       </div>
@@ -6140,6 +6141,13 @@ function MetodoTab({ data, onChange }) {
             );
           })}
         </div>
+      )}
+
+      {section === "metodologia" && (
+        <MetodologiaTab
+          metodologia={localMetodologia}
+          onChange={met => { setLocalMetodologia(met); setDirty(true); }}
+        />
       )}
     </div>
   );
