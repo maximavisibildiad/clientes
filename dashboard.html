@@ -3273,15 +3273,39 @@ Cierre:          > 20% de los calificados se convierten en ventas
 ROAS mínimo:     5x sobre la inversión publicitaria`
 };
 
-function orgToRolesSummary(org) {
-  if (!org || !org.areas) return "";
+function orgToRolesSummary(orgData) {
+  if (!orgData) return "";
+  // Legacy structured format
+  if (orgData.areas) {
+    const lines = [];
+    if (orgData.ceo) lines.push(`${orgData.ceo.name} — ${orgData.ceo.title}`);
+    orgData.areas.forEach(a => {
+      lines.push(`\n${a.name.toUpperCase()} (${a.pct})`);
+      a.roles.forEach(r => {
+        const icon = r.status==="active" ? "✅" : r.status==="outsourced" ? "🔗" : "⏳";
+        lines.push(`  ${icon} ${r.name}: ${r.desc}`);
+      });
+    });
+    return lines.join("\n");
+  }
+  // Flow format (new canvas-based)
+  if (!orgData.nodes) return "";
+  const nodes = orgData.nodes;
+  const edges = orgData.edges || [];
   const lines = [];
-  if (org.ceo) lines.push(`${org.ceo.name} — ${org.ceo.title}`);
-  org.areas.forEach(a => {
-    lines.push(`\n${a.name.toUpperCase()} (${a.pct})`);
-    a.roles.forEach(r => {
-      const icon = r.status==="active" ? "✅" : r.status==="outsourced" ? "🔗" : "⏳";
-      lines.push(`  ${icon} ${r.name}: ${r.desc}`);
+  const ceo = nodes.find(n => n.type === "inicio");
+  if (ceo?.text) lines.push(ceo.text.split('\n')[0]);
+  const ceoEdges = edges.filter(e => e.from === ceo?.id);
+  ceoEdges.forEach(ce => {
+    const area = nodes.find(n => n.id === ce.to);
+    if (!area?.text) return;
+    lines.push(`\n${area.text.split('\n')[0]}`);
+    edges.filter(e => e.from === area.id).forEach(ae => {
+      const role = nodes.find(n => n.id === ae.to);
+      if (!role?.text) return;
+      const icon = role.type==="accion" ? "✅" : role.type==="alerta" ? "⏳" : "🔗";
+      const parts = role.text.split('\n');
+      lines.push(`  ${icon} ${parts[0]}${parts[1] ? ': '+parts[1] : ''}`);
     });
   });
   return lines.join("\n");
@@ -3682,13 +3706,14 @@ function ClientsList({ clients, onSelect, onCreate, onDelete, teamPin }) {
 function TeamTab({ data, onChange }) {
   return (
     <div>
-      <div style={{ marginBottom:20, padding:"12px 16px", background:"rgba(167,139,250,0.07)", border:"1px solid rgba(167,139,250,0.25)", borderRadius:10 }}>
+      <div style={{ marginBottom:16, padding:"12px 16px", background:"rgba(167,139,250,0.07)", border:"1px solid rgba(167,139,250,0.25)", borderRadius:10 }}>
         <div style={{ fontSize:12, color:"#A78BFA", fontWeight:600, marginBottom:2 }}>🔒 Equipo Growth Partner · Privado</div>
-        <div style={{ fontSize:11, color:GRAY }}>Los cambios aquí se conectan con el Método (botón "↺ Del organigrama" en la sección Roles del Equipo). Edita roles, estados y descripciones · click en el badge de estado para cambiar · todos los campos son editables.</div>
+        <div style={{ fontSize:11, color:GRAY }}>Canvas editable del equipo GP. Arrastrá, conectá y reorganizá nodos. El botón "↺ Del organigrama" en la sección Roles del Método importa el equipo desde este canvas.</div>
       </div>
       <OrganigramaTab
-        org={data.globalOrganigrama}
-        onChange={newOrg => onChange({ ...data, globalOrganigrama: newOrg })}
+        flow={data.globalOrganigramaFlow}
+        onUpdate={newFlow => onChange({ ...data, globalOrganigramaFlow: newFlow })}
+        apiKey={data.settings?.apiKey || ""}
       />
     </div>
   );
@@ -6547,162 +6572,84 @@ const ORGANIGRAMA_DEFAULT = {
   ]
 };
 
+// ─── ORGANIGRAMA FLOW DEFAULT ─────────────────────────────────────────────────
+const ORGANIGRAMA_DEFAULT_FLOW = {
+  nodes: [
+    // CEO
+    { id:"o_ceo", type:"inicio", text:"JP Mesa · CEO — Estrategia\nBrief creativos · Oferta irresistible · Aprobación gates · Cierre ventas · Estrategia por cliente", x:430, y:20 },
+    // ÁREA COMERCIAL
+    { id:"o_com", type:"speech", bg:"#FEF3C7", text:"COMERCIAL · 70%\nConversión de leads, entrenamiento, pipeline y retención de clientes.", x:20, y:155 },
+    { id:"o_r12", type:"alerta", text:"ROL 12 · Director de Ventas / Auditoría\nManejo de promedios y metas. Liderazgo y entrenamiento del equipo comercial.", x:30, y:280 },
+    { id:"o_r11", type:"alerta", text:"ROL 11 · Closer\nCierra las llamadas de diagnóstico. KPIs diario/semanal. Manejo de objeciones.", x:30, y:390 },
+    { id:"o_r6",  type:"alerta", text:"ROL 6 · Setter Inbound\nDMs IG → WhatsApp → agenda llamada. Primera línea de contacto con el lead.", x:30, y:500 },
+    { id:"o_r5",  type:"accion", text:"ROL 5 · Account Manager ✅\nComunicación con el cliente. Garantiza seguimiento, cronograma y lanzamiento.", x:30, y:610 },
+    { id:"o_r13", type:"alerta", text:"ROL 13 · Outbound Setter\nGoogle Maps → contacto frío → TAP. Pipeline nuevo sin depender de ads.", x:30, y:720 },
+    // ÁREA TRÁFICO Y SISTEMAS
+    { id:"o_tra", type:"speech", bg:"#EFF6FF", text:"TRÁFICO Y SISTEMAS + COMUNICACIONES · 25%\nCampañas, automatizaciones CRM, producción audiovisual y RRSS.", x:390, y:155 },
+    { id:"o_r3",  type:"accion", text:"ROL 3 · Media Buyer ✅\nLanza y optimiza campañas diariamente. Fan Page, píxel, accesos FB/IG, dominio.", x:400, y:280 },
+    { id:"o_r2",  type:"accion", text:"ROL 2 · CAIO — Automatización ✅\nCRM, bots de bienvenida y seguimiento, WhatsApp API, integraciones FB/IG/Calendar.", x:400, y:390 },
+    { id:"o_r7",  type:"speech", text:"ROL 7 · Editor / Comunicaciones 🔗\nPiezas gráficas, video ads, VSL, Google My Business, perfiles IG/FB.", x:400, y:500 },
+    { id:"o_r4",  type:"accion", text:"ROL 4 · Estratega ✅\nOferta irresistible, speech de venta, brief publicitario, ángulos por nicho.", x:400, y:610 },
+    // ÁREA ADMINISTRATIVA
+    { id:"o_adm", type:"speech", bg:"#F5F3FF", text:"ADMINISTRATIVO · 5%\nFinanzas, contratos, operaciones internas y soporte al sistema.", x:760, y:155 },
+    { id:"o_r1",  type:"alerta", text:"ROL 1 · COO — Supervisión\nCrea empresa en Drive, coordina la entrega, abre espacios internos.", x:770, y:280 },
+    { id:"o_r10", type:"alerta", text:"ROL 10 · Bookkeeper\nEnvía cuentas de cobro, revisa comisiones, gestiona contratos. P&L mensual.", x:770, y:390 },
+    { id:"o_r8",  type:"alerta", text:"ROL 8 · CSM — Customer Success\nSemáforo semanal por cliente. Agenda supervisiones y reuniones de seguimiento.", x:770, y:500 },
+    { id:"o_r9",  type:"alerta", text:"ROL 9 · VA — Asistente Virtual\nSoporte administrativo al CEO. Agenda reuniones de diagnóstico y comités.", x:770, y:610 },
+    { id:"o_r19", type:"alerta", text:"ROL 19 · Manager de Operaciones\nActiva a escala completa. Coordina VA + Bookkeeper. Lidera Comité Directivo.", x:770, y:720 },
+    // ROLES DE EXPANSIÓN
+    { id:"o_exp", type:"decision", text:"ROLES DE EXPANSIÓN · No contratar antes del trigger\nSe activan por cuello de botella o hito de revenue específico", x:200, y:870 },
+    { id:"o_r18", type:"decision", text:"ROL 18 · Setter Manager\nActivar: cuello de botella T37", x:30, y:980 },
+    { id:"o_r14", type:"decision", text:"ROL 14 · Community Manager\nActivar: cuello de botella T37", x:250, y:980 },
+    { id:"o_r15", type:"decision", text:"ROL 15 · Content Manager\nActivar: cuello de botella T37", x:470, y:980 },
+    { id:"o_r16", type:"decision", text:"ROL 16 · Coach DWY\nActivar: DWY $10K MRR + 10 casos", x:30, y:1080 },
+    { id:"o_r17", type:"decision", text:"ROL 17 · CSC DWY\nActivar: DWY $10K MRR + 10 casos", x:250, y:1080 },
+  ],
+  edges: [
+    // CEO → Áreas
+    { id:"e_ca", from:"o_ceo", to:"o_com" },
+    { id:"e_ct", from:"o_ceo", to:"o_tra" },
+    { id:"e_cd", from:"o_ceo", to:"o_adm" },
+    // COMERCIAL → Roles
+    { id:"e_c12", from:"o_com", to:"o_r12" },
+    { id:"e_c11", from:"o_com", to:"o_r11" },
+    { id:"e_c6",  from:"o_com", to:"o_r6" },
+    { id:"e_c5",  from:"o_com", to:"o_r5" },
+    { id:"e_c13", from:"o_com", to:"o_r13" },
+    // TRÁFICO → Roles
+    { id:"e_t3", from:"o_tra", to:"o_r3" },
+    { id:"e_t2", from:"o_tra", to:"o_r2" },
+    { id:"e_t7", from:"o_tra", to:"o_r7" },
+    { id:"e_t4", from:"o_tra", to:"o_r4" },
+    // ADMIN → Roles
+    { id:"e_a1",  from:"o_adm", to:"o_r1" },
+    { id:"e_a10", from:"o_adm", to:"o_r10" },
+    { id:"e_a8",  from:"o_adm", to:"o_r8" },
+    { id:"e_a9",  from:"o_adm", to:"o_r9" },
+    { id:"e_a19", from:"o_adm", to:"o_r19" },
+    // Expansion header → roles
+    { id:"e_e18", from:"o_exp", to:"o_r18" },
+    { id:"e_e14", from:"o_exp", to:"o_r14" },
+    { id:"e_e15", from:"o_exp", to:"o_r15" },
+    { id:"e_e16", from:"o_exp", to:"o_r16" },
+    { id:"e_e17", from:"o_exp", to:"o_r17" },
+  ]
+};
+
 // ─── ORGANIGRAMA TAB ───────────────────────────────────────────────────────────
-function OrganigramaTab({ org, onChange }) {
-  const [d, setD] = React.useState(() => (org && org.areas) ? org : ORGANIGRAMA_DEFAULT);
-
-  const upd = next => { setD(next); onChange(next); };
-  const setCeo  = p   => upd({ ...d, ceo: { ...d.ceo, ...p } });
-  const setArea = (id,p) => upd({ ...d, areas: d.areas.map(a => a.id===id ? {...a,...p} : a) });
-  const setRole = (aid,rid,p) => upd({ ...d, areas: d.areas.map(a => a.id===aid ? {...a, roles:a.roles.map(r=>r.id===rid?{...r,...p}:r)} : a) });
-  const addRole = aid => upd({ ...d, areas: d.areas.map(a => a.id===aid ? {...a, roles:[...a.roles,{id:"r_"+uid(),num:"ROL ?",name:"Nuevo rol",status:"pending",desc:""}]} : a) });
-  const delRole = (aid,rid) => upd({ ...d, areas: d.areas.map(a => a.id===aid ? {...a, roles:a.roles.filter(r=>r.id!==rid)} : a) });
-  const cycleStatus = (aid,rid,cur) => { const nxt={active:"pending",pending:"outsourced",outsourced:"active"}; setRole(aid,rid,{status:nxt[cur]||"pending"}); };
-
-  // Light theme palette — white background within the dark dashboard
-  const L = { bg:"#FFFFFF", surface:"#F6F5F2", border:"#E4E3DF", text:"#1A1A1C", gray:"#5A5A5E", faint:"#9B9B9F" };
-
-  const STAT = {
-    active:     {lbl:"✅ Activo",      c:"#15803D", bg:"#F0FDF4", bd:"#86EFAC"},
-    pending:    {lbl:"⏳ Pendiente",   c:"#92400E", bg:"#FFFBEB", bd:"#FCD34D"},
-    outsourced: {lbl:"🔗 Tercerizado", c:"#1E40AF", bg:"#EFF6FF", bd:"#93C5FD"},
-  };
-  const INP = (v,cb,sx) => <input value={v} onChange={e=>cb(e.target.value)} style={{background:"transparent",border:"none",outline:"none",fontFamily:"inherit",color:L.text,...sx}} />;
-  const TXA = (v,cb,rows,sx) => <textarea value={v} onChange={e=>cb(e.target.value)} rows={rows||2} style={{width:"100%",background:"transparent",border:"none",outline:"none",fontFamily:"inherit",resize:"none",lineHeight:1.6,color:L.gray,...sx}} />;
+function OrganigramaTab({ flow, onUpdate, apiKey }) {
+  const orgFlow = (flow && Array.isArray(flow.nodes) && flow.nodes.length > 0) ? flow : ORGANIGRAMA_DEFAULT_FLOW;
 
   return (
-    <div style={{background:L.bg,borderRadius:14,padding:24,border:`1px solid ${L.border}`,boxShadow:"0 2px 16px rgba(0,0,0,0.10)"}}>
-      {/* Legend */}
-      <div style={{display:"flex",gap:10,marginBottom:20,paddingBottom:14,borderBottom:`1px solid ${L.border}`,alignItems:"center",flexWrap:"wrap"}}>
-        <span style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,color:L.faint}}>Estado:</span>
-        {Object.entries(STAT).map(([k,v])=>(
-          <span key={k} style={{fontSize:10,color:v.c,display:"flex",alignItems:"center",gap:5,background:v.bg,padding:"2px 10px",borderRadius:20,border:`1px solid ${v.bd}`,fontWeight:600}}>
-            {v.lbl}
-          </span>
-        ))}
-        <span style={{fontSize:10,color:L.faint,marginLeft:"auto"}}>Click en el badge para cambiar · todos los campos son editables</span>
-      </div>
-
-      {/* CEO Block */}
-      <div style={{background:"#FFFEF5",border:"1px solid #E9D96B",borderLeft:"4px solid #D4AF37",borderRadius:10,padding:"16px 20px",marginBottom:24}}>
-        <div style={{fontSize:9,fontWeight:700,letterSpacing:2.5,textTransform:"uppercase",color:"#8A7420",marginBottom:8}}>Fundador · CEO · Estrategia · Reunión · Gerencia</div>
-        <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:8,flexWrap:"wrap"}}>
-          {INP(d.ceo.name,v=>setCeo({name:v}),{fontSize:18,fontWeight:800,color:"#1A1202"})}
-          <span style={{color:"#C4A428",fontSize:14}}>·</span>
-          {INP(d.ceo.title,v=>setCeo({title:v}),{fontSize:13,fontWeight:600,color:"#8A7420",flex:1,minWidth:120})}
-        </div>
-        {TXA(d.ceo.note,v=>setCeo({note:v}),2,{color:"#6B5E10",fontSize:11})}
-      </div>
-
-      {/* 3 Columns */}
-      <div style={{display:"flex",gap:14,alignItems:"flex-start",flexWrap:"wrap"}}>
-        {d.areas.map(area=>{
-          const activeN = area.roles.filter(r=>r.status==="active").length;
-          return (
-            <div key={area.id} style={{flex:"1 1 270px",minWidth:250,display:"flex",flexDirection:"column",gap:8}}>
-              {/* Area header */}
-              <div style={{background:`${area.color}10`,border:`1px solid ${area.color}35`,borderLeft:`4px solid ${area.color}`,borderRadius:10,padding:"14px 16px"}}>
-                <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-                  {INP(area.pct,v=>setArea(area.id,{pct:v}),{fontSize:26,fontWeight:800,color:area.color,width:70})}
-                  {INP(area.name,v=>setArea(area.id,{name:v}),{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:0.3,color:area.color,flex:1})}
-                </div>
-                <div style={{marginBottom:8,paddingBottom:8,borderBottom:`1px solid ${area.color}20`}}>
-                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,color:L.faint,marginBottom:3}}>Equipo interno</div>
-                  {TXA(area.desc_internal,v=>setArea(area.id,{desc_internal:v}),2,{fontSize:10})}
-                </div>
-                <div>
-                  <div style={{fontSize:8,fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,color:area.color,marginBottom:3}}>En el método · entrega al cliente</div>
-                  {TXA(area.desc_method,v=>setArea(area.id,{desc_method:v}),2,{color:L.text,fontSize:10})}
-                </div>
-                <div style={{marginTop:10,fontSize:9,color:L.faint,fontWeight:600}}>{activeN}/{area.roles.length} activos</div>
-              </div>
-
-              {/* Hire priority */}
-              {area.hire_priority && (
-                <div style={{borderRadius:7,padding:"7px 12px",
-                  background:area.hire_priority===1?"#FEF2F2":"#FFFBEB",
-                  border:`1px solid ${area.hire_priority===1?"#FECACA":"#FDE68A"}`,
-                  display:"flex",gap:8,alignItems:"center"}}>
-                  <span style={{fontSize:9,fontWeight:800,padding:"2px 7px",borderRadius:4,
-                    background:area.hire_priority===1?"#EF4444":"#F59E0B",color:"#FFFFFF",flexShrink:0}}>#{area.hire_priority}</span>
-                  {INP(area.hire_note,v=>setArea(area.id,{hire_note:v}),{fontSize:10,fontWeight:600,color:area.hire_priority===1?"#DC2626":"#92400E",flex:1})}
-                </div>
-              )}
-
-              {/* Role cards */}
-              {area.roles.map(role=>{
-                const s = STAT[role.status] || STAT.pending;
-                return (
-                  <div key={role.id} style={{background:L.bg,border:`1px solid ${L.border}`,borderLeft:`3px solid ${s.c}`,borderRadius:8,padding:"10px 12px",boxShadow:"0 1px 3px rgba(0,0,0,0.05)"}}>
-                    <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:6,marginBottom:5}}>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:5}}>
-                          {INP(role.num,v=>setRole(area.id,role.id,{num:v}),{fontSize:9,color:L.faint,fontFamily:"monospace",width:44,flexShrink:0})}
-                          {INP(role.name,v=>setRole(area.id,role.id,{name:v}),{fontSize:12,fontWeight:700,flex:1})}
-                        </div>
-                        <button onClick={()=>cycleStatus(area.id,role.id,role.status)}
-                          style={{fontSize:9,fontWeight:700,letterSpacing:0.5,textTransform:"uppercase",padding:"2px 8px",borderRadius:4,
-                            background:s.bg,color:s.c,border:`1px solid ${s.bd}`,cursor:"pointer"}}>
-                          {s.lbl}
-                        </button>
-                      </div>
-                      <button onClick={()=>delRole(area.id,role.id)}
-                        style={{background:"none",border:"none",color:"#EF4444",cursor:"pointer",fontSize:15,opacity:0.4,flexShrink:0,lineHeight:1,paddingTop:2}}>×</button>
-                    </div>
-                    {TXA(role.desc,v=>setRole(area.id,role.id,{desc:v}),2,{fontSize:10,marginTop:4})}
-                  </div>
-                );
-              })}
-
-              {/* Add role */}
-              <button onClick={()=>addRole(area.id)}
-                style={{padding:"7px",borderRadius:7,border:`1px dashed ${area.color}60`,color:area.color,
-                  background:"transparent",cursor:"pointer",fontSize:11,fontWeight:600}}>
-                + Agregar rol
-              </button>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Method task map */}
-      <div style={{marginTop:24,border:`1px solid ${L.border}`,borderRadius:10,overflow:"hidden"}}>
-        <div style={{padding:"10px 16px",borderBottom:`1px solid ${L.border}`,fontSize:10,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:L.faint,background:L.surface}}>
-          Tareas del Método por Área · 261 total · equivalencia con método simplificado
-        </div>
-        <div style={{display:"flex",flexWrap:"wrap",background:L.bg}}>
-          {[
-            {area:"Estrategia",         count:18, col:"#B8860B", roles:"CEO · ROL 4 Estratega",                         old:"CEO + Reunión estrategia"},
-            {area:"Comercial",          count:80, col:"#B45309", roles:"ROL 11 · ROL 12 · ROL 5 AM · ROL 2 bots",      old:"Comercial + Reunión + Comité"},
-            {area:"Tráfico + Comun.",   count:96, col:"#1D4ED8", roles:"ROL 3 Media Buyer · ROL 2 CAIO · ROL 7 Editor", old:"Tráfico + Comunicaciones"},
-            {area:"Administrativo",     count:67, col:"#6D28D9", roles:"CEO hoy · ROL 1 COO · ROL 10 · ROL 9 VA",      old:"Gerencia + Supervisión + Comité Dir."},
-          ].map((m,i)=>(
-            <div key={m.area} style={{flex:"1 1 140px",padding:"14px 16px",borderRight:i<3?`1px solid ${L.border}`:"none"}}>
-              <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:1.5,color:m.col,marginBottom:3}}>{m.area}</div>
-              <div style={{fontSize:22,fontWeight:800,color:m.col,letterSpacing:-0.5,marginBottom:3}}>{m.count}</div>
-              <div style={{fontSize:9,color:L.gray,lineHeight:1.6,marginBottom:3}}>{m.roles}</div>
-              <div style={{fontSize:8,color:L.faint,fontStyle:"italic"}}>≡ {m.old}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Expansion */}
-      <div style={{marginTop:12,background:L.surface,border:`1px solid ${L.border}`,borderRadius:10,padding:"14px 16px"}}>
-        <div style={{fontSize:9,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:L.faint,marginBottom:10}}>
-          Roles que se activan por cuello de botella · no contratar antes de T37
-        </div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-          {d.expansion.map(r=>(
-            <div key={r.id} style={{display:"flex",alignItems:"center",gap:6,padding:"5px 12px",borderRadius:20,background:L.bg,border:`1px solid ${L.border}`}}>
-              <span style={{fontSize:9,color:L.faint,fontFamily:"monospace",flexShrink:0}}>{r.num}</span>
-              {INP(r.name,v=>upd({...d,expansion:d.expansion.map(x=>x.id===r.id?{...x,name:v}:x)}),{fontSize:10})}
-              <span style={{fontSize:9,color:L.faint,flexShrink:0}}>→</span>
-              {INP(r.trigger,v=>upd({...d,expansion:d.expansion.map(x=>x.id===r.id?{...x,trigger:v}:x)}),{fontSize:9,color:L.gray,minWidth:80})}
-            </div>
-          ))}
-        </div>
-      </div>
+    <div style={{ minHeight:700 }}>
+      <FlowCanvas
+        flow={orgFlow}
+        onUpdate={onUpdate}
+        clientName="GP Equipo"
+        clientProfile={{}}
+        clientTasks={[]}
+        apiKey={apiKey || ""}
+      />
     </div>
   );
 }
@@ -6935,7 +6882,7 @@ function MetodoTab({ data, onChange }) {
         <MetodologiaTab
           metodologia={localMetodologia}
           onChange={met => { setLocalMetodologia(met); setDirty(true); }}
-          organigrama={data.globalOrganigrama}
+          organigrama={data.globalOrganigramaFlow}
         />
       )}
     </div>
@@ -7542,7 +7489,7 @@ function MetodoGrowthPartner() {
             flowTemplates={data.flowTemplates||[]}
             onSaveTemplate={saveTemplate} onDeleteTemplate={deleteTemplate}
             globalLaunchPhases={data.globalLaunchPhases} globalMvpSteps={data.globalMvpSteps} globalFullSteps={data.globalFullSteps}
-            globalOrganigrama={data.globalOrganigrama}
+            globalOrganigrama={data.globalOrganigramaFlow}
           />
         ) : (
           <>
