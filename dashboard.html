@@ -541,6 +541,7 @@ const LAUNCH_PHASES = [
   { id:"arranque",    group:"sem1", type:"ext", name:"Sesión de Arranque",                     offset:0,   defaultOwner:"Setter",   color:"#D4AF37", note:"" },
   { id:"estrategia",  group:"sem1", type:"int", name:"Sesión Estrategia General",              offset:2,   defaultOwner:"Traffic",  color:"#D4AF37", note:"" },
   { id:"oferta",      group:"sem1", type:"int", name:"Creación Oferta Irresistible y Guiones", offset:4,   defaultOwner:"Setter",   color:"#D4AF37", note:"" },
+  { id:"reuniones_ok",group:"sem1", type:"ext", name:"Reuniones de Arranque ejecutadas — Día 7", offset:6,  defaultOwner:"Director", color:"#D4AF37", note:"Todas las reuniones agendadas deben ocurrir dentro de los primeros 7 días" },
   // Semana 2
   { id:"ads",         group:"sem2", type:"ext", name:"Grabación Ads",                          offset:7,   defaultOwner:"Setter",   color:"#F59E0B", note:"" },
   { id:"metodologia", group:"sem2", type:"int", name:"Creación Metodología Base",              offset:10,  defaultOwner:"Director", color:"#F59E0B", note:"" },
@@ -550,6 +551,8 @@ const LAUNCH_PHASES = [
   { id:"campanas",    group:"sem3", type:"int", name:"Lanzamiento Campañas",                   offset:18,  defaultOwner:"Traffic",  color:"#22C55E", note:"" },
   { id:"maquinaria",  group:"sem3", type:"ext", name:"Lanzamiento Maquinaria",                 offset:21,  defaultOwner:"Director", color:"#22C55E", note:"" },
   // Post-lanzamiento
+  { id:"reporte_dia", group:"post", type:"int", name:"Reporte Diario Comercial — proceso activo", offset:22, defaultOwner:"Comercial", color:"#A78BFA", note:"Mensajes recibidos · Llamadas realizadas · Preguntas frecuentes del día" },
+  { id:"reunion_kpi", group:"post", type:"ext", name:"Reunión Semanal Revisión KPIs",          offset:28,  defaultOwner:"Director", color:"#A78BFA", note:"Recurrente cada semana · CPL · Contactabilidad · Cierre · ROAS" },
   { id:"resumen1",    group:"post", type:"int", name:"Resumen Operativo — 1 semana",           offset:28,  defaultOwner:"Legal",    color:"#A78BFA", note:"Va con reunión interna antes" },
   { id:"resumen3",    group:"post", type:"int", name:"Resumen Operativo — 3 semanas",          offset:42,  defaultOwner:"Legal",    color:"#A78BFA", note:"Va con reunión interna antes" },
   { id:"informe1m",   group:"post", type:"int", name:"Informe 1 mes + Proyección Trimestre",   offset:60,  defaultOwner:"Director", color:"#A78BFA", note:"Va con reunión interna antes" },
