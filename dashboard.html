@@ -551,7 +551,7 @@ const LAUNCH_PHASES = [
   { id:"campanas",    group:"sem3", type:"int", name:"Lanzamiento Campañas",                   offset:18,  defaultOwner:"Traffic",  color:"#22C55E", note:"" },
   { id:"maquinaria",  group:"sem3", type:"ext", name:"Lanzamiento Maquinaria",                 offset:21,  defaultOwner:"Director", color:"#22C55E", note:"" },
   // Post-lanzamiento
-  { id:"reporte_dia", group:"post", type:"int", name:"Reporte Diario Comercial — proceso activo", offset:22, defaultOwner:"Comercial", color:"#A78BFA", note:"Mensajes recibidos · Llamadas realizadas · Preguntas frecuentes del día" },
+  { id:"reporte_dia", group:"post", type:"int", name:"Reporte Diario Comercial — proceso activo", offset:22, defaultOwner:"Setter", color:"#A78BFA", note:"Mensajes recibidos · Llamadas realizadas · Preguntas frecuentes del día" },
   { id:"reunion_kpi", group:"post", type:"ext", name:"Reunión Semanal Revisión KPIs",          offset:28,  defaultOwner:"Director", color:"#A78BFA", note:"Recurrente cada semana · CPL · Contactabilidad · Cierre · ROAS" },
   { id:"resumen1",    group:"post", type:"int", name:"Resumen Operativo — 1 semana",           offset:28,  defaultOwner:"Legal",    color:"#A78BFA", note:"Va con reunión interna antes" },
   { id:"resumen3",    group:"post", type:"int", name:"Resumen Operativo — 3 semanas",          offset:42,  defaultOwner:"Legal",    color:"#A78BFA", note:"Va con reunión interna antes" },
@@ -2860,10 +2860,26 @@ Bot Categoría B: Si elige [servicio 2] → rama B (info + preguntas específica
 Bot Reactivación: Si lead no responde en 24h → mensaje automático de seguimiento
 Bot RMK (etapa Recuperar): Secuencia de 3 mensajes en 72h, uno cada 24h
 
+PREGUNTAS DE PRECALIFICACIÓN DEL BOT — ejemplo para clínica dental/estética
+──────────────────────────────────────────
+Pregunta 1: "¿Es odontología, medicina estética o ambas?"
+  → Define rama del bot y el guion del setter
+Pregunta 2: "¿Cuántos pacientes atienden al mes aproximadamente?"
+  → <30 pacientes: señal de alerta (ticket bajo, volumen insuficiente para sistema)
+  → 30-100: perfil estándar
+  → 100+: cliente de alto potencial, pasar a Setter con prioridad Caso 3
+Pregunta 3: "¿Ya tienen WhatsApp Business activo?"
+  → NO: registrar en CRM con tag SETUP-PENDIENTE — el setter lo aborda en el primer contacto
+Pregunta 4: "¿Tienen equipo comercial activo o serían los primeros en tener un asesor?"
+  → Sin equipo: onboarding más largo — ajustar expectativas desde el setter
+
+[Adaptar estas preguntas al servicio real del cliente. Estas son el punto de partida para
+clínicas. Para otro tipo de negocio, redefinir las preguntas antes de lanzar el bot.]
+
 ÁRBOL DE DECISIÓN DE BOTS
 ──────────────────────────────────────────
 Lead entra → Bot Bienvenida → ¿Responde?
-  SÍ → ¿Qué servicio busca? → Bot Categoría correspondiente → Setter asume
+  SÍ → Precalificación (4 preguntas arriba) → registra en CRM con tag de categoría → Setter asume
   NO (24h) → Bot Reactivación → ¿Responde?
     SÍ → Setter asume
     NO → Mover a "Recuperar" → Bot RMK (3 mensajes / 72h)
@@ -2997,6 +3013,20 @@ PASO 3 — INDAGACIÓN PROFUNDA (2-4 minutos)
 "¿Hay algo específico que te tenga dudando en este momento?"
 [Las objeciones reales salen aquí, no al final. Escuchar sin interrumpir.]
 
+PASO 3.5 — BREVE HISTORIA (90 segundos máximo — antes de dar el precio)
+──────────────────────────────────────────
+Plantar un caso real de un cliente similar al dolor que salió en la Indagación.
+No improvisar — tener 2-3 historias listas. Elegir la que más se parece al dolor del lead.
+
+"Mira, me hace pensar en [tipo de negocio similar, sin nombre si no hay autorización].
+Tenían exactamente eso: [punto de dolor que el lead acaba de mencionar].
+Lo que hicimos fue [descripción de la solución en 1 línea].
+En [tiempo real] lograron [resultado concreto y verificable].
+Por eso cuando me comentas que [eco de sus palabras], me da confianza de que esto aplica."
+
+[Si el lead interrumpe para preguntar el precio → buena señal. Responder con naturalidad
+y continuar al Paso 4. No forzar la historia si el lead ya está listo para cerrar.]
+
 PASO 4 — OFERTA (basada en las palabras exactas del lead)
 ──────────────────────────────────────────
 "Escuchándote, creo que lo que más te conviene es [servicio X] porque [razón usando sus propias palabras].
@@ -3026,6 +3056,20 @@ MANEJO DE OBJECIONES
 "Lo consulto con mi pareja / familiar"
 → "Tiene todo el sentido. ¿Cuándo podrían verlo juntos?
    Podríamos hablar los tres al mismo tiempo para que no queden dudas. ¿Mañana a las [hora] sirve?"
+
+SECUENCIA DE CIERRES PARCIALES — 80% preguntas, 20% afirmaciones
+──────────────────────────────────────────
+No cerrar de golpe. Construir una cadena de SÍs pequeños antes del SÍ grande.
+Cada pregunta debe ser respondible con un sí directo — si el lead duda, hay una objeción
+no resuelta que saldrá acá, no en el cierre final.
+
+"¿Esto que le comenté tiene sentido para lo que busca?" → esperar SÍ
+"¿El resultado que describió [eco de sus palabras] sigue siendo lo que necesita?" → esperar SÍ
+"¿La forma de pago que le propongo lo haría más manejable?" → esperar SÍ
+"¿Y si avanzamos, cuándo le gustaría tener esto funcionando?" → dejar que fijen la fecha
+
+[Regla: si en algún punto el lead dice NO o duda → ese es el obstáculo real.
+Resolverlo allí y reiniciar la secuencia. No ignorarlo y seguir.]
 
 CIERRE DIRECTO (cuando hay intención clara)
 ──────────────────────────────────────────
@@ -3153,7 +3197,14 @@ CRONOGRAMA CON 3 ASESORES O MÁS
 ──────────────────────────────────────────
 Asesor A → Setter puro (nunca cierra)
 Asesor B → Closer 1 (primer contacto calificado)
-Asesor C → Closer 2 + 3 (seguimientos + cierres tardíos + RMK por llamada)`,
+Asesor C → Closer 2 + 3 (seguimientos + cierres tardíos + RMK por llamada)
+
+REGLA DE SEPARACIÓN DE ROLES
+──────────────────────────────────────────
+Si el cliente recibe más de 15 leads/semana, el Setter y el Closer NO pueden ser la misma
+persona. Esa carga parte la calidad de ambas funciones. Señal práctica: si el asesor único
+empieza a saltarse notas de CRM o los tiempos de respuesta pasan de 30 min → separar roles.
+Por debajo de 15 leads/semana: un asesor bien entrenado puede hacer ambas funciones.`,
 
   jornada: `INSTRUCCIONES DE JORNADA — SECUENCIA EXACTA DEL DÍA
 
@@ -3165,6 +3216,15 @@ INICIO DE JORNADA (08:00–08:30) — OBLIGATORIO
 [ ] Enviar mensaje de confirmación a TODOS los agendados de hoy:
     "Hola [nombre], le confirmo su cita hoy a las [hora] con [nombre del negocio].
      ¿Sigue en pie? Quedamos a la espera."
+[ ] Enviar Reporte de Agendados al grupo [Ventas] antes de las 08:30
+
+Formato exacto del reporte de agendados:
+"[Nombre] | Agendados [DD/MM]
+ Agendados hoy: X
+ Confirmaron: X
+ Sin respuesta (llamar en bloque mañana): X
+ Cancelados: X"
+
 [ ] Revisar mensajes de WhatsApp que llegaron fuera de horario
 [ ] Priorizar: Caso 3 (calientes) → Caso 2 (tibios) → Caso 1 nuevos del día
 
@@ -3221,12 +3281,17 @@ CONEXIÓN NOCTURNA (si el negocio opera fuera de horario)
 
   reportes: `GRUPOS DE WHATSAPP — ESTRUCTURA Y USO CORRECTO
 ──────────────────────────────────────────
-Grupo [Ventas / Agencia]: Reportes mediodía + cierre + ventas confirmadas del día
-Grupo [Horario]:          Confirmación de entrada y salida del equipo
-Grupo [Enrolamiento]:     Registro de nuevos clientes / proceso de acceso al servicio
-Grupo [Voucher / Pagos]:  Comprobantes de pago + validación de financiaciones
-Grupo [Contabilidad]:     Cierres del mes, facturas, cuadre de caja
-Regla: Nada va al grupo equivocado. Contabilidad no va a Ventas. Vouchers no van a Enrolamiento.
+Grupo [Ventas / Agencia]:    Reportes mediodía + cierre + ventas confirmadas del día
+Grupo [Horario]:             Confirmación de entrada y salida del equipo
+Grupo [Citas / Agendamientos]: Citas agendadas confirmadas, reschedules, no-shows del día
+Grupo [Leads Calientes]:     Solo para leads Caso 3 (caliente con urgencia real) que no
+                             tienen un closer disponible para atenderlos en ese momento.
+                             Formato: Nombre | Número | Servicio | Disponible para llamar: [hora]
+                             Regla: cualquier closer disponible puede asumir el lead publicado
+                             acá. Quien lo tome lo registra en CRM con nota inmediata.
+Grupo [Voucher / Pagos]:     Comprobantes de pago + validación de financiaciones
+Grupo [Contabilidad]:        Cierres del mes, facturas, cuadre de caja
+Regla: Nada va al grupo equivocado. Contabilidad no va a Ventas. Vouchers no van a Citas.
 
 EXCEL DE VENTAS — HOJA BASE (columnas obligatorias)
 ──────────────────────────────────────────
