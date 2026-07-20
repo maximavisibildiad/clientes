@@ -683,15 +683,31 @@ function getInitialData(savedOverride) {
   };
   const saved = savedOverride || storageGet();
   if (saved && saved.clients) {
+    // Siempre actualizar owners desde GEMA_TASKS — preservar custom tasks del usuario
+    const freshTaskMap = new Map(defaults.globalTasks.map(t => [t.id, t]));
+    const savedTasks = saved.globalTasks || [];
+    const savedIds = new Set(savedTasks.map(t => t.id));
+    const mergedTasks = [
+      ...savedTasks.map(t => {
+        const fresh = freshTaskMap.get(t.id);
+        return fresh ? { ...t, owner: fresh.owner, title: fresh.title, area: fresh.area, week: fresh.week } : t;
+      }),
+      ...defaults.globalTasks.filter(t => !savedIds.has(t.id)), // nuevas tareas añadidas al código
+    ];
+    const freshClients = syncTasksToClients(
+      syncPhasesToClients(saved.clients, saved.globalLaunchPhases || defaults.globalLaunchPhases),
+      mergedTasks
+    );
     return {
       ...defaults,
       ...saved,
       personal: saved.personal ? { ...defaults.personal, ...saved.personal } : defaults.personal,
-      globalTasks: saved.globalTasks || defaults.globalTasks,
+      globalTasks: mergedTasks,
       globalMvpSteps: saved.globalMvpSteps || defaults.globalMvpSteps,
       globalFullSteps: saved.globalFullSteps || defaults.globalFullSteps,
       globalLaunchPhases: saved.globalLaunchPhases || defaults.globalLaunchPhases,
       teamFlow: saved.teamFlow || defaults.teamFlow,
+      clients: freshClients,
     };
   }
   return defaults;
