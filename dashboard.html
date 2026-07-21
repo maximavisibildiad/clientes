@@ -883,7 +883,6 @@ function EjecucionTab({ client, team, onChange }) {
   const [weekFilter, setWeekFilter] = useState("Todas");
   const [areaFilter, setAreaFilter] = useState("Todas");
   const [ownerFilter, setOwnerFilter] = useState("Todos");
-  const [showAdd, setShowAdd] = useState(false);
   const [customTitle, setCustomTitle] = useState("");
   const [customWeek, setCustomWeek] = useState("Semana 1");
   const [customArea, setCustomArea] = useState("Administrativo");
@@ -911,6 +910,11 @@ function EjecucionTab({ client, team, onChange }) {
   const deleteTask = (taskId) => {
     if (!confirm("¿Eliminar esta tarea?")) return;
     onChange({ ...client, tasks: tasks.filter(t => t.id !== taskId) });
+  };
+
+  const urgentTask = (taskId) => {
+    const updated = tasks.map(t => t.id === taskId ? { ...t, urgent: !t.urgent } : t);
+    onChange({ ...client, tasks: updated });
   };
 
   // Group by area when showing all weeks
@@ -1097,48 +1101,42 @@ function EjecucionTab({ client, team, onChange }) {
       </div>
       <div style={{ display:"flex", gap:6, marginBottom:16, alignItems:"center", flexWrap:"wrap" }}>
         {["Todos","JP","COO","CAIO","Media Buyer","AM"].map(o=><Pill key={o} active={ownerFilter===o} onClick={()=>setOwnerFilter(o)}>{o}</Pill>)}
-        <div style={{ flex:1 }} />
-        <button onClick={()=>setShowAdd(s=>!s)}
-          style={{ padding:"4px 12px", borderRadius:6, fontSize:12, cursor:"pointer", background: showAdd ? GREEN : "#222225", color: showAdd ? "#141414" : WHITE, border:`1px solid ${showAdd ? GREEN : BORDER}`, fontWeight:600 }}>
-          {showAdd ? "✕ Cerrar" : "+ Tarea extra"}
-        </button>
       </div>
 
-      {/* Add custom task panel */}
-      {showAdd && (
-        <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:8, padding:14, marginBottom:16 }}>
-          <div style={{ fontSize:12, color:GRAY, marginBottom:10 }}>Tarea adicional para este cliente (no afecta el método global)</div>
-          <input
-            value={customTitle} onChange={e=>setCustomTitle(e.target.value)}
-            placeholder="Título de la tarea..."
-            style={{ width:"100%", background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"6px 8px", color:WHITE, fontSize:12, outline:"none", marginBottom:8, boxSizing:"border-box" }}
-          />
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-            <select value={customWeek} onChange={e=>setCustomWeek(e.target.value)}
-              style={{ flex:1, minWidth:100, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 8px", color:WHITE, fontSize:11, outline:"none" }}>
-              {WEEKS.map(w=><option key={w} value={w}>{w}</option>)}
-            </select>
-            <select value={customArea} onChange={e=>setCustomArea(e.target.value)}
-              style={{ flex:1, minWidth:120, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 8px", color:WHITE, fontSize:11, outline:"none" }}>
-              {AREAS.map(a=><option key={a} value={a}>{a}</option>)}
-            </select>
-            <select value={customOwner} onChange={e=>setCustomOwner(e.target.value)}
-              style={{ flex:1, minWidth:90, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 8px", color:WHITE, fontSize:11, outline:"none" }}>
-              <option value="TUYO">TUYO</option>
-              <option value="GEMA V4">GEMA V4</option>
-            </select>
-          </div>
-          <button
-            onClick={() => {
-              if (!customTitle.trim()) return;
-              onChange({...client, tasks: [...tasks, {id:uid(), n:null, week:customWeek, area:customArea, title:customTitle.trim(), owner:customOwner, done:false, assigneeId:null, doneAt:null}]});
-              setCustomTitle(""); setShowAdd(false);
-            }}
-            style={{ padding:"6px 16px", background:GREEN, color:"#141414", border:"none", borderRadius:6, cursor:"pointer", fontWeight:700, fontSize:12 }}>
-            + Añadir tarea
-          </button>
-        </div>
-      )}
+      {/* Quick-add bar */}
+      <div style={{ display:"flex", gap:6, marginBottom:16, alignItems:"center", flexWrap:"wrap",
+        background:"#0d0d0f", border:`1px solid ${BORDER}`, borderRadius:8, padding:"8px 10px" }}>
+        <input
+          value={customTitle} onChange={e=>setCustomTitle(e.target.value)}
+          onKeyDown={e=>{ if(e.key==="Enter" && customTitle.trim()) {
+            onChange({...client, tasks:[...tasks,{id:uid(),n:null,week:customWeek,area:customArea,title:customTitle.trim(),owner:customOwner,done:false,assigneeId:null,doneAt:null}]});
+            setCustomTitle("");
+          }}}
+          placeholder="+ Nueva tarea para este cliente..."
+          style={{ flex:1, minWidth:160, background:"transparent", border:"none", color:WHITE, fontSize:12, outline:"none", padding:"2px 0" }}
+        />
+        <select value={customOwner} onChange={e=>setCustomOwner(e.target.value)}
+          style={{ background:"#111113", border:`1px solid ${BORDER}`, borderRadius:5, padding:"3px 6px", color:GRAY, fontSize:11, outline:"none" }}>
+          {["JP","COO","CAIO","Media Buyer","AM"].map(o=><option key={o} value={o}>{o}</option>)}
+        </select>
+        <select value={customWeek} onChange={e=>setCustomWeek(e.target.value)}
+          style={{ background:"#111113", border:`1px solid ${BORDER}`, borderRadius:5, padding:"3px 6px", color:GRAY, fontSize:11, outline:"none" }}>
+          {WEEKS.map(w=><option key={w} value={w}>{w}</option>)}
+        </select>
+        <select value={customArea} onChange={e=>setCustomArea(e.target.value)}
+          style={{ background:"#111113", border:`1px solid ${BORDER}`, borderRadius:5, padding:"3px 6px", color:GRAY, fontSize:11, outline:"none" }}>
+          {AREAS.map(a=><option key={a} value={a}>{a}</option>)}
+        </select>
+        <button
+          onClick={() => {
+            if (!customTitle.trim()) return;
+            onChange({...client, tasks:[...tasks,{id:uid(),n:null,week:customWeek,area:customArea,title:customTitle.trim(),owner:customOwner,done:false,assigneeId:null,doneAt:null}]});
+            setCustomTitle("");
+          }}
+          style={{ padding:"4px 12px", background:customTitle.trim()?GREEN:"#222225", color:customTitle.trim()?"#141414":GRAY, border:`1px solid ${customTitle.trim()?GREEN:BORDER}`, borderRadius:5, cursor:"pointer", fontWeight:700, fontSize:12, transition:"all 0.15s", flexShrink:0 }}>
+          Añadir
+        </button>
+      </div>
 
       {/* Task list */}
       {weekFilter === "Todas" ? (
@@ -1155,12 +1153,12 @@ function EjecucionTab({ client, team, onChange }) {
                 </span>
               )}
             </div>
-            {areaTask.map(t => <TaskRow key={t.id} task={t} team={team} onToggle={toggleTask} onAssign={assignTask} onDelete={deleteTask} />)}
+            {areaTask.map(t => <TaskRow key={t.id} task={t} team={team} onToggle={toggleTask} onAssign={assignTask} onDelete={deleteTask} onUrgent={urgentTask} />)}
           </div>
           );
         })
       ) : (
-        filtered.map(t => <TaskRow key={t.id} task={t} team={team} onToggle={toggleTask} onAssign={assignTask} onDelete={deleteTask} />)
+        filtered.map(t => <TaskRow key={t.id} task={t} team={team} onToggle={toggleTask} onAssign={assignTask} onDelete={deleteTask} onUrgent={urgentTask} />)
       )}
 
       {filtered.length === 0 && (
@@ -1178,18 +1176,20 @@ const ROLE_BADGE = {
   "AM":          { color:"#4ADE80", bg:"rgba(34,197,94,0.08)",   border:"rgba(34,197,94,0.4)" },
 };
 
-function TaskRow({ task, team, onToggle, onAssign, onDelete }) {
+function TaskRow({ task, team, onToggle, onAssign, onDelete, onUrgent }) {
   const badge = ROLE_BADGE[task.owner] || { color:"#D4AF37", bg:"rgba(212,175,55,0.08)", border:"rgba(212,175,55,0.4)" };
   return (
     <div style={{
       display:"flex", alignItems:"center", gap:8, padding:"8px 10px", borderRadius:8, marginBottom:4,
-      background: task.done ? "rgba(76,175,125,0.05)" : "transparent",
-      border:`1px solid ${task.done ? "rgba(76,175,125,0.2)" : BORDER}`,
+      background: task.urgent ? "rgba(239,68,68,0.04)" : task.done ? "rgba(76,175,125,0.05)" : "transparent",
+      border:`1px solid ${task.urgent ? "rgba(239,68,68,0.3)" : task.done ? "rgba(76,175,125,0.2)" : BORDER}`,
       opacity: task.done ? 0.6 : 1,
       transition:"all 0.15s",
     }}>
       <input type="checkbox" checked={task.done} onChange={()=>onToggle(task.id)}
         style={{ accentColor:GOLD, width:15, height:15, cursor:"pointer", flexShrink:0 }} />
+      <button onClick={()=>onUrgent && onUrgent(task.id)} title={task.urgent?"Quitar prioridad":"Marcar como prioritaria"}
+        style={{ background:"none", border:"none", cursor:"pointer", fontSize:13, padding:"0 1px", flexShrink:0, opacity: task.urgent ? 1 : 0.25, transition:"opacity 0.15s" }}>⚡</button>
       <span style={{ fontFamily:"monospace", fontSize:10, color:GRAY, minWidth:24, flexShrink:0 }}>#{task.n}</span>
       <span style={{ flex:1, fontSize:12, color:WHITE, textDecoration:task.done?"line-through":"none", lineHeight:1.4 }}>{task.title}</span>
       <span style={{
@@ -7346,7 +7346,19 @@ function IssuesPanel({ issues, team, roles, onChange }) {
   );
 }
 
-function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues }) {
+function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues, onUpdateClient }) {
+  const [addingTo, setAddingTo] = useState(null);   // client id con form abierto
+  const [quickTitle, setQuickTitle] = useState("");
+  const [quickOwner, setQuickOwner] = useState("JP");
+
+  const submitQuickTask = (client, e) => {
+    if (e) e.stopPropagation();
+    if (!quickTitle.trim()) return;
+    const newTask = { id: uid(), n: null, week: "Semana 1", area: "Administrativo", title: quickTitle.trim(), owner: quickOwner, done: false, assigneeId: null, doneAt: null };
+    onUpdateClient({ ...client, tasks: [...(client.tasks || []), newTask] });
+    setQuickTitle("");
+    setAddingTo(null);
+  };
   const allTasks = data.clients.flatMap(c => c.tasks || []);
   const doneTasks = allTasks.filter(t => t.done);
   const pct = allTasks.length ? Math.round(doneTasks.length / allTasks.length * 100) : 0;
@@ -7494,6 +7506,33 @@ function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues }) {
             }
           </div>
 
+          {/* Panel de Prioridades */}
+          {(() => {
+            const urgent = data.clients.flatMap(c =>
+              (c.tasks||[]).filter(t => t.urgent && !t.done).map(t => ({ ...t, clientName: c.name, clientId: c.id }))
+            );
+            if (urgent.length === 0) return null;
+            return (
+              <div style={{ padding:20, background:CARD, border:`1px solid rgba(239,68,68,0.3)`, borderLeft:`3px solid #EF4444`, borderRadius:14, boxShadow:"0 2px 12px rgba(0,0,0,0.2)", marginBottom:16 }}>
+                <div style={{ marginBottom:12 }}>
+                  <div style={{ color:"#EF444488", fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:5 }}>Prioridad</div>
+                  <div style={{ color:WHITE, fontWeight:800, fontSize:16, letterSpacing:-0.3 }}>⚡ Pendientes Urgentes <span style={{ fontSize:12, fontWeight:500, color:GRAY }}>({urgent.length})</span></div>
+                </div>
+                {urgent.map(t => {
+                  const badge = ROLE_BADGE[t.owner] || { color:"#D4AF37", bg:"rgba(212,175,55,0.08)", border:"rgba(212,175,55,0.4)" };
+                  return (
+                    <div key={t.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 0", borderBottom:`1px solid rgba(42,42,46,0.5)` }}>
+                      <span style={{ fontSize:10, fontWeight:700, color:"#EF4444", flexShrink:0 }}>⚡</span>
+                      <span onClick={()=>onSelectClient(t.clientId)} style={{ fontSize:11, color:GRAY, flexShrink:0, cursor:"pointer", minWidth:72 }}>{t.clientName}</span>
+                      <span style={{ flex:1, fontSize:12, color:WHITE, lineHeight:1.3 }}>{t.title.replace(/^\[(TUYO|GEMA V4)\]\s*/,"")}</span>
+                      <span style={{ fontSize:10, padding:"1px 6px", borderRadius:4, border:`1px solid ${badge.border}`, color:badge.color, background:badge.bg, flexShrink:0 }}>{t.owner}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
           <div style={{ padding:20, background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, boxShadow:"0 2px 12px rgba(0,0,0,0.2)" }}>
             <div style={{ marginBottom:16 }}>
               <div style={{ color:"#A78BFA99", fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:5 }}>Portafolio</div>
@@ -7512,17 +7551,46 @@ function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues }) {
                 const cd = ct.filter(t => t.done).length;
                 const cp = ct.length ? Math.round(cd / ct.length * 100) : 0;
                 const barColor = cp>70?GREEN:cp>40?GOLD:RED;
+                const isOpen = addingTo === c.id;
                 return (
-                  <div key={c.id} onClick={()=>onSelectClient(c.id)}
-                    style={{ padding:"9px 0", borderBottom:`1px solid rgba(42,42,46,0.6)`, cursor:"pointer", transition:"opacity 0.15s" }}
-                    onMouseEnter={e=>e.currentTarget.style.opacity="0.7"}
-                    onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6, alignItems:"baseline" }}>
-                      <span style={{ color:WHITE, fontSize:12, fontWeight:600 }}>{c.name}</span>
-                      <span style={{ color:barColor, fontSize:11, fontWeight:700 }}>{cp}%</span>
+                  <div key={c.id} style={{ padding:"9px 0", borderBottom:`1px solid rgba(42,42,46,0.6)` }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6, alignItems:"center" }}>
+                      <span onClick={()=>onSelectClient(c.id)}
+                        style={{ color:WHITE, fontSize:12, fontWeight:600, cursor:"pointer", flex:1 }}
+                        onMouseEnter={e=>e.currentTarget.style.opacity="0.7"}
+                        onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+                        {c.name}
+                      </span>
+                      <span style={{ color:barColor, fontSize:11, fontWeight:700, marginRight:8 }}>{cp}%</span>
+                      <button
+                        onClick={e=>{ e.stopPropagation(); if(isOpen){setAddingTo(null);setQuickTitle("");}else{setAddingTo(c.id);setQuickTitle("");} }}
+                        style={{ padding:"1px 7px", background:isOpen?"rgba(212,175,55,0.1)":"transparent", border:`1px solid ${isOpen?GOLD:BORDER}`, borderRadius:5, color:isOpen?GOLD:GRAY, fontSize:13, cursor:"pointer", fontWeight:700, lineHeight:1.4 }}>
+                        {isOpen ? "✕" : "+"}
+                      </button>
                     </div>
                     <ProgressBar pct={cp} color={barColor} height={3} />
                     <div style={{ color:GRAY, fontSize:10, marginTop:3 }}>{cd} de {ct.length} tareas</div>
+                    {isOpen && (
+                      <div onClick={e=>e.stopPropagation()}
+                        style={{ display:"flex", gap:5, marginTop:8, alignItems:"center" }}>
+                        <input
+                          autoFocus
+                          value={quickTitle}
+                          onChange={e=>setQuickTitle(e.target.value)}
+                          onKeyDown={e=>{ if(e.key==="Enter") submitQuickTask(c,e); if(e.key==="Escape"){setAddingTo(null);setQuickTitle("");} }}
+                          placeholder="Nueva tarea..."
+                          style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:5, padding:"4px 7px", color:WHITE, fontSize:11, outline:"none" }}
+                        />
+                        <select value={quickOwner} onChange={e=>setQuickOwner(e.target.value)}
+                          style={{ background:"#111113", border:`1px solid ${BORDER}`, borderRadius:5, padding:"4px 5px", color:GRAY, fontSize:10, outline:"none" }}>
+                          {["JP","COO","CAIO","Media Buyer","AM"].map(o=><option key={o} value={o}>{o}</option>)}
+                        </select>
+                        <button onClick={e=>submitQuickTask(c,e)}
+                          style={{ padding:"4px 9px", background:quickTitle.trim()?GREEN:"#222225", color:quickTitle.trim()?"#141414":GRAY, border:"none", borderRadius:5, cursor:"pointer", fontWeight:700, fontSize:11 }}>
+                          ✓
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })
@@ -7717,6 +7785,7 @@ function MetodoGrowthPartner() {
                 onGoToClients={()=>setTab("clientes")}
                 onSelectClient={(id)=>{ setSelectedClientId(id); setTab("clientes"); }}
                 onUpdateIssues={(issues)=>updateData({...data, issues})}
+                onUpdateClient={updateClient}
               />
             )}
             {tab === "clientes" && (
