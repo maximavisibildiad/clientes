@@ -1344,7 +1344,7 @@ function FlowCanvas({ flow, clientName, clientProfile, clientTasks, onUpdate, ap
       const rx2 = Math.max(selectionRect.x1, selectionRect.x2);
       const ry2 = Math.max(selectionRect.y1, selectionRect.y2);
       const selected = nodes.filter(n => {
-        const nw = 220, nh = 80;
+        const nw = n.w || 180, nh = 80;
         return n.x < rx2 && n.x + nw > rx1 && n.y < ry2 && n.y + nh > ry1;
       });
       if (selected.length > 0) {
@@ -1421,15 +1421,37 @@ function FlowCanvas({ flow, clientName, clientProfile, clientTasks, onUpdate, ap
     onUpdate(prev);
   };
 
-  // Edge midpoints for labels
-  const getNodeCenter = (id) => {
-    const n = nodes.find(x=>x.id===id);
+  // Port-based connection points — exits from the correct edge of each node
+  const getPortPt = (nodeId, otherId) => {
+    const n = nodes.find(x=>x.id===nodeId);
+    const o = nodes.find(x=>x.id===otherId);
     if (!n) return null;
     const cfg = NODE_TYPES[n.type] || NODE_TYPES.speech;
-    if (cfg.swimlane) return { x: n.x + (n.w||cfg.defaultW||680)/2, y: n.y + (n.h||cfg.defaultH||200)/2 };
-    if (n.shape === "circle") return { x: n.x + 60, y: n.y + 60 };
-    return { x: n.x + 90, y: n.y + 28 };
+    if (cfg.swimlane) {
+      return { x: n.x + (n.w||cfg.defaultW||680)/2, y: n.y + (n.h||cfg.defaultH||200)/2, side:"center" };
+    }
+    const nw = n.w || 180;
+    const nh = 56 + Math.ceil(((n.text||"").length / 22)) * 17;
+    const cx = n.x + nw / 2;
+    const cy = n.y + nh / 2;
+    if (n.shape === "circle") {
+      if (!o) return { x: cx, y: cy, side:"bottom" };
+      const ow = o.w||180, oh = 60;
+      const angle = Math.atan2((o.y+oh/2)-cy, (o.x+ow/2)-cx);
+      return { x: cx + Math.cos(angle)*60, y: cy + Math.sin(angle)*60, side:"edge" };
+    }
+    if (!o) return { x: cx, y: n.y + nh, side:"bottom" };
+    const ow = o.w||180, oh = 60;
+    const ocx = o.x + ow/2, ocy = o.y + oh/2;
+    const dx = ocx - cx, dy = ocy - cy;
+    const adx = Math.abs(dx), ady = Math.abs(dy);
+    if (adx > ady * 1.4) {
+      return dx > 0 ? { x: n.x + nw, y: cy, side:"right" } : { x: n.x, y: cy, side:"left" };
+    }
+    return dy > 0 ? { x: cx, y: n.y + nh, side:"bottom" } : { x: cx, y: n.y, side:"top" };
   };
+  // Compat shim for any callers still using getNodeCenter
+  const getNodeCenter = (id) => getPortPt(id, null);
 
   const getShapeStyle = (shape) => {
     switch(shape) {
@@ -1918,6 +1940,24 @@ ${text}`;
               style={{ padding:"2px 10px", borderRadius:6, border:`1px solid ${_pn.bold ? GOLD : BORDER}`, background: _pn.bold ? "rgba(212,175,55,0.15)" : "transparent", color: _pn.bold ? GOLD : GRAY, fontWeight:700, fontSize:13, cursor:"pointer" }}>
               B
             </button>
+            {/* Font size */}
+            <input type="number" min={9} max={20} step={1}
+              value={_pn.fontSize || 12}
+              onChange={e=>updateNodeProp(_pn.id,{fontSize:Number(e.target.value)})}
+              onPointerDown={e=>e.stopPropagation()}
+              title="Tamaño de fuente"
+              style={{ width:46, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:6, padding:"2px 5px", color:WHITE, fontSize:11, outline:"none", textAlign:"center" }} />
+            {/* Text alignment */}
+            {["left","center","right"].map(a => (
+              <button key={a} title={a==="left"?"Izquierda":a==="center"?"Centro":"Derecha"}
+                onClick={()=>updateNodeProp(_pn.id,{textAlign: (_pn.textAlign||"left")===a ? "left" : a})}
+                style={{ padding:"2px 7px", borderRadius:6, fontSize:12, cursor:"pointer",
+                  background: (_pn.textAlign||"left")===a ? "rgba(212,175,55,0.15)" : "transparent",
+                  color: (_pn.textAlign||"left")===a ? GOLD : GRAY,
+                  border:`1px solid ${(_pn.textAlign||"left")===a ? GOLD : BORDER}` }}>
+                {a==="left"?"←":a==="center"?"≡":"→"}
+              </button>
+            ))}
             {/* Delete */}
             <button
               onClick={()=>{ deleteNode(_pn.id); setSelectedIds(new Set()); }}
@@ -1950,6 +1990,18 @@ ${text}`;
               ))}
             </div>
           </div>
+          {/* Node width control (non-swimlane) */}
+          {!_pc.swimlane && (
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
+              <span style={{ color:GRAY, fontSize:11, fontWeight:600, minWidth:50 }}>Ancho:</span>
+              <input type="range" min={100} max={400} step={10}
+                value={_pn.w || 180}
+                onChange={e=>updateNodeProp(_pn.id,{w:Number(e.target.value)})}
+                onPointerDown={e=>e.stopPropagation()}
+                style={{ flex:1, accentColor:GOLD, cursor:"pointer" }} />
+              <span style={{ color:GRAY, fontSize:11, minWidth:30, textAlign:"right" }}>{_pn.w||180}px</span>
+            </div>
+          )}
           {/* Swimlane size controls */}
           {_pc.swimlane && (
             <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:8 }}>
@@ -2094,8 +2146,8 @@ ${text}`;
               ))}
             </defs>
             {edges.map(edge => {
-              const fc = getNodeCenter(edge.from);
-              const tc = getNodeCenter(edge.to);
+              const fc = getPortPt(edge.from, edge.to);
+              const tc = getPortPt(edge.to, edge.from);
               if (!fc || !tc) return null;
               const mx = (fc.x+tc.x)/2, my = (fc.y+tc.y)/2;
               const col = edge.edgeColor || "#9B9B9F";
@@ -2107,10 +2159,21 @@ ${text}`;
               if (routing === "straight") {
                 d = `M ${fc.x} ${fc.y} L ${tc.x} ${tc.y}`;
               } else if (routing === "step") {
-                const midY = (fc.y + tc.y) / 2;
-                d = `M ${fc.x} ${fc.y} L ${fc.x} ${midY} L ${tc.x} ${midY} L ${tc.x} ${tc.y}`;
+                // Direction-aware: horizontal-first when exiting left/right, vertical-first when exiting top/bottom
+                const hExit = fc.side === "left" || fc.side === "right";
+                if (hExit) {
+                  d = `M ${fc.x} ${fc.y} L ${mx} ${fc.y} L ${mx} ${tc.y} L ${tc.x} ${tc.y}`;
+                } else {
+                  d = `M ${fc.x} ${fc.y} L ${fc.x} ${my} L ${tc.x} ${my} L ${tc.x} ${tc.y}`;
+                }
               } else {
-                d = `M ${fc.x} ${fc.y} C ${fc.x} ${my}, ${tc.x} ${my}, ${tc.x} ${tc.y}`;
+                // Direction-aware bezier: control points follow the exit direction
+                const dist = Math.max(Math.abs(tc.x-fc.x), Math.abs(tc.y-fc.y)) * 0.45 + 30;
+                const c1x = fc.side==="left" ? fc.x-dist : fc.side==="right" ? fc.x+dist : fc.x;
+                const c1y = fc.side==="top"  ? fc.y-dist : fc.side==="bottom" ? fc.y+dist : fc.y;
+                const c2x = tc.side==="left" ? tc.x-dist : tc.side==="right" ? tc.x+dist : tc.x;
+                const c2y = tc.side==="top"  ? tc.y-dist : tc.side==="bottom" ? tc.y+dist : tc.y;
+                d = `M ${fc.x} ${fc.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${tc.x} ${tc.y}`;
               }
               return (
                 <g key={edge.id} style={{ pointerEvents:"auto" }} onClick={()=>{ setSelectedEdgeId(edge.id); setSelectedIds(new Set()); }}>
@@ -2126,8 +2189,8 @@ ${text}`;
                       <g style={{ cursor:"pointer", userSelect:"none" }}
                         onClick={e=>{ e.stopPropagation(); setSelectedEdgeId(edge.id); setSelectedIds(new Set()); }}>
                         <rect x={mx - bw/2} y={my - bh - 2} width={bw} height={bh}
-                          rx={bh/2} fill="#FFFFFF" stroke={isSelEdge ? GOLD : col} strokeWidth={isSelEdge ? 2 : 1.5}
-                          filter="drop-shadow(0 1px 2px rgba(0,0,0,0.18))" />
+                          rx={bh/2} fill="#1A1A1E" stroke={isSelEdge ? GOLD : col} strokeWidth={isSelEdge ? 2 : 1.5}
+                          filter="drop-shadow(0 1px 3px rgba(0,0,0,0.5))" />
                         <text x={mx} y={my - 7} textAnchor="middle"
                           fill={isSelEdge ? GOLD : col} fontSize={fSize} fontWeight="700"
                           style={{ userSelect:"none" }}>
@@ -2163,7 +2226,7 @@ ${text}`;
             const isClipped = ["diamond","hexagon","parallelogram"].includes(node.shape);
             const bw = cfg.thick ? 5 : 2;
             const borderStyle = isClipped
-              ? { border:"none", boxShadow: matchesSearch ? `0 0 0 3px #60A5FA, 0 0 12px #60A5FA66` : (isSelected ? `0 0 0 3px ${GOLD}88` : `0 0 0 2px ${cfg.border}`) }
+              ? { border:"none", filter: matchesSearch ? `drop-shadow(0 0 0 3px #60A5FA) drop-shadow(0 0 8px #60A5FA66)` : isSelected ? `drop-shadow(0 0 0 2.5px ${GOLD})` : `drop-shadow(0 0 0 1.5px ${cfg.border})` }
               : cfg.note
                 ? { borderTop:"none", borderRight:"none", borderBottom:"none", borderLeft:`3px solid ${isSelected?GOLD:cfg.border}`, borderRadius:0, boxShadow: isSelected?`0 0 0 2px ${GOLD}44`:"none" }
                 : { border:`${bw}px solid ${matchesSearch ? "#60A5FA" : isSelected ? GOLD : isConnSrc ? "#60A5FA" : cfg.border}`, boxShadow: matchesSearch ? `0 0 0 3px #60A5FA, 0 0 12px #60A5FA66` : (isSelected ? `0 0 0 3px ${GOLD}44` : "0 2px 8px rgba(0,0,0,0.12)") };
@@ -2206,7 +2269,7 @@ ${text}`;
             return (
               <div key={node.id}
                 style={{
-                  position:"absolute", left:node.x, top:node.y, width:180, minHeight:56,
+                  position:"absolute", left:node.x, top:node.y, width: node.w || 180, minHeight:56,
                   background:nodeBg,
                   padding:"8px 10px", cursor:"move",
                   userSelect:"none",
@@ -2226,12 +2289,12 @@ ${text}`;
                 {editingNodeId === node.id ? (
                   <textarea autoFocus defaultValue={node.text}
                     onBlur={e=>{ update({...flow,nodes:nodes.map(n=>n.id===node.id?{...n,text:e.target.value}:n)}); setEditingNodeId(null); }}
-                    style={{ width:"100%", background:"transparent", border:"none", outline:"none", color:nodeTextColor, fontSize:12, resize:"none", fontFamily:"inherit", fontWeight: node.bold ? 700 : 400 }}
+                    style={{ width:"100%", background:"transparent", border:"none", outline:"none", color:nodeTextColor, fontSize: node.fontSize || 12, resize:"none", fontFamily:"inherit", fontWeight: node.bold ? 700 : 400, textAlign: node.textAlign || "left" }}
                     rows={3}
                     onPointerDown={e=>e.stopPropagation()}
                   />
                 ) : (
-                  <div style={{ fontSize:12, color:nodeTextColor, lineHeight:1.4, fontWeight: node.bold ? 700 : 400 }}
+                  <div style={{ fontSize: node.fontSize || 12, color:nodeTextColor, lineHeight:1.4, fontWeight: node.bold ? 700 : 400, textAlign: node.textAlign || "left" }}
                     onDoubleClick={e=>{ e.stopPropagation(); setEditingNodeId(node.id); }}>
                     {node.text}
                   </div>
