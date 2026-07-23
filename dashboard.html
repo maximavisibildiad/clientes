@@ -7678,6 +7678,7 @@ function MetodoGrowthPartner() {
   const [fbStatus, setFbStatus] = useState("sync"); // "sync" | "ok" | "error"
   const saveTimer = useRef(null);
   const lastSaveTs = useRef(0);
+  const firebaseInitDone = useRef(false); // protege auto-save de disparar antes de que Firebase responda
   const [teamUnlocked, setTeamUnlocked] = useState(false);
   const [teamPinInput, setTeamPinInput] = useState("");
   const [teamPinError, setTeamPinError] = useState(false);
@@ -7699,12 +7700,14 @@ function MetodoGrowthPartner() {
 
           if (fbTime > localTs + 2000) {
             // Firebase es más nuevo → usar Firebase
+            firebaseInitDone.current = true;
             setData(getInitialData(clean));
             storageSet(clean);
             storageSetTs(fbTime);
             lastSaveTs.current = fbTime;
           } else if (isInitial && localTs >= fbTime) {
             // Local es más nuevo o igual → mantener local y empujar a Firebase
+            firebaseInitDone.current = true;
             const localData = storageGet();
             if (localData && localData.clients) {
               const ts = localTs || Date.now();
@@ -7717,9 +7720,12 @@ function MetodoGrowthPartner() {
             storageSet(clean);
             storageSetTs(fbTime);
             lastSaveTs.current = fbTime;
+          } else if (isInitial) {
+            firebaseInitDone.current = true;
           }
         } else if (isInitial) {
           // Firebase vacío → subir datos locales
+          firebaseInitDone.current = true;
           const localData = storageGet();
           if (localData && localData.clients) {
             const ts = localTs || Date.now();
@@ -7737,6 +7743,8 @@ function MetodoGrowthPartner() {
   }, []);
 
   // Auto-save: localStorage + Firebase
+  // Protegido: no escribe a Firebase hasta que la sincronización inicial de Firebase haya terminado
+  // Esto evita que un dispositivo con localStorage vacío pise datos reales antes de recibirlos
   useEffect(() => {
     clearTimeout(saveTimer.current);
     setSaved(false);
@@ -7744,13 +7752,14 @@ function MetodoGrowthPartner() {
       const ts = Date.now();
       storageSet(data);
       storageSetTs(ts);
+      if (!firebaseInitDone.current) return; // esperar a Firebase antes de escribir
       const ref = getFbRef();
       if (ref) {
         lastSaveTs.current = ts;
         ref.set({ ...data, _ts: ts }).catch(() => setFbStatus("error"));
       }
       setSaved(true);
-    }, 1000);
+    }, 1500); // aumentado a 1.5s para dar más margen a Firebase en redes lentas (ej. celular)
     return () => clearTimeout(saveTimer.current);
   }, [data]);
 
