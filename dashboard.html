@@ -219,7 +219,10 @@ function storageSetTs(ts) {
   try { localStorage.setItem(STORAGE_KEY + "_ts", ts.toString()); } catch(_) {}
 }
 
-// ─── GEMA TASKS (261) ─────────────────────────────────────────────────────────
+// ─── GEMA TASKS (264) ─────────────────────────────────────────────────────────
+// n:262-264 = [GP] agregadas 2026-07-22, ver data/changelog.md — cubren el hueco de
+// clientes SIN equipo comercial propio (dueño/socio es su propio vendedor), caso
+// origen: Alexander Odontólogo.
 const GEMA_TASKS = [
   { n:1, week:"Semana 1", area:"Administrativo", title:"[GEMA V4] Firma oficial del contrato B2B (Equity + Fee o Fee + Success).", owner:"COO" },
   { n:2, week:"Semana 1", area:"Administrativo", title:"[GEMA V4] Inserción de Cláusula de Propiedad Intelectual (Sistema e IA son de la agencia).", owner:"COO" },
@@ -371,6 +374,8 @@ const GEMA_TASKS = [
   { n:148, week:"Semana 3", area:"Estrategia", title:"[TUYO] Creacion de speech presencial con objeciones.", owner:"JP" },
   { n:149, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Creación de usuarios y permisos en CRM para vendedores.", owner:"CAIO" },
   { n:150, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Entrega de manuales de atención 'Método de la Agencia'.", owner:"AM" },
+  { n:262, week:"Semana 3", area:"Comercial", title:"[GP] Entrega del Cuadro Diario Comercial + manuales de recordatorio de cita y consultorio — solo si el cliente NO tiene equipo comercial propio (el dueño/socio hace sus propias llamadas).", owner:"AM" },
+  { n:263, week:"Semana 3", area:"Comercial", title:"[GP] Acordar día y hora fija de la reunión semanal de revisión con el cliente — queda agendada en firme, nunca \"para coordinar después\".", owner:"AM" },
   { n:151, week:"Semana 3", area:"Administrativo", title:"[TUYO] crear archivo oficial de la empresa (metodologia+nombre de la empresa+genelypse).", owner:"JP" },
   { n:152, week:"Semana 3", area:"Administrativo", title:"[TUYO] CREAR DENTRO DEL ARCHIVO METODOLOGIA UNA PESTAÑA DE know-how.", owner:"JP" },
   { n:153, week:"Semana 3", area:"Administrativo", title:"[TUYO] manual de funciones.", owner:"JP" },
@@ -448,6 +453,7 @@ const GEMA_TASKS = [
   { n:225, week:"Semana 4+", area:"Administrativo", title:"[GEMA V4] Conciliación de Ventas (Auditoría Pasarelas): CRM vs Dinero.", owner:"COO" },
   { n:226, week:"Semana 4+", area:"Administrativo", title:"[GEMA V4] Ejecución de la Guillotina: Alerta de rescisión si falla cerrador.", owner:"COO" },
   { n:227, week:"Semana 4+", area:"Comercial", title:"[GEMA V4] Sesión de retroalimentación estratégica con el cliente.", owner:"AM" },
+  { n:264, week:"Semana 4+", area:"Comercial", title:"[GP] Reunión semanal de revisión con el cliente (recurrente) — clientes con comercial propio: revisar cuadro diario, tasas de contacto/agenda/show-up. Si se reprograma 2+ veces seguidas, escalar a JP el mismo día.", owner:"AM" },
   { n:228, week:"Semana 4+", area:"Tráfico y Sistemas", title:"[GEMA V4] Mantenimiento técnico mensual de la API y el SaaS.", owner:"CAIO" },
   { n:229, week:"Semana 4+", area:"Comercial", title:"[GEMA V4] Auditoría diaria de primer contacto (Velocity).", owner:"AM" },
   { n:230, week:"Semana 4+", area:"Comercial", title:"[GEMA V4] Clínica de ventas diaria (Revisión de chats grabados).", owner:"AM" },
@@ -531,25 +537,25 @@ const FULL_STEPS = [
 // ─── LAUNCH PHASES (cronograma) ───────────────────────────────────────────────
 const LAUNCH_PHASES = [
   // Pre-lanzamiento (antes de startDate)
-  { id:"claridad",    group:"pre",  type:"ext", name:"Sesión de Claridad",                    offset:-21, defaultOwner:"Setter",   color:"#60A5FA", note:"" },
-  { id:"diagnostico", group:"pre",  type:"ext", name:"Diagnóstico de Viabilidad",              offset:-18, defaultOwner:"Setter",   color:"#60A5FA", note:"" },
+  { id:"claridad",    group:"pre",  type:"ext", name:"Sesión de Claridad",                    offset:-21, defaultOwner:"Setter",   color:"#60A5FA", note:"Primer contacto — mapear dolor real y encaje antes de cotizar" },
+  { id:"diagnostico", group:"pre",  type:"ext", name:"Diagnóstico de Viabilidad",              offset:-18, defaultOwner:"Setter",   color:"#60A5FA", note:"Cuestionario de diagnóstico comercial completo — sin esto no se cotiza" },
   { id:"proyeccion",  group:"pre",  type:"ext", name:"Proyección Financiera",                  offset:-14, defaultOwner:"Traffic",  color:"#60A5FA", note:"Va con reunión interna antes" },
-  { id:"revision",    group:"pre",  type:"ext", name:"Revisión de Promedio",                   offset:-12, defaultOwner:"Setter",   color:"#60A5FA", note:"" },
-  { id:"acuerdo",     group:"pre",  type:"ext", name:"Claridad del Acuerdo",                   offset:-7,  defaultOwner:"Legal",    color:"#60A5FA", note:"" },
-  { id:"firma",       group:"pre",  type:"ext", name:"Firma del Acuerdo",                      offset:-3,  defaultOwner:"Legal",    color:"#60A5FA", note:"" },
+  { id:"revision",    group:"pre",  type:"ext", name:"Revisión de Promedio",                   offset:-12, defaultOwner:"Setter",   color:"#60A5FA", note:"Presentar propuesta con proyección y condiciones — objetivo: acuerdo verbal" },
+  { id:"acuerdo",     group:"pre",  type:"ext", name:"Claridad del Acuerdo",                   offset:-7,  defaultOwner:"Legal",    color:"#60A5FA", note:"Contrato + alcance + cuestionario enviados — sin ambigüedad en comisiones/garantía" },
+  { id:"firma",       group:"pre",  type:"ext", name:"Firma del Acuerdo",                      offset:-3,  defaultOwner:"Legal",    color:"#60A5FA", note:"Contrato firmado + pago de setup confirmado — dispara el Día 0" },
   // Semana 1 (startDate = Día 0)
-  { id:"arranque",    group:"sem1", type:"ext", name:"Sesión de Arranque",                     offset:0,   defaultOwner:"Setter",   color:"#D4AF37", note:"" },
-  { id:"estrategia",  group:"sem1", type:"int", name:"Sesión Estrategia General",              offset:2,   defaultOwner:"Traffic",  color:"#D4AF37", note:"" },
-  { id:"oferta",      group:"sem1", type:"int", name:"Creación Oferta Irresistible y Guiones", offset:4,   defaultOwner:"Setter",   color:"#D4AF37", note:"" },
+  { id:"arranque",    group:"sem1", type:"ext", name:"Sesión de Arranque",                     offset:0,   defaultOwner:"Setter",   color:"#D4AF37", note:"Kick-off 60 min — expectativas, accesos, horarios" },
+  { id:"estrategia",  group:"sem1", type:"int", name:"Sesión Estrategia General",              offset:2,   defaultOwner:"Traffic",  color:"#D4AF37", note:"Requiere Contexto + ICP + Servicios y Catálogo completos (pestaña Metodología)" },
+  { id:"oferta",      group:"sem1", type:"int", name:"Creación Oferta Irresistible y Guiones", offset:4,   defaultOwner:"Setter",   color:"#D4AF37", note:"Requiere la Sesión de Estrategia General aprobada" },
   { id:"reuniones_ok",group:"sem1", type:"ext", name:"Reuniones de Arranque ejecutadas — Día 7", offset:6,  defaultOwner:"Director", color:"#D4AF37", note:"Todas las reuniones agendadas deben ocurrir dentro de los primeros 7 días" },
   // Semana 2
-  { id:"ads",         group:"sem2", type:"ext", name:"Grabación Ads",                          offset:7,   defaultOwner:"Setter",   color:"#F59E0B", note:"" },
-  { id:"metodologia", group:"sem2", type:"int", name:"Creación Metodología Base",              offset:10,  defaultOwner:"Director", color:"#F59E0B", note:"" },
-  { id:"crm",         group:"sem2", type:"int", name:"Automatizar CRM",                        offset:12,  defaultOwner:"Director", color:"#F59E0B", note:"" },
+  { id:"ads",         group:"sem2", type:"ext", name:"Grabación Ads",                          offset:7,   defaultOwner:"Setter",   color:"#F59E0B", note:"Requiere brief de creativos aprobado — mínimo 3 piezas" },
+  { id:"metodologia", group:"sem2", type:"int", name:"Creación Metodología Base",              offset:10,  defaultOwner:"Director", color:"#F59E0B", note:"Completar la pestaña Metodología con los guiones ya definidos en Semana 1" },
+  { id:"crm",         group:"sem2", type:"int", name:"Automatizar CRM",                        offset:12,  defaultOwner:"Director", color:"#F59E0B", note:"Pipeline + tags + tasks + workflows en GHL, según el Flujo CRM ya definido" },
   // Semana 3 — Lanzamiento
   { id:"closers",     group:"sem3", type:"ext", name:"Entrenamiento Closers",                  offset:14,  defaultOwner:"Director", color:"#22C55E", note:"1-3 días de inducción con paso a paso" },
-  { id:"campanas",    group:"sem3", type:"int", name:"Lanzamiento Campañas",                   offset:18,  defaultOwner:"Traffic",  color:"#22C55E", note:"" },
-  { id:"maquinaria",  group:"sem3", type:"ext", name:"Lanzamiento Maquinaria",                 offset:21,  defaultOwner:"Director", color:"#22C55E", note:"" },
+  { id:"campanas",    group:"sem3", type:"int", name:"Lanzamiento Campañas",                   offset:18,  defaultOwner:"Traffic",  color:"#22C55E", note:"Requiere Gate Full: creativos + pixel + pipeline + nurturing + agente IA, todos listos" },
+  { id:"maquinaria",  group:"sem3", type:"ext", name:"Lanzamiento Maquinaria",                 offset:21,  defaultOwner:"Director", color:"#22C55E", note:"Confirmar que el loop completo corrió sin errores antes de escalar presupuesto" },
   // Post-lanzamiento
   { id:"reporte_dia", group:"post", type:"int", name:"Reporte Diario Comercial — proceso activo", offset:22, defaultOwner:"Setter", color:"#A78BFA", note:"Mensajes recibidos · Llamadas realizadas · Preguntas frecuentes del día" },
   { id:"reunion_kpi", group:"post", type:"ext", name:"Reunión Semanal Revisión KPIs",          offset:28,  defaultOwner:"Director", color:"#A78BFA", note:"Recurrente cada semana · CPL · Contactabilidad · Cierre · ROAS" },
@@ -2749,19 +2755,19 @@ function LaunchTab({ client, onChange, globalLaunchPhases, globalMvpSteps, globa
 
 // ─── METODOLOGIA TAB ──────────────────────────────────────────────────────────
 const METODO_SECTIONS = [
-  { id:"contexto",      label:"Contexto del Cliente",               icon:"🏢", hint:"Quiénes son, qué venden, precio, equipo actual, CRM y fecha de inicio con GP." },
-  { id:"nicho",         label:"Nicho & ICP del Mercado",            icon:"🎯", hint:"Comportamiento del comprador ideal, objeciones reales, competencia y riesgos del nicho." },
-  { id:"servicios",     label:"Servicios y Catálogo",               icon:"📋", hint:"Catálogo completo con precios, combos, producto de mayor margen y upsell natural." },
-  { id:"pagos",         label:"Métodos de Pago + Orden de Oferta",  icon:"💳", hint:"Métodos disponibles y la secuencia obligatoria: financiación primero, contado al final." },
-  { id:"flujo_ventas",  label:"Flujo Macro de Ventas",              icon:"🔁", hint:"Mapa completo de anuncio a cierre: tiempos críticos, handoffs y puntos de quiebre." },
-  { id:"crm",           label:"Flujo CRM + Automatización",         icon:"🔄", hint:"Etapas del pipeline, reglas de CRM, bots activos y árbol de decisión de automatización." },
-  { id:"tipos_cliente", label:"Tipos de Cliente & Contactabilidad", icon:"👤", hint:"4 casos según cómo llegó el lead + protocolo exacto de reintentos por caso." },
-  { id:"setter",        label:"Guión — Setter",                     icon:"📞", hint:"Pre-contacto, apertura, calificación, handoff al Closer y nota de CRM.", copy:true },
-  { id:"closer1",       label:"Guión — Closer 1",                   icon:"🎯", hint:"5 pasos: Intro → Transición → Indagación → Oferta → Cierre parcial + objeciones.", copy:true },
-  { id:"closer2",       label:"Guión — Closer 2 / 3",               icon:"🏆", hint:"Seguimiento 24-48h (C2) y último intento personal (C3) antes de mover a RMK.", copy:true },
-  { id:"roles",         label:"Roles + Cronograma por Cargo",       icon:"👥", hint:"Funciones detalladas por cargo + cronograma con 1, 2 o 3 asesores." },
-  { id:"jornada",       label:"Instrucciones de Jornada",           icon:"⏱️", hint:"Secuencia exacta del día: inicio, bloques de llamadas, reportes de mediodía y cierre." },
-  { id:"reportes",      label:"Reportes + Excel + Tipificación",    icon:"📊", hint:"Grupos de WhatsApp, columnas del Excel, tipificación de ventas y métricas clave." },
+  { id:"contexto",      label:"Contexto del Cliente",               icon:"🏢", hint:"Quiénes son, qué venden, precio, equipo actual, CRM y fecha de inicio con GP.", guia:"Sale del cuestionario de diagnóstico (Área 1) — agente: modulo_diagnostico_servicios.md" },
+  { id:"nicho",         label:"Nicho & ICP del Mercado",            icon:"🎯", hint:"Comportamiento del comprador ideal, objeciones reales, competencia y riesgos del nicho.", guia:"Sale del cuestionario (Áreas 2-3) — agente: agente_estratega.md" },
+  { id:"servicios",     label:"Servicios y Catálogo",               icon:"📋", hint:"Catálogo completo con precios, combos, producto de mayor margen y upsell natural.", guia:"Sale del cuestionario + Punto 0 — agente: sop_flujo_comercial_servicios.md" },
+  { id:"pagos",         label:"Métodos de Pago + Orden de Oferta",  icon:"💳", hint:"Métodos disponibles y la secuencia obligatoria: financiación primero, contado al final.", guia:"Si el pago tiene mecanismo no obvio (financiero, tiers), sale de la Sesión de Oferta Irresistible — agente: sop_flujo_comercial_servicios.md, Punto 0" },
+  { id:"flujo_ventas",  label:"Flujo Macro de Ventas",              icon:"🔁", hint:"Mapa completo de anuncio a cierre: tiempos críticos, handoffs y puntos de quiebre.", requiere:"Contexto del Cliente + ICP + Servicios y Catálogo completos primero", guia:"Se construye en la Sesión de Estrategia General — agente: modulo_estrategia_general_cliente.md" },
+  { id:"crm",           label:"Flujo CRM + Automatización",         icon:"🔄", hint:"Etapas del pipeline, reglas de CRM, bots activos y árbol de decisión de automatización." , requiere:"Contexto del Cliente + ICP + Servicios y Catálogo completos primero", guia:"Traduce el Flujo Macro de Ventas a Tags/Tasks/Notes/Workflows de GHL — agente: modulo_estrategia_general_cliente.md + plantilla_bot_ghl_servicios.md" },
+  { id:"tipos_cliente", label:"Tipos de Cliente & Contactabilidad", icon:"👤", hint:"4 casos según cómo llegó el lead + protocolo exacto de reintentos por caso.", guia:"Protocolo de contactabilidad — agente: manual_contactabilidad_objeciones.md" },
+  { id:"setter",        label:"Guión — Setter",                     icon:"📞", hint:"Pre-contacto, apertura, calificación, handoff al Closer y nota de CRM.", copy:true, guia:"Guion de calificación — agente: manual_contactabilidad_objeciones.md" },
+  { id:"closer1",       label:"Guión — Closer 1",                   icon:"🎯", hint:"5 pasos: Intro → Transición → Indagación → Oferta → Cierre parcial + objeciones.", copy:true, guia:"Guion de cierre — agente: manual_contactabilidad_objeciones.md" },
+  { id:"closer2",       label:"Guión — Closer 2 / 3",               icon:"🏆", hint:"Seguimiento 24-48h (C2) y último intento personal (C3) antes de mover a RMK.", copy:true, guia:"Guion de seguimiento — agente: manual_contactabilidad_objeciones.md" },
+  { id:"roles",         label:"Roles + Cronograma por Cargo",       icon:"👥", hint:"Funciones detalladas por cargo + cronograma con 1, 2 o 3 asesores.", guia:"Puede importarse del organigrama (botón abajo) — agente: roles_equipo.md" },
+  { id:"jornada",       label:"Instrucciones de Jornada",           icon:"⏱️", hint:"Secuencia exacta del día: inicio, bloques de llamadas, reportes de mediodía y cierre.", guia:"Se ajusta según el cuadro diario comercial — agente: agente_account_manager.md, sección Acompañamiento" },
+  { id:"reportes",      label:"Reportes + Excel + Tipificación",    icon:"📊", hint:"Grupos de WhatsApp, columnas del Excel, tipificación de ventas y métricas clave.", guia:"Reportería recurrente — agentes: reporte_diario.md / reporte_semanal.md" },
 ];
 
 const METODOLOGIA_BASE = {
@@ -3499,6 +3505,12 @@ function MetodologiaTab({ metodologia, onChange, organigrama }) {
                   <div>
                     <div style={{ fontSize:13, fontWeight:700, color:WHITE }}>{sec.label}</div>
                     <div style={{ fontSize:10, color:GRAY, marginTop:1 }}>{sec.hint}</div>
+                    {sec.requiere && (
+                      <div style={{ fontSize:10, color:GOLD, marginTop:3 }}>⚠ Requiere: {sec.requiere}</div>
+                    )}
+                    {sec.guia && (
+                      <div style={{ fontSize:9.5, color:GRAY, marginTop:2, fontStyle:"italic" }}>Guía: {sec.guia}</div>
+                    )}
                   </div>
                 </div>
                 <div style={{ display:"flex", gap:6 }}>
