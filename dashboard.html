@@ -679,7 +679,26 @@ function getInitialData(savedOverride) {
         { id:"wmc4", label:"",                       color:"#F59E0B" },
         { id:"wmc5", label:"",                       color:"#8B5CF6" },
       ],
-      finance: { monthlyData:{}, gastoCategories:{ personales:["Hija","Casa","Juan","Tarjeta"], profesionales:["Softwares","Equipo","Impuestos","Anuncios"], otros:["Vuelos","Muebles"] }, assets:[], liabilities:[] },
+      finance: {
+        monthlyData:{}, gastoCategories:{ personales:["Hija","Casa","Juan","Tarjeta"], profesionales:["Softwares","Equipo","Impuestos","Anuncios"], otros:["Vuelos","Muebles"] }, assets:[], liabilities:[],
+        metricasPersonales: {
+          calculadora: {
+            metaMonto: "", metaPeriodo: "año",
+            valorCliente: 875,
+            tasaCierre: 30, tasaShowUp: 60, tasaAgenda: 4,
+            diasVacaciones: 10,
+            mensajesPorTanda: 10, minutosPorTanda: 20,
+          },
+          seisOcultas: {
+            que:    { ref: "Ecuación nirvánica: A + P + S × T = Meta — A: Avatar de cliente al que apuntás · P: Problema de ese avatar · S: Solución que ofrecés · T: Tiempo necesario. Si definís estos 4 elementos y los sostenés en el tiempo, la meta se vuelve específica y alcanzable.", notas:"" },
+            cuando: { ref: "[COMPLETAR — falta el detalle de esta sección, pegar cuando esté disponible]", notas:"" },
+            porque: { ref: "[COMPLETAR — falta el detalle de esta sección, pegar cuando esté disponible]", notas:"" },
+            como:   { ref: "[COMPLETAR — falta el detalle de esta sección, pegar cuando esté disponible]", notas:"" },
+            donde:  { ref: "Entorno de Crecimiento — el entorno influye en 3 planos: (1) Dónde vivimos — define con quién nos rodeamos y qué tan grandes son nuestras aspiraciones; importa la cultura de crecimiento del lugar, la seguridad, y la diferencia horaria con los clientes. (2) Con quién nos rodeamos — pareja/familia/amistades deben apuntar alto, entender y respetar los proyectos, y motivar a seguir creciendo; si no están alineados pueden convertirse en una carga emocional. (3) El lugar donde trabajamos — impacta directo en la productividad. Checklist de entorno de alto rendimiento: espacio limpio y ordenado, escritorio cómodo, buena luz (preferentemente natural), sonido controlado, celular fuera del alcance, pocas pestañas abiertas (máx 2-3), notificaciones desactivadas, gestión de contraseñas (ej. OnePassword), redes sociales cerradas salvo que sean parte del trabajo.", notas:"" },
+            quien:  { ref: "Capacidad Personal — tener una meta no alcanza: hay que desarrollar las habilidades, creencias y hábitos de la persona que puede conseguirla. Preguntas clave: ¿Quién tengo que ser para lograr esto? ¿Qué habilidades necesito? ¿Qué mentalidad debo desarrollar? ¿Qué comportamientos tengo que adoptar todos los días? El proceso de perseguir la meta es lo que te transforma en la persona capaz de conseguirla.", notas:"" },
+          },
+        },
+      },
       proyeccion: {
         metas: {
           startDate: "2026-07-21",
@@ -5532,7 +5551,7 @@ function FinanzasSection({ personal, onUpdate }) {
   return (
     <div>
       <div style={{ display:"flex", borderBottom:`1px solid ${BORDER}`, marginBottom:20 }}>
-        {[["mensual","Mensual"],["patrimonio","Patrimonio & Deudas"],["vision","Visión $250K"]].map(([id,label])=>(
+        {[["mensual","Mensual"],["patrimonio","Patrimonio & Deudas"],["vision","Visión $250K"],["metricas_personales","Métricas Personales"]].map(([id,label])=>(
           <button key={id} className={`gp-nav-tab${tab===id?" active":""}`} onClick={()=>setTab(id)}>{label}</button>
         ))}
       </div>
@@ -6540,6 +6559,107 @@ function FinanzasSection({ personal, onUpdate }) {
           </div>
         </div>
       )}
+
+      {/* ══ MÉTRICAS PERSONALES ══ */}
+      {tab==="metricas_personales" && (() => {
+        const mp   = finance.metricasPersonales || { calculadora:{}, seisOcultas:{} };
+        const calc = mp.calculadora || {};
+        const seis = mp.seisOcultas || {};
+        const updateCalc   = (patch) => onUpdate({ finance: { ...finance, metricasPersonales: { ...mp, calculadora: { ...calc, ...patch } } } });
+        const updateOculta = (key, patch) => onUpdate({ finance: { ...finance, metricasPersonales: { ...mp, seisOcultas: { ...seis, [key]: { ...(seis[key]||{}), ...patch } } } } });
+
+        const metaMonto    = parseFloat(calc.metaMonto)    || 0;
+        const valorCliente = parseFloat(calc.valorCliente) || 0;
+        const tc  = (parseFloat(calc.tasaCierre)  || 0) / 100;
+        const sur = (parseFloat(calc.tasaShowUp)  || 0) / 100;
+        const ta  = (parseFloat(calc.tasaAgenda)  || 0) / 100;
+        const diasVac = parseFloat(calc.diasVacaciones) || 0;
+        const diasHabiles = Math.max(0, 365 - 104 - diasVac);
+        const mensajesPorTanda = parseFloat(calc.mensajesPorTanda) || 10;
+        const minutosPorTanda  = parseFloat(calc.minutosPorTanda)  || 20;
+
+        const clientesRequeridos = valorCliente>0 ? metaMonto/valorCliente : 0;
+        const llamadasRequeridas = tc>0  ? clientesRequeridos/tc  : 0;
+        const llamadasNecesarias = sur>0 ? llamadasRequeridas/sur : 0;
+        const mensajesEnPeriodo  = ta>0  ? llamadasNecesarias/ta  : 0;
+        const mensajesPorDia     = diasHabiles>0 ? mensajesEnPeriodo/diasHabiles : 0;
+        const horasPorDia        = mensajesPorTanda>0 ? (mensajesPorDia/mensajesPorTanda)*(minutosPorTanda/60) : 0;
+
+        const fmt0 = (v) => Number.isFinite(v) ? Math.round(v).toLocaleString("en-US") : "—";
+        const fmt1 = (v) => Number.isFinite(v) ? v.toFixed(1) : "—";
+
+        const OCULTAS = [
+          { key:"que",    label:"Qué",     sub:"apuntar" },
+          { key:"cuando", label:"Cuándo",  sub:"teoría del tiempo" },
+          { key:"porque", label:"Por qué", sub:"vacíos motivacionales" },
+          { key:"como",   label:"Cómo",    sub:"causalidad de la meta" },
+          { key:"donde",  label:"Dónde",   sub:"entorno de crecimiento" },
+          { key:"quien",  label:"Quién",   sub:"capacidad personal" },
+        ];
+
+        return (
+          <div>
+            <div style={{ color:GRAY, fontSize:12, marginBottom:18, maxWidth:640 }}>
+              Metodología de ingeniería inversa de metas: partiendo de cuánto querés facturar, calcula cuántos mensajes/llamadas necesitás por día para lograrlo — más el framework "Las 6 Ocultas" para sostener la meta en el tiempo.
+            </div>
+
+            <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:18, marginBottom:20 }}>
+              <div style={{ color:GOLD, fontWeight:700, fontSize:13, marginBottom:14 }}>Calculadora de Ingeniería Inversa</div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
+                <Input  label="Meta ($ a facturar)" value={calc.metaMonto} onChange={v=>updateCalc({metaMonto:v})} type="number" placeholder="ej. 100000" />
+                <Select label="Período de la meta" value={calc.metaPeriodo||"año"} onChange={v=>updateCalc({metaPeriodo:v})}
+                  options={[{value:"año",label:"En un año"},{value:"mes",label:"En un mes"},{value:"trimestre",label:"En un trimestre"}]} />
+                <Input label="Valor promedio del cliente ($)"    value={calc.valorCliente}    onChange={v=>updateCalc({valorCliente:v})}    type="number" />
+                <Input label="Tasa de Cierre — TC (%)"           value={calc.tasaCierre}       onChange={v=>updateCalc({tasaCierre:v})}      type="number" />
+                <Input label="Tasa de Show Up — SUR (%)"         value={calc.tasaShowUp}       onChange={v=>updateCalc({tasaShowUp:v})}       type="number" />
+                <Input label="Tasa de Agenda — TA (%)"           value={calc.tasaAgenda}       onChange={v=>updateCalc({tasaAgenda:v})}       type="number" />
+                <Input label="Días de vacaciones/feriados al año" value={calc.diasVacaciones}  onChange={v=>updateCalc({diasVacaciones:v})}  type="number" />
+                <Input label="Mensajes por tanda"                value={calc.mensajesPorTanda} onChange={v=>updateCalc({mensajesPorTanda:v})} type="number" />
+                <Input label="Minutos por tanda"                 value={calc.minutosPorTanda}  onChange={v=>updateCalc({minutosPorTanda:v})}  type="number" />
+              </div>
+
+              <div style={{ color:GRAY, fontSize:9, fontWeight:700, letterSpacing:2, textTransform:"uppercase", margin:"18px 0 10px" }}>Resultado — cascada de la meta a la acción diaria</div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))", gap:10 }}>
+                {[
+                  { label:"Clientes requeridos",          val: fmt0(clientesRequeridos) },
+                  { label:"Llamadas requeridas (÷TC)",    val: fmt0(llamadasRequeridas) },
+                  { label:"Llamadas necesarias (÷SUR)",   val: fmt0(llamadasNecesarias) },
+                  { label:"Mensajes en el período (÷TA)", val: fmt0(mensajesEnPeriodo) },
+                  { label:"Días hábiles/año",             val: fmt0(diasHabiles), dim:true },
+                  { label:"Mensajes/día",                 val: fmt0(mensajesPorDia), highlight:true },
+                  { label:"Horas/día en prospección",     val: fmt1(horasPorDia)+"h", highlight:true },
+                ].map(({label,val,highlight,dim})=>(
+                  <div key={label} style={{ background:"#0a0a0b", border:`1px solid ${highlight?GOLD_DIM:BORDER}`, borderRadius:10, padding:"12px 14px" }}>
+                    <div style={{ color:GRAY, fontSize:9, fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:5 }}>{label}</div>
+                    <div style={{ color: highlight?GOLD:(dim?GRAY:WHITE), fontWeight:800, fontSize:18 }}>{val}</div>
+                  </div>
+                ))}
+              </div>
+              {(!metaMonto || !valorCliente) && (
+                <div style={{ color:GRAY, fontSize:11, marginTop:12, padding:"10px 14px", background:"#111113", borderRadius:8 }}>
+                  Completá la meta y el valor de cliente para ver el resultado.
+                </div>
+              )}
+            </div>
+
+            <div style={{ color:GOLD, fontWeight:700, fontSize:13, marginBottom:4 }}>Las 6 Ocultas — framework para sostener la meta</div>
+            <div style={{ color:GRAY, fontSize:11, marginBottom:14 }}>Definir una meta no alcanza por sí solo — responder estas 6 preguntas ayuda a entender su verdadera naturaleza.</div>
+            <div style={{ display:"grid", gap:10 }}>
+              {OCULTAS.map(({key,label,sub}) => {
+                const o = seis[key] || { ref:"", notas:"" };
+                return (
+                  <div key={key} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:14 }}>
+                    <div style={{ color:WHITE, fontWeight:700, fontSize:12, marginBottom:2 }}>{label} <span style={{ color:GRAY, fontWeight:400, fontSize:11 }}>· {sub}</span></div>
+                    <div style={{ color:GRAY, fontSize:11, lineHeight:1.5, marginTop:6, marginBottom:8 }}>{o.ref}</div>
+                    <textarea value={o.notas||""} onChange={e=>updateOculta(key,{notas:e.target.value})} placeholder="Notas propias sobre esta pregunta..."
+                      style={{ width:"100%", minHeight:44, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"8px 10px", color:WHITE, fontSize:12, outline:"none", boxSizing:"border-box", resize:"vertical", fontFamily:"inherit" }} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
