@@ -679,7 +679,67 @@ function getInitialData(savedOverride) {
         { id:"wmc4", label:"",                       color:"#F59E0B" },
         { id:"wmc5", label:"",                       color:"#8B5CF6" },
       ],
-      finance: { monthlyData:{}, gastoCategories:{ personales:["Hija","Casa","Juan","Tarjeta"], profesionales:["Softwares","Equipo","Impuestos","Anuncios"], otros:["Vuelos","Muebles"] }, assets:[], liabilities:[] }
+      finance: { monthlyData:{}, gastoCategories:{ personales:["Hija","Casa","Juan","Tarjeta"], profesionales:["Softwares","Equipo","Impuestos","Anuncios"], otros:["Vuelos","Muebles"] }, assets:[], liabilities:[] },
+      proyeccion: {
+        metas: {
+          startDate: "2026-07-21",
+          mrrActual: 2050,
+          metaFinal: 40000,
+          hitoIntermedio: 10000,
+          ticketNuevo: 875,
+        },
+        kpis: { tasaAgenda:4, tasaCalificacion:33, showUpRate:60, tasaCierre:30 },
+        anual: {
+          aovTC: 875,
+          objetivoCashCollected: 40000,
+          feccuPct: 70, feccpPct: 20, beccPct: 10,
+          quarters: {
+            q1: { leads:"", llamadasAgendadas:"", llamadasEfectivas:"", cierres:"", aovTC:"", feccu:"", feccp:"", becc:"", ingresosTotales:"",
+                  personalVentas:"", personalProducto:"", personalOperaciones:"", personalMarketing:"", softwares:"", reembolsos:"", otros:"", anuncios:"" },
+            q2: { leads:"", llamadasAgendadas:"", llamadasEfectivas:"", cierres:"", aovTC:"", feccu:"", feccp:"", becc:"", ingresosTotales:"",
+                  personalVentas:"", personalProducto:"", personalOperaciones:"", personalMarketing:"", softwares:"", reembolsos:"", otros:"", anuncios:"" },
+            q3: { leads:"", llamadasAgendadas:"", llamadasEfectivas:"", cierres:"", aovTC:"", feccu:"", feccp:"", becc:"", ingresosTotales:"",
+                  personalVentas:"", personalProducto:"", personalOperaciones:"", personalMarketing:"", softwares:"", reembolsos:"", otros:"", anuncios:"" },
+            q4: { leads:"", llamadasAgendadas:"", llamadasEfectivas:"", cierres:"", aovTC:"", feccu:"", feccp:"", becc:"", ingresosTotales:"",
+                  personalVentas:"", personalProducto:"", personalOperaciones:"", personalMarketing:"", softwares:"", reembolsos:"", otros:"", anuncios:"" },
+          },
+        },
+        mensual: {
+          escenarioActivo: "A",
+          escenarios: {
+            A: [
+              { id:"a1", label:"Mes 1", periodo:"21-31 jul 2026", convDia:"10", cierres:0, llamadasAgendadas:"", llamadasEfectivas:"", aovTC:875, feccu:1435, feccp:410, becc:205, ingresosTotales:2050 },
+              { id:"a2", label:"Mes 2", periodo:"Agosto 2026", convDia:"25", cierres:2, llamadasAgendadas:"", llamadasEfectivas:"", aovTC:875, feccu:2660, feccp:760, becc:380, ingresosTotales:3800 },
+              { id:"a3", label:"Mes 3", periodo:"Septiembre 2026", convDia:"50", cierres:3, llamadasAgendadas:"", llamadasEfectivas:"", aovTC:875, feccu:4497.5, feccp:1285, becc:642.5, ingresosTotales:6425 },
+              { id:"a4", label:"Mes 4", periodo:"Octubre 2026", convDia:"75", cierres:6, llamadasAgendadas:"", llamadasEfectivas:"", aovTC:875, feccu:8172.5, feccp:2335, becc:1167.5, ingresosTotales:11675 },
+              { id:"a5", label:"Mes 5", periodo:"Noviembre 2026", convDia:"100", cierres:7, llamadasAgendadas:"", llamadasEfectivas:"", aovTC:875, feccu:12460, feccp:3560, becc:1780, ingresosTotales:17800 },
+              { id:"a6", label:"Mes 6", periodo:"Diciembre 2026", convDia:"120", cierres:9, llamadasAgendadas:"", llamadasEfectivas:"", aovTC:875, feccu:17972.5, feccp:5135, becc:2567.5, ingresosTotales:25675 },
+            ],
+            B: [
+              { id:"b1", label:"Mes 1", periodo:"21-31 jul 2026", convDia:"0→14", cierres:0, llamadasAgendadas:"", llamadasEfectivas:"", aovTC:875, feccu:1435, feccp:410, becc:205, ingresosTotales:2050 },
+              { id:"b2", label:"Mes 2", periodo:"Agosto 2026", convDia:"14→57", cierres:2, llamadasAgendadas:"", llamadasEfectivas:"", aovTC:875, feccu:2660, feccp:760, becc:380, ingresosTotales:3800 },
+              { id:"b3", label:"Mes 3", periodo:"Septiembre 2026", convDia:"57→99", cierres:6, llamadasAgendadas:"", llamadasEfectivas:"", aovTC:875, feccu:6335, feccp:1810, becc:905, ingresosTotales:9050 },
+              { id:"b4", label:"Mes 4", periodo:"Octubre 2026", convDia:"99→142", cierres:9, llamadasAgendadas:"", llamadasEfectivas:"", aovTC:875, feccu:11847.5, feccp:3385, becc:1692.5, ingresosTotales:16925 },
+              { id:"b5", label:"Mes 5", periodo:"Noviembre 2026", convDia:"142→184", cierres:11, llamadasAgendadas:"", llamadasEfectivas:"", aovTC:875, feccu:18585, feccp:5310, becc:2655, ingresosTotales:26550 },
+              { id:"b6", label:"Mes 6", periodo:"Diciembre 2026", convDia:"184→227", cierres:16, llamadasAgendadas:"", llamadasEfectivas:"", aovTC:875, feccu:28385, feccp:8110, becc:4055, ingresosTotales:40550 },
+            ],
+          },
+        },
+        optimizacion: {
+          metricas: [
+            { id:"opt_leads",            nombre:"Leads",              valorActual:"", kpiObjetivo:"",       accionables:[] },
+            { id:"opt_tasaAgenda",       nombre:"Tasa de Agenda",     valorActual:"", kpiObjetivo:"4%",      accionables:[] },
+            { id:"opt_tasaCancelacion",  nombre:"Tasa de Cancelación",valorActual:"", kpiObjetivo:"",       accionables:[] },
+            { id:"opt_tasaShowUp",       nombre:"Tasa de Show Up",    valorActual:"", kpiObjetivo:"60%",     accionables:[] },
+            { id:"opt_tasaCierre",       nombre:"Tasa de Cierre",     valorActual:"", kpiObjetivo:"30%",     accionables:[] },
+            { id:"opt_aovTC",            nombre:"AOV TC",             valorActual:"", kpiObjetivo:"$875",    accionables:[] },
+            { id:"opt_feccu",            nombre:"FECCU",              valorActual:"", kpiObjetivo:"70%",     accionables:[] },
+            { id:"opt_feccp",            nombre:"FECCP",              valorActual:"", kpiObjetivo:"20%",     accionables:[] },
+            { id:"opt_becc",             nombre:"BECC",               valorActual:"", kpiObjetivo:"10%",     accionables:[] },
+          ],
+        },
+        diario: { entries: [] },
+      },
     },
     globalTasks: GEMA_TASKS.map(t => ({...t, id:"gt_"+t.n})),
     globalMvpSteps: MVP_STEPS.map(s => ({...s, id:"mvp_"+s.n})),
@@ -6484,6 +6544,653 @@ function FinanzasSection({ personal, onUpdate }) {
   );
 }
 
+// ─── PROYECCIÓN SECTION ───────────────────────────────────────────────────────
+function ProyeccionSection({ personal, onUpdate }) {
+  const { useState: us } = React;
+  const proy    = personal.proyeccion || {};
+  const metas   = proy.metas   || {};
+  const kpis    = proy.kpis    || {};
+  const anual   = proy.anual   || {};
+  const mensual = proy.mensual || {};
+  const optim   = proy.optimizacion || {};
+  const diario  = proy.diario  || {};
+  const finance = personal.finance || {};
+  const monthlyData = finance.monthlyData || {};
+  const trm = (finance.salesConfig && finance.salesConfig.usdRate) || 4200;
+
+  // ── Estado (todos los hooks declarados arriba, sin condicionales) ──
+  const [view, setView] = us("anual");
+  const [expandedMetrica, setExpandedMetrica] = us(null);
+  const [newAccInputs, setNewAccInputs] = us({});
+  const emptyEntryForm = () => ({ date: new Date().toISOString().slice(0,10), inversionAds: "", gastosMarketing: "", comisionesVenta: "", leads: "", llamadas: "", llamadasCanceladas: "", noShows: "", llamadasEfectivas: "", cierres: "", feccu: "", feccp: "", becc: "", ingresosTotales: "" });
+  const [entryForm, setEntryForm] = us(emptyEntryForm());
+  const [selMesN, setSelMesN] = us(null);
+
+  // ── Formatters ──
+  const fmtUSD0 = (v) => (v || v===0) ? "$"+Math.round(v).toLocaleString("en-US") : "—";
+  const fmtN    = (v) => (v || v===0) ? Math.round(v).toLocaleString("en-US") : "—";
+
+  // ── Lógica reusada de FinanzasSection (replicada, no importada — mismo objeto personal.finance.monthlyData) ──
+  const toCOP = (i) => {
+    const amt = parseFloat(i.amount) || 0;
+    return i.currency === "USD" ? amt * trm : amt;
+  };
+  const getCashCollected = (key) => {
+    const md = monthlyData[key] || {};
+    const ingresos = md.ingresos || [];
+    if (ingresos.length > 0) return ingresos.reduce((s, i) => s + toCOP(i), 0);
+    return md.cashCollected || 0;
+  };
+  const getTotalGastos = (key) => {
+    const md = monthlyData[key] || {};
+    const ledger = (md.egresos || []).reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+    if (md.egresos !== undefined) return ledger;
+    const gastoCategories = finance.gastoCategories || { personales: [], profesionales: [], otros: [] };
+    const allCats = [
+      ...(gastoCategories.personales || []).map(c => `personales_${c}`),
+      ...(gastoCategories.profesionales || []).map(c => `profesionales_${c}`),
+      ...(gastoCategories.otros || []).map(c => `otros_${c}`),
+    ];
+    const gi = md.gastoItems || {};
+    const cat = allCats.reduce((s, k) => s + (gi[k] || 0), 0);
+    return cat > 0 ? cat : (md.gastos || 0);
+  };
+  const cashCollectedUSD = (key) => getCashCollected(key) / trm;
+  const totalGastosUSD   = (key) => getTotalGastos(key) / trm;
+  const monthKey = (year, monthIdx0) => `${year}-${String(monthIdx0 + 1).padStart(2, "0")}`;
+
+  const currentYear = new Date().getFullYear();
+  const facturacionAcumulada = Array.from({ length: 12 }, (_, m) => cashCollectedUSD(monthKey(currentYear, m))).reduce((a, b) => a + b, 0);
+  const egresosAcumulados    = Array.from({ length: 12 }, (_, m) => totalGastosUSD(monthKey(currentYear, m))).reduce((a, b) => a + b, 0);
+
+  // ── Fechas relativas (Mes 1 = mes de metas.startDate) ──
+  const startDateStr = metas.startDate || "2026-07-21";
+  const startYear  = parseInt(startDateStr.slice(0, 4), 10);
+  const startMonth = parseInt(startDateStr.slice(5, 7), 10) - 1;
+  const mesNKey = (n) => {
+    const idx = startMonth + (n - 1);
+    const y = startYear + Math.floor(idx / 12);
+    const m = ((idx % 12) + 12) % 12;
+    return `${y}-${String(m + 1).padStart(2, "0")}`;
+  };
+  const mesNForDate = (dateStr) => {
+    if (!dateStr) return null;
+    const y = parseInt(dateStr.slice(0, 4), 10), m = parseInt(dateStr.slice(5, 7), 10) - 1;
+    return (y - startYear) * 12 + (m - startMonth) + 1;
+  };
+
+  // ── Updaters ──
+  const updateProy   = (patch) => onUpdate({ proyeccion: { ...proy, ...patch } });
+  const updateMetas  = (patch) => updateProy({ metas: { ...metas, ...patch } });
+  const updateKpis   = (patch) => updateProy({ kpis: { ...kpis, ...patch } });
+  const updateAnual  = (patch) => updateProy({ anual: { ...anual, ...patch } });
+  const updateQuarter = (q, patch) => updateAnual({ quarters: { ...(anual.quarters || {}), [q]: { ...((anual.quarters || {})[q] || {}), ...patch } } });
+  const updateMensual = (patch) => updateProy({ mensual: { ...mensual, ...patch } });
+  const updateOptim   = (patch) => updateProy({ optimizacion: { ...optim, ...patch } });
+  const updateDiario  = (patch) => updateProy({ diario: { ...diario, ...patch } });
+
+  // ── Combinada / Leads Necesarios (bloque A) ──
+  const combinedRate = ((kpis.tasaAgenda||0)/100) * ((kpis.tasaCalificacion||0)/100) * ((kpis.showUpRate||0)/100) * ((kpis.tasaCierre||0)/100);
+  const mrrNuevoNecesario   = Math.max(0, (anual.objetivoCashCollected || 0) - (metas.mrrActual || 0));
+  const clientesNecesarios  = (metas.ticketNuevo || 0) > 0 ? Math.ceil(mrrNuevoNecesario / metas.ticketNuevo) : 0;
+  const leadsNecesarios     = combinedRate > 0 ? Math.ceil(clientesNecesarios / combinedRate) : 0;
+
+  const hitoPct = (anual.objetivoCashCollected || 0) > 0 ? Math.min(100, (metas.hitoIntermedio || 0) / anual.objetivoCashCollected * 100) : 0;
+  const facturacionPct = (anual.objetivoCashCollected || 0) > 0 ? Math.min(100, facturacionAcumulada / anual.objetivoCashCollected * 100) : 0;
+
+  // ── Estilos compartidos ──
+  const cardStyle = { background: CARD, borderRadius: 12, padding: 16, border: `1px solid ${BORDER}` };
+  const labelStyle = { color: GRAY, fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 };
+  const numInputStyle = { width: "100%", background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "5px 7px", color: WHITE, fontSize: 12, outline: "none", boxSizing: "border-box", textAlign: "right" };
+  const thStyle = { textAlign: "right", padding: "6px 8px", borderBottom: `1px solid ${BORDER}`, color: GRAY, fontWeight: 600, fontSize: 11, whiteSpace: "nowrap" };
+  const tdLabelStyle = { padding: "6px 8px", color: WHITE, fontSize: 12 };
+
+  const QNumInput = ({ value, onChange }) => (
+    <input type="number" value={value ?? ""} onChange={e => onChange(e.target.value)} style={numInputStyle} />
+  );
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // VISTA A — RESUMEN ANUAL
+  // ═══════════════════════════════════════════════════════════════════════
+  const renderAnual = () => {
+    const q = anual.quarters || {};
+    const ingresoRows = [
+      { key: "leads",              label: "Leads" },
+      { key: "llamadasAgendadas",  label: "Llamadas Agendadas" },
+      { key: "llamadasEfectivas",  label: "Llamadas Efectivas" },
+      { key: "cierres",            label: "Cierres" },
+      { key: "aovTC",              label: "AOV TC", money: true },
+      { key: "feccu",              label: "FECCU", money: true },
+      { key: "feccp",              label: "FECCP", money: true },
+      { key: "becc",               label: "BECC", money: true },
+    ];
+    const egresoRows = [
+      { key: "personalVentas",       label: "Personal de Ventas" },
+      { key: "personalProducto",     label: "Personal de Producto" },
+      { key: "personalOperaciones",  label: "Personal de Operaciones" },
+      { key: "personalMarketing",    label: "Personal de Marketing" },
+      { key: "softwares",            label: "Softwares" },
+      { key: "reembolsos",           label: "Reembolsos" },
+      { key: "otros",                label: "Otros" },
+      { key: "anuncios",             label: "Anuncios" },
+    ];
+    const quarterIngresosTotales = (qk) => {
+      const qd = q[qk] || {};
+      return (parseFloat(qd.feccu) || 0) + (parseFloat(qd.feccp) || 0) + (parseFloat(qd.becc) || 0);
+    };
+    const quarterEgresosTotales = (qk) => {
+      const qd = q[qk] || {};
+      return egresoRows.reduce((s, r) => s + (parseFloat(qd[r.key]) || 0), 0);
+    };
+
+    return (
+      <div>
+        {/* Barra grande de facturación acumulada */}
+        <div style={{ ...cardStyle, marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+            <div style={{ color: WHITE, fontWeight: 700, fontSize: 14 }}>Facturación acumulada {currentYear}</div>
+            <div style={{ color: GOLD, fontWeight: 900, fontSize: 18 }}>{fmtUSD0(facturacionAcumulada)} <span style={{ color: GRAY, fontWeight: 500, fontSize: 12 }}>/ {fmtUSD0(anual.objetivoCashCollected)} meta</span></div>
+          </div>
+          <div style={{ position: "relative", background: "rgba(255,255,255,0.04)", borderRadius: 8, height: 12, overflow: "visible" }}>
+            <div style={{ height: "100%", borderRadius: 8, background: `linear-gradient(90deg,${GOLD_DIM},${GOLD})`, width: `${facturacionPct}%`, transition: "width 0.5s ease" }} />
+            {hitoPct > 0 && hitoPct < 100 && (
+              <div title={`Hito $${(metas.hitoIntermedio||0).toLocaleString("en-US")}`} style={{ position: "absolute", top: -3, bottom: -3, left: `${hitoPct}%`, width: 2, background: "#22C55E", boxShadow: "0 0 6px rgba(34,197,94,0.7)" }} />
+            )}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", color: GRAY, fontSize: 10, marginTop: 6 }}>
+            <span>$0</span>
+            <span style={{ color: "#22C55E" }}>hito ${fmtN(metas.hitoIntermedio)}</span>
+            <span>{fmtUSD0(anual.objetivoCashCollected)}</span>
+          </div>
+        </div>
+
+        {/* KPIs + Ticket + Objetivo + Leads necesarios */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 12, marginBottom: 16 }}>
+          <div style={cardStyle}>
+            <div style={labelStyle}>KPI's de Conversión</div>
+            {[["tasaAgenda","Tasa de Agenda"],["tasaCalificacion","Tasa de Calificación"],["showUpRate","Tasa de Show Up"],["tasaCierre","Tasa de Cierre"]].map(([k,l]) => (
+              <div key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 8 }}>
+                <span style={{ color: GRAY, fontSize: 12 }}>{l}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                  <input type="number" value={kpis[k] ?? ""} onChange={e => updateKpis({ [k]: e.target.value })} style={{ ...numInputStyle, width: 60 }} />
+                  <span style={{ color: GRAY, fontSize: 11 }}>%</span>
+                </div>
+              </div>
+            ))}
+            <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: GRAY, fontSize: 11 }}>Ratio de Conversión combinado</span>
+              <span style={{ color: GOLD, fontWeight: 700, fontSize: 12 }}>{(combinedRate*100).toFixed(4)}%</span>
+            </div>
+          </div>
+
+          <div style={cardStyle}>
+            <div style={labelStyle}>Ticket / AOV</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 8 }}>
+              <span style={{ color: GRAY, fontSize: 12 }}>Ticket a proyectar (clientes nuevos)</span>
+              <input type="number" value={metas.ticketNuevo ?? ""} onChange={e => updateMetas({ ticketNuevo: e.target.value })} style={{ ...numInputStyle, width: 80 }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+              <span style={{ color: GRAY, fontSize: 12 }}>AOV TC (referencia tabla)</span>
+              <input type="number" value={anual.aovTC ?? ""} onChange={e => updateAnual({ aovTC: e.target.value })} style={{ ...numInputStyle, width: 80 }} />
+            </div>
+            <div style={{ color: GRAY, fontSize: 10, marginTop: 10 }}>MRR actual: <span style={{ color: WHITE, fontWeight: 700 }}>{fmtUSD0(metas.mrrActual)}</span></div>
+          </div>
+
+          <div style={cardStyle}>
+            <div style={labelStyle}>Objetivo Cash Collected</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, gap: 8 }}>
+              <span style={{ color: GRAY, fontSize: 12 }}>Monto meta</span>
+              <input type="number" value={anual.objetivoCashCollected ?? ""} onChange={e => updateAnual({ objetivoCashCollected: e.target.value })} style={{ ...numInputStyle, width: 90 }} />
+            </div>
+            {[["feccuPct","FECCU"],["feccpPct","FECCP"],["beccPct","BECC"]].map(([k,l]) => (
+              <div key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6, gap: 8 }}>
+                <span style={{ color: GRAY, fontSize: 11 }}>{l}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input type="number" value={anual[k] ?? ""} onChange={e => updateAnual({ [k]: e.target.value })} style={{ ...numInputStyle, width: 48 }} />
+                  <span style={{ color: GRAY, fontSize: 10 }}>%</span>
+                  <span style={{ color: WHITE, fontSize: 11, fontWeight: 600, minWidth: 62, textAlign: "right" }}>{fmtUSD0((anual.objetivoCashCollected||0) * (anual[k]||0) / 100)}</span>
+                </div>
+              </div>
+            ))}
+            <div style={{ color: (((anual.feccuPct||0)+(anual.feccpPct||0)+(anual.beccPct||0))===100) ? "#22C55E" : "#EF4444", fontSize: 10, marginTop: 4 }}>
+              Suma: {(anual.feccuPct||0)+(anual.feccpPct||0)+(anual.beccPct||0)}%{(((anual.feccuPct||0)+(anual.feccpPct||0)+(anual.beccPct||0))!==100) ? " (debería sumar 100%)" : ""}
+            </div>
+          </div>
+
+          <div style={cardStyle}>
+            <div style={labelStyle}>Leads Necesarios</div>
+            <div style={{ color: GOLD, fontWeight: 900, fontSize: 22 }}>{fmtN(leadsNecesarios)}</div>
+            <div style={{ color: GRAY, fontSize: 10, marginTop: 4 }}>conversaciones para cerrar {fmtN(clientesNecesarios)} clientes nuevos</div>
+            <div style={{ color: GRAY, fontSize: 10, marginTop: 8 }}>MRR nuevo necesario: <span style={{ color: WHITE }}>{fmtUSD0(mrrNuevoNecesario)}</span></div>
+          </div>
+        </div>
+
+        {/* Tabla Leadflow y Conversión / Ingresos */}
+        <div style={{ ...cardStyle, marginBottom: 16, overflowX: "auto" }}>
+          <div style={{ color: WHITE, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>Leadflow y Conversión / Ingresos</div>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
+            <thead>
+              <tr>
+                <th style={{ ...thStyle, textAlign: "left" }}>Métrica</th>
+                <th style={thStyle}>Situación Actual</th>
+                <th style={thStyle}>Q1</th><th style={thStyle}>Q2</th><th style={thStyle}>Q3</th><th style={thStyle}>Q4</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ingresoRows.map(row => (
+                <tr key={row.key}>
+                  <td style={tdLabelStyle}>{row.label}</td>
+                  <td style={{ padding: "6px 8px", textAlign: "right", color: GRAY, fontSize: 12 }}>—</td>
+                  {["q1","q2","q3","q4"].map(qk => (
+                    <td key={qk} style={{ padding: "3px 5px" }}>
+                      <QNumInput value={(q[qk]||{})[row.key]} onChange={v => updateQuarter(qk, { [row.key]: v })} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              <tr>
+                <td style={{ ...tdLabelStyle, fontWeight: 700 }}>Ingresos Totales</td>
+                <td style={{ padding: "6px 8px", textAlign: "right", color: GOLD, fontWeight: 700, fontSize: 12 }}>{fmtUSD0(facturacionAcumulada)}</td>
+                {["q1","q2","q3","q4"].map(qk => (
+                  <td key={qk} style={{ padding: "6px 8px", textAlign: "right", color: GOLD, fontWeight: 700, fontSize: 12 }}>{fmtUSD0(quarterIngresosTotales(qk))}</td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+          <div style={{ color: GRAY, fontSize: 10, marginTop: 8 }}>Ingresos Totales = FECCU + FECCP + BECC del periodo. "Situación Actual" en Leads/Llamadas/Cierres/AOV no se registra en Finanzas — completalos a mano si querés compararlos.</div>
+        </div>
+
+        {/* Tabla Egresos */}
+        <div style={{ ...cardStyle, overflowX: "auto" }}>
+          <div style={{ color: WHITE, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>Egresos</div>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
+            <thead>
+              <tr>
+                <th style={{ ...thStyle, textAlign: "left" }}>Categoría</th>
+                <th style={thStyle}>Situación Actual</th>
+                <th style={thStyle}>Q1</th><th style={thStyle}>Q2</th><th style={thStyle}>Q3</th><th style={thStyle}>Q4</th>
+              </tr>
+            </thead>
+            <tbody>
+              {egresoRows.map(row => (
+                <tr key={row.key}>
+                  <td style={tdLabelStyle}>{row.label}</td>
+                  <td style={{ padding: "6px 8px", textAlign: "right", color: GRAY, fontSize: 12 }}>—</td>
+                  {["q1","q2","q3","q4"].map(qk => (
+                    <td key={qk} style={{ padding: "3px 5px" }}>
+                      <QNumInput value={(q[qk]||{})[row.key]} onChange={v => updateQuarter(qk, { [row.key]: v })} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              <tr>
+                <td style={{ ...tdLabelStyle, fontWeight: 700 }}>Egresos Totales</td>
+                <td style={{ padding: "6px 8px", textAlign: "right", color: "#EF4444", fontWeight: 700, fontSize: 12 }}>{fmtUSD0(egresosAcumulados)}</td>
+                {["q1","q2","q3","q4"].map(qk => (
+                  <td key={qk} style={{ padding: "6px 8px", textAlign: "right", color: "#EF4444", fontWeight: 700, fontSize: 12 }}>{fmtUSD0(quarterEgresosTotales(qk))}</td>
+                ))}
+              </tr>
+              <tr>
+                <td style={{ ...tdLabelStyle, fontWeight: 700 }}>Profit</td>
+                <td style={{ padding: "6px 8px", textAlign: "right", color: (facturacionAcumulada-egresosAcumulados)>=0?"#22C55E":"#EF4444", fontWeight: 700, fontSize: 12 }}>{fmtUSD0(facturacionAcumulada-egresosAcumulados)}</td>
+                {["q1","q2","q3","q4"].map(qk => {
+                  const p = quarterIngresosTotales(qk) - quarterEgresosTotales(qk);
+                  return <td key={qk} style={{ padding: "6px 8px", textAlign: "right", color: p>=0?"#22C55E":"#EF4444", fontWeight: 700, fontSize: 12 }}>{fmtUSD0(p)}</td>;
+                })}
+              </tr>
+            </tbody>
+          </table>
+          <div style={{ color: GRAY, fontSize: 10, marginTop: 8 }}>Egresos Totales = suma de categorías del periodo. Profit = Ingresos Totales − Egresos Totales.</div>
+        </div>
+      </div>
+    );
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // VISTA B — RESUMEN MENSUAL
+  // ═══════════════════════════════════════════════════════════════════════
+  const renderMensual = () => {
+    const escActiva = mensual.escenarioActivo || "A";
+    const escenarios = mensual.escenarios || { A: [], B: [] };
+    const meses = escenarios[escActiva] || [];
+
+    const setMeses = (nuevos) => updateMensual({ escenarios: { ...escenarios, [escActiva]: nuevos } });
+    const updateMes = (id, patch) => setMeses(meses.map(m => m.id === id ? { ...m, ...patch } : m));
+    const addMes = () => {
+      const n = meses.length + 1;
+      setMeses([...meses, { id: "m_"+uid(), label: `Mes ${n}`, periodo: "", convDia: "", cierres: 0, llamadasAgendadas: "", llamadasEfectivas: "", aovTC: metas.ticketNuevo||0, feccu: 0, feccp: 0, becc: 0 }]);
+    };
+    const removeMes = (id) => setMeses(meses.filter(m => m.id !== id));
+
+    const mesIngresosTotales = (m) => (parseFloat(m.feccu)||0) + (parseFloat(m.feccp)||0) + (parseFloat(m.becc)||0);
+
+    const rows = [
+      { key: "llamadasAgendadas", label: "Llamadas Agendadas" },
+      { key: "llamadasEfectivas", label: "Llamadas Efectivas" },
+      { key: "cierres",           label: "Cierres" },
+      { key: "aovTC",             label: "AOV TC" },
+      { key: "feccu",             label: "FECCU" },
+      { key: "feccp",             label: "FECCP" },
+      { key: "becc",              label: "BECC" },
+    ];
+
+    return (
+      <div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, alignItems: "center" }}>
+          <span style={{ color: GRAY, fontSize: 11, marginRight: 4 }}>Escenario:</span>
+          <Pill active={escActiva === "A"} onClick={() => updateMensual({ escenarioActivo: "A" })}>A · Ramp moderado (120/día tope)</Pill>
+          <Pill active={escActiva === "B"} onClick={() => updateMensual({ escenarioActivo: "B" })}>B · Ramp agresivo ($40K al 31-dic)</Pill>
+        </div>
+
+        <div style={{ ...cardStyle, overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 640 }}>
+            <thead>
+              <tr>
+                <th style={{ ...thStyle, textAlign: "left" }}>Métrica</th>
+                {meses.map(m => {
+                  const key = mesNKey(parseInt(m.label.replace(/\D/g,""),10) || 1);
+                  const realUSD = cashCollectedUSD(key);
+                  return (
+                    <th key={m.id} style={{ ...thStyle, minWidth: 110, whiteSpace: "normal", verticalAlign: "top" }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        <div style={{ color: WHITE, fontWeight: 700 }}>{m.label}</div>
+                        <input value={m.periodo||""} onChange={e => updateMes(m.id, { periodo: e.target.value })} placeholder="periodo"
+                          style={{ display: "block", width: "100%", background: "transparent", border: "none", color: GRAY, fontSize: 9, textAlign: "right", outline: "none", boxSizing: "border-box" }} />
+                        <input value={m.convDia||""} onChange={e => updateMes(m.id, { convDia: e.target.value })} placeholder="conv/día"
+                          style={{ display: "block", width: "100%", background: "transparent", border: "none", color: GRAY, fontSize: 9, textAlign: "right", outline: "none", boxSizing: "border-box" }} />
+                        {realUSD > 0 && <div style={{ color: "#22C55E", fontSize: 9, fontWeight: 700 }}>Real: {fmtUSD0(realUSD)}</div>}
+                        <button onClick={() => removeMes(m.id)} title="Eliminar mes" style={{ display: "block", marginLeft: "auto", background: "none", border: "none", color: "#E06C6C", fontSize: 10, cursor: "pointer", padding: 0 }}>eliminar</button>
+                      </div>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(row => (
+                <tr key={row.key}>
+                  <td style={tdLabelStyle}>{row.label}</td>
+                  {meses.map(m => (
+                    <td key={m.id} style={{ padding: "3px 5px" }}>
+                      <QNumInput value={m[row.key]} onChange={v => updateMes(m.id, { [row.key]: v })} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              <tr>
+                <td style={{ ...tdLabelStyle, fontWeight: 700 }}>Ingresos Totales</td>
+                {meses.map(m => (
+                  <td key={m.id} style={{ padding: "6px 8px", textAlign: "right", color: GOLD, fontWeight: 700, fontSize: 12 }}>{fmtUSD0(mesIngresosTotales(m))}</td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
+            <div style={{ color: GRAY, fontSize: 10 }}>Ingresos Totales = FECCU+FECCP+BECC. "Real" bajo cada mes = facturación cargada en Finanzas para ese mes calendario, convertida a USD.</div>
+            <button onClick={addMes} style={{ padding: "7px 16px", background: GOLD, color: "#141414", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>+ Agregar mes</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // VISTA C — OPTIMIZACIÓN DE MÉTRICAS
+  // ═══════════════════════════════════════════════════════════════════════
+  const renderOptimizacion = () => {
+    const metricas = optim.metricas || [];
+    const updateMetrica = (id, patch) => updateOptim({ metricas: metricas.map(m => m.id === id ? { ...m, ...patch } : m) });
+    const addAccionable = (metricaId) => {
+      const texto = (newAccInputs[metricaId] || "").trim();
+      if (!texto) return;
+      const m = metricas.find(x => x.id === metricaId);
+      const nuevo = { id: "acc_"+uid(), texto, done: false, notas: "", hito15: false, hito30: false, hito60: false, hito90: false, hito120: false };
+      updateMetrica(metricaId, { accionables: [...(m.accionables||[]), nuevo] });
+      setNewAccInputs(p => ({ ...p, [metricaId]: "" }));
+    };
+    const updateAccionable = (metricaId, accId, patch) => {
+      const m = metricas.find(x => x.id === metricaId);
+      updateMetrica(metricaId, { accionables: (m.accionables||[]).map(a => a.id === accId ? { ...a, ...patch } : a) });
+    };
+    const removeAccionable = (metricaId, accId) => {
+      const m = metricas.find(x => x.id === metricaId);
+      updateMetrica(metricaId, { accionables: (m.accionables||[]).filter(a => a.id !== accId) });
+    };
+
+    return (
+      <div>
+        {metricas.map(m => {
+          const expanded = expandedMetrica === m.id;
+          const accionables = m.accionables || [];
+          const doneCount = accionables.filter(a => a.done).length;
+          return (
+            <div key={m.id} style={{ ...cardStyle, marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }} onClick={() => setExpandedMetrica(expanded ? null : m.id)}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ color: WHITE, fontWeight: 700, fontSize: 13 }}>{m.nombre}</span>
+                  {accionables.length > 0 && <span style={{ color: GRAY, fontSize: 11 }}>{doneCount}/{accionables.length} accionables</span>}
+                </div>
+                <span style={{ color: GOLD, fontSize: 12 }}>{expanded ? "▲" : "▼"}</span>
+              </div>
+
+              {expanded && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                    <Input label="Valor Actual" value={m.valorActual} onChange={v => updateMetrica(m.id, { valorActual: v })} />
+                    <Input label="KPI objetivo" value={m.kpiObjetivo} onChange={v => updateMetrica(m.id, { kpiObjetivo: v })} />
+                  </div>
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={{ display: "block", color: GRAY, fontSize: 12, marginBottom: 4 }}>Detalle</label>
+                    <textarea value={m.detalle||""} onChange={e => updateMetrica(m.id, { detalle: e.target.value })} rows={2}
+                      style={{ width: "100%", background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 10px", color: WHITE, fontSize: 13, outline: "none", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
+                  </div>
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ display: "block", color: GRAY, fontSize: 12, marginBottom: 4 }}>Notas de Implementación</label>
+                    <textarea value={m.notas||""} onChange={e => updateMetrica(m.id, { notas: e.target.value })} rows={2}
+                      style={{ width: "100%", background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 10px", color: WHITE, fontSize: 13, outline: "none", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
+                  </div>
+
+                  <div style={labelStyle}>Accionables</div>
+                  {accionables.map(a => (
+                    <div key={a.id} style={{ background: "#111113", borderRadius: 8, padding: "10px 12px", marginBottom: 8, border: `1px solid ${BORDER}` }}>
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                        <input type="checkbox" checked={!!a.done} onChange={e => updateAccionable(m.id, a.id, { done: e.target.checked })} style={{ marginTop: 3 }} />
+                        <input value={a.texto} onChange={e => updateAccionable(m.id, a.id, { texto: e.target.value })}
+                          style={{ flex: 1, background: "transparent", border: "none", color: a.done?GRAY:WHITE, fontSize: 13, outline: "none", textDecoration: a.done?"line-through":"none" }} />
+                        <button onClick={() => removeAccionable(m.id, a.id)} style={{ background: "none", border: "none", color: "#E06C6C", cursor: "pointer", fontSize: 14, padding: 0 }}>×</button>
+                      </div>
+                      <input value={a.notas||""} onChange={e => updateAccionable(m.id, a.id, { notas: e.target.value })} placeholder="Notas de implementación de este accionable..."
+                        style={{ width: "100%", background: "transparent", border: "none", borderTop: `1px solid ${BORDER}`, marginTop: 8, paddingTop: 6, color: GRAY, fontSize: 11, outline: "none" }} />
+                      <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+                        {[["hito15","15d"],["hito30","30d"],["hito60","60d"],["hito90","90d"],["hito120","120d"]].map(([hk,hl]) => (
+                          <label key={hk} style={{ display: "flex", alignItems: "center", gap: 3, color: GRAY, fontSize: 10, cursor: "pointer" }}>
+                            <input type="checkbox" checked={!!a[hk]} onChange={e => updateAccionable(m.id, a.id, { [hk]: e.target.checked })} />
+                            {hl}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input value={newAccInputs[m.id]||""} onChange={e => setNewAccInputs(p => ({ ...p, [m.id]: e.target.value }))}
+                      onKeyDown={e => { if (e.key === "Enter") addAccionable(m.id); }}
+                      placeholder="Nuevo accionable..."
+                      style={{ flex: 1, background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 10px", color: WHITE, fontSize: 13, outline: "none" }} />
+                    <button onClick={() => addAccionable(m.id)} style={{ padding: "8px 16px", background: GOLD, color: "#141414", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}>+ Agregar</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // VISTA D — SEGUIMIENTO DIARIO
+  // ═══════════════════════════════════════════════════════════════════════
+  const renderDiario = () => {
+    const entries = diario.entries || [];
+    const todayMesN = mesNForDate(new Date().toISOString().slice(0,10));
+    const mesNSet = new Set(entries.map(e => mesNForDate(e.date)));
+    mesNSet.add(todayMesN);
+    const mesNList = Array.from(mesNSet).filter(n => n && n > 0).sort((a,b) => a-b);
+    const activeMesN = selMesN != null ? selMesN : todayMesN;
+
+    const setEntryField = (k, v) => setEntryForm(f => ({ ...f, [k]: v }));
+    const addEntry = () => {
+      if (!entryForm.date) return;
+      const entry = { id: "de_"+uid(), ...entryForm };
+      updateDiario({ entries: [...entries, entry] });
+      setEntryForm(emptyEntryForm());
+    };
+    const removeEntry = (id) => updateDiario({ entries: entries.filter(e => e.id !== id) });
+
+    const entriesForMes = entries.filter(e => mesNForDate(e.date) === activeMesN).sort((a,b) => a.date.localeCompare(b.date));
+    const sum = (key) => entriesForMes.reduce((s,e) => s + (parseFloat(e[key])||0), 0);
+
+    const rInversionAds = sum("inversionAds"), rGastosMkt = sum("gastosMarketing"), rComisiones = sum("comisionesVenta");
+    const rLeads = sum("leads"), rLlamadas = sum("llamadas"), rCanceladas = sum("llamadasCanceladas"), rNoShows = sum("noShows");
+    const rEfectivas = sum("llamadasEfectivas"), rCierres = sum("cierres");
+    const rFeccu = sum("feccu"), rFeccp = sum("feccp"), rBecc = sum("becc"), rIngresos = sum("ingresosTotales");
+
+    const gastosAdquisicion = rInversionAds + rGastosMkt + rComisiones;
+    const cac        = rCierres > 0 ? rInversionAds / rCierres : null;
+    const cacBlended = rCierres > 0 ? gastosAdquisicion / rCierres : null;
+    const aovTCMes    = rCierres > 0 ? rIngresos / rCierres : null;
+    const feccuCacRatio = cacBlended ? rFeccu / cacBlended : null;
+    const aovCacRatio   = cac ? aovTCMes / cac : null;
+
+    const entryFields = [
+      ["date","Fecha","date"], ["inversionAds","Inversión Ads","number"], ["gastosMarketing","Gastos Mkt","number"], ["comisionesVenta","Comisiones","number"],
+      ["leads","Leads","number"], ["llamadas","Llamadas","number"], ["llamadasCanceladas","Canceladas","number"], ["noShows","No Shows","number"],
+      ["llamadasEfectivas","Efectivas","number"], ["cierres","Cierres","number"], ["feccu","FECCU","number"], ["feccp","FECCP","number"], ["becc","BECC","number"], ["ingresosTotales","Ing. Totales","number"],
+    ];
+
+    return (
+      <div>
+        {/* Formulario de nueva entrada */}
+        <div style={{ ...cardStyle, marginBottom: 16 }}>
+          <div style={{ color: WHITE, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>Registrar entrada diaria</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: 8, marginBottom: 12 }}>
+            {entryFields.map(([k,l,t]) => (
+              <div key={k}>
+                <label style={{ display: "block", color: GRAY, fontSize: 10, marginBottom: 3 }}>{l}</label>
+                <input type={t} value={entryForm[k]} onChange={e => setEntryField(k, e.target.value)}
+                  style={{ width: "100%", background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: WHITE, fontSize: 12, outline: "none", boxSizing: "border-box" }} />
+              </div>
+            ))}
+          </div>
+          <button onClick={addEntry} style={{ padding: "8px 20px", background: GOLD, color: "#141414", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}>+ Agregar entrada</button>
+        </div>
+
+        {/* Selector de mes */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 14, alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ color: GRAY, fontSize: 11, marginRight: 4 }}>Mes:</span>
+          {mesNList.map(n => (
+            <Pill key={n} active={activeMesN === n} onClick={() => setSelMesN(n)}>Mes {n}{n===todayMesN ? " (actual)" : ""}</Pill>
+          ))}
+        </div>
+
+        {/* Tabla de entradas del mes */}
+        <div style={{ ...cardStyle, marginBottom: 16, overflowX: "auto" }}>
+          <div style={{ color: WHITE, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>Entradas — Mes {activeMesN}</div>
+          {entriesForMes.length === 0 ? (
+            <div style={{ color: GRAY, fontSize: 12 }}>Sin entradas registradas este mes.</div>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 780 }}>
+              <thead>
+                <tr>
+                  <th style={{ ...thStyle, textAlign: "left" }}>Fecha</th>
+                  {entryFields.slice(1).map(([k,l]) => <th key={k} style={thStyle}>{l}</th>)}
+                  <th style={thStyle}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {entriesForMes.map(e => (
+                  <tr key={e.id}>
+                    <td style={{ padding: "5px 8px", color: WHITE, fontSize: 12 }}>{e.date}</td>
+                    {entryFields.slice(1).map(([k]) => (
+                      <td key={k} style={{ padding: "5px 8px", textAlign: "right", color: WHITE, fontSize: 12 }}>{e[k] || "—"}</td>
+                    ))}
+                    <td style={{ padding: "5px 8px", textAlign: "right" }}>
+                      <button onClick={() => removeEntry(e.id)} style={{ background: "none", border: "none", color: "#E06C6C", cursor: "pointer", fontSize: 13 }}>×</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Resumen + Resumen Adquisición */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
+          <div style={cardStyle}>
+            <div style={labelStyle}>Resumen — Mes {activeMesN}</div>
+            {[["Leads",rLeads],["Llamadas",rLlamadas],["Canceladas",rCanceladas],["No Shows",rNoShows],["Llamadas Efectivas",rEfectivas],["Cierres",rCierres]].map(([l,v]) => (
+              <div key={l} style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                <span style={{ color: GRAY, fontSize: 12 }}>{l}</span><span style={{ color: WHITE, fontSize: 12, fontWeight: 600 }}>{fmtN(v)}</span>
+              </div>
+            ))}
+            <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: 8, paddingTop: 8 }} />
+            {[["FECCU",rFeccu],["FECCP",rFeccp],["BECC",rBecc],["Ingresos Totales",rIngresos]].map(([l,v]) => (
+              <div key={l} style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                <span style={{ color: GRAY, fontSize: 12 }}>{l}</span><span style={{ color: GOLD, fontSize: 12, fontWeight: 700 }}>{fmtUSD0(v)}</span>
+              </div>
+            ))}
+          </div>
+
+          <div style={cardStyle}>
+            <div style={labelStyle}>Resumen Adquisición — Mes {activeMesN}</div>
+            {[["Inversión ADS",rInversionAds],["Otros Gastos Marketing",rGastosMkt],["Comisiones de Ventas",rComisiones],["Gastos en Adquisición",gastosAdquisicion]].map(([l,v]) => (
+              <div key={l} style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                <span style={{ color: GRAY, fontSize: 12 }}>{l}</span><span style={{ color: WHITE, fontSize: 12, fontWeight: 600 }}>{fmtUSD0(v)}</span>
+              </div>
+            ))}
+            <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: 8, paddingTop: 8 }} />
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+              <span style={{ color: GRAY, fontSize: 12 }}>CAC</span><span style={{ color: WHITE, fontSize: 12, fontWeight: 700 }}>{cac!=null ? fmtUSD0(cac) : "—"}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+              <span style={{ color: GRAY, fontSize: 12 }}>CAC Blended</span><span style={{ color: WHITE, fontSize: 12, fontWeight: 700 }}>{cacBlended!=null ? fmtUSD0(cacBlended) : "—"}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+              <span style={{ color: GRAY, fontSize: 12 }}>FECCU:CAC</span><span style={{ color: "#22C55E", fontSize: 12, fontWeight: 700 }}>{feccuCacRatio!=null ? feccuCacRatio.toFixed(2) : "—"}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: GRAY, fontSize: 12 }}>AOV TC:CAC</span><span style={{ color: "#22C55E", fontSize: 12, fontWeight: 700 }}>{aovCacRatio!=null ? aovCacRatio.toFixed(2) : "—"}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div>
+          <div style={{ color: WHITE, fontWeight: 800, fontSize: 16, letterSpacing: -0.2 }}>Proyección 2026</div>
+          <div style={{ color: GRAY, fontSize: 12 }}>De {fmtUSD0(metas.mrrActual)}/mes ({metas.startDate}) a {fmtUSD0(metas.metaFinal)}/mes — hito {fmtUSD0(metas.hitoIntermedio)}/mes</div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 20 }}>
+        {[["anual","A · Resumen Anual"],["mensual","B · Resumen Mensual"],["optimizacion","C · Optimización de Métricas"],["diario","D · Seguimiento Diario"]].map(([id,label]) => (
+          <Pill key={id} active={view === id} onClick={() => setView(id)}>{label}</Pill>
+        ))}
+      </div>
+
+      {view === "anual"        && renderAnual()}
+      {view === "mensual"      && renderMensual()}
+      {view === "optimizacion" && renderOptimizacion()}
+      {view === "diario"       && renderDiario()}
+    </div>
+  );
+}
+
 // ─── PERSONAL TAB ─────────────────────────────────────────────────────────────
 function PersonalTab({ data, onChange }) {
   const { useState: us } = React;
@@ -6532,7 +7239,7 @@ function PersonalTab({ data, onChange }) {
       </div>
 
       <div style={{ display:"flex", gap:0, marginBottom:24, borderBottom:`1px solid ${BORDER}` }}>
-        {[["entrenamiento","Entrenamiento"],["metricas","Métricas"],["finanzas","Finanzas"]].map(([id,label])=>(
+        {[["entrenamiento","Entrenamiento"],["metricas","Métricas"],["finanzas","Finanzas"],["proyeccion","Proyección"]].map(([id,label])=>(
           <button key={id} onClick={()=>setSubTab(id)}
             className={`gp-nav-tab${subTab===id?" active":""}`}>
             {label}
@@ -6543,6 +7250,7 @@ function PersonalTab({ data, onChange }) {
       {subTab==="entrenamiento" && <EntrenamientoSection personal={personal} onUpdate={updatePersonal} />}
       {subTab==="metricas"      && <MetricasSection      personal={personal} onUpdate={updatePersonal} />}
       {subTab==="finanzas"      && <FinanzasSection      personal={personal} onUpdate={updatePersonal} />}
+      {subTab==="proyeccion"    && <ProyeccionSection    personal={personal} onUpdate={updatePersonal} />}
     </div>
   );
 }
