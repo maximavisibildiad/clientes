@@ -6617,17 +6617,20 @@ function FinanzasSection({ personal, onUpdate }) {
                 <Input label="Mensajes por tanda"                value={calc.mensajesPorTanda} onChange={v=>updateCalc({mensajesPorTanda:v})} type="number" />
                 <Input label="Minutos por tanda"                 value={calc.minutosPorTanda}  onChange={v=>updateCalc({minutosPorTanda:v})}  type="number" />
               </div>
+              <div style={{ color:GRAY, fontSize:10, lineHeight:1.5, marginTop:8, fontStyle:"italic" }}>
+                Una "tanda" es una ronda de mensajes seguidos (ej. 10 mensajes bien elaborados en 20 minutos). Estos 2 campos solo se usan para convertir "Mensajes/día" en "Horas/día en prospección" — ajustalos a tu ritmo real de escritura.
+              </div>
 
               <div style={{ color:GRAY, fontSize:9, fontWeight:700, letterSpacing:2, textTransform:"uppercase", margin:"18px 0 10px" }}>Resultado — cascada de la meta a la acción diaria</div>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))", gap:10 }}>
                 {[
-                  { label:"Clientes requeridos",          val: fmt0(clientesRequeridos) },
-                  { label:"Llamadas requeridas (÷TC)",    val: fmt0(llamadasRequeridas) },
-                  { label:"Llamadas necesarias (÷SUR)",   val: fmt0(llamadasNecesarias) },
-                  { label:"Mensajes en el período (÷TA)", val: fmt0(mensajesEnPeriodo) },
-                  { label:"Días hábiles/año",             val: fmt0(diasHabiles), dim:true },
-                  { label:"Mensajes/día",                 val: fmt0(mensajesPorDia), highlight:true },
-                  { label:"Horas/día en prospección",     val: fmt1(horasPorDia)+"h", highlight:true },
+                  { label:"Clientes requeridos",                   val: fmt0(clientesRequeridos) },
+                  { label:"Llamadas efectivas requeridas (÷TC)",   val: fmt0(llamadasRequeridas) },
+                  { label:"Llamadas Agendadas necesarias (÷SUR)",  val: fmt0(llamadasNecesarias) },
+                  { label:"Mensajes en el período (÷TA)",          val: fmt0(mensajesEnPeriodo) },
+                  { label:"Días hábiles/año",                      val: fmt0(diasHabiles), dim:true },
+                  { label:"Mensajes/día",                          val: fmt0(mensajesPorDia), highlight:true },
+                  { label:"Horas/día en prospección",              val: fmt1(horasPorDia)+"h", highlight:true },
                 ].map(({label,val,highlight,dim})=>(
                   <div key={label} style={{ background:"#0a0a0b", border:`1px solid ${highlight?GOLD_DIM:BORDER}`, borderRadius:10, padding:"12px 14px" }}>
                     <div style={{ color:GRAY, fontSize:9, fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:5 }}>{label}</div>
@@ -6640,6 +6643,16 @@ function FinanzasSection({ personal, onUpdate }) {
                   Completá la meta y el valor de cliente para ver el resultado.
                 </div>
               )}
+
+              <div style={{ marginTop:14, padding:"12px 14px", background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8 }}>
+                <div style={{ color:GRAY, fontSize:9, fontWeight:700, letterSpacing:1.5, textTransform:"uppercase", marginBottom:8 }}>Cómo se lee la cascada</div>
+                <div style={{ color:GRAY, fontSize:11, lineHeight:1.7 }}>
+                  <b style={{ color:WHITE }}>Clientes requeridos</b> = Meta ÷ Valor de cliente.{" "}
+                  <b style={{ color:WHITE }}>Llamadas efectivas requeridas</b> = clientes que necesitás dividido tu Tasa de Cierre — son las llamadas que sí se presentan y con las que cerrás.{" "}
+                  <b style={{ color:WHITE }}>Llamadas Agendadas necesarias</b> = esas llamadas efectivas divididas tu Show Up Rate — es la cantidad que tenés que lograr que la gente agende (mismo campo "Llamadas Agendadas" que ves en Proyección → Resumen Anual/Mensual), sabiendo que no todas se van a presentar.{" "}
+                  <b style={{ color:WHITE }}>Mensajes en el período</b> = esas llamadas agendadas divididas tu Tasa de Agenda — cuántas conversaciones/mensajes necesitás mandar para que esa cantidad agende. Repartido en los días hábiles del año te da <b style={{ color:GOLD }}>Mensajes/día</b>, y con "mensajes por tanda" y "minutos por tanda" eso se traduce a <b style={{ color:GOLD }}>Horas/día</b> reales de trabajo.
+                </div>
+              </div>
             </div>
 
             <div style={{ color:GOLD, fontWeight:700, fontSize:13, marginBottom:4 }}>Las 6 Ocultas — framework para sostener la meta</div>
@@ -6680,6 +6693,7 @@ function ProyeccionSection({ personal, onUpdate }) {
 
   // ── Estado (todos los hooks declarados arriba, sin condicionales) ──
   const [view, setView] = us("anual");
+  const [guiaOpen, setGuiaOpen] = us(true);
   const [expandedMetrica, setExpandedMetrica] = us(null);
   const [newAccInputs, setNewAccInputs] = us({});
   const emptyEntryForm = () => ({ date: new Date().toISOString().slice(0,10), inversionAds: "", gastosMarketing: "", comisionesVenta: "", leads: "", llamadas: "", llamadasCanceladas: "", noShows: "", llamadasEfectivas: "", cierres: "", feccu: "", feccp: "", becc: "", ingresosTotales: "" });
@@ -6757,6 +6771,24 @@ function ProyeccionSection({ personal, onUpdate }) {
 
   const hitoPct = (anual.objetivoCashCollected || 0) > 0 ? Math.min(100, (metas.hitoIntermedio || 0) / anual.objetivoCashCollected * 100) : 0;
   const facturacionPct = (anual.objetivoCashCollected || 0) > 0 ? Math.min(100, facturacionAcumulada / anual.objetivoCashCollected * 100) : 0;
+
+  // ── "Qué hacer ahora" — real vs. plan del escenario activo, a la fecha de hoy ──
+  const todayStr        = new Date().toISOString().slice(0, 10);
+  const currentMesN     = Math.max(1, mesNForDate(todayStr) || 1);
+  const escActivaTop    = mensual.escenarioActivo || "A";
+  const escenariosTop   = mensual.escenarios || { A: [], B: [] };
+  const mesesTop        = escenariosTop[escActivaTop] || [];
+  const mesNumero       = (m) => parseInt((m.label || "").replace(/\D/g, ""), 10) || 0;
+  const currentMesData  = mesesTop.find(m => mesNumero(m) === currentMesN);
+  const mesesHastaAhora = mesesTop.filter(m => mesNumero(m) > 0 && mesNumero(m) <= currentMesN);
+  const targetAcumuladoHastaAhora = mesesHastaAhora.reduce((s, m) =>
+    s + ((parseFloat(m.feccu) || 0) + (parseFloat(m.feccp) || 0) + (parseFloat(m.becc) || 0)), 0);
+  const gapVsPlan       = facturacionAcumulada - targetAcumuladoHastaAhora;
+  const clientesParaPonerseAlDia = (metas.ticketNuevo || 0) > 0 && gapVsPlan < 0 ? Math.ceil(Math.abs(gapVsPlan) / metas.ticketNuevo) : 0;
+  const gapAlHito       = Math.max(0, (metas.hitoIntermedio || 0) - facturacionAcumulada);
+  const gapALaMeta      = Math.max(0, (metas.metaFinal || 0) - facturacionAcumulada);
+  const hayDatosReales  = facturacionAcumulada > 0;
+  const hayMesProyectado = mesesHastaAhora.length > 0;
 
   // ── Estilos compartidos ──
   const cardStyle = { background: CARD, borderRadius: 12, padding: 16, border: `1px solid ${BORDER}` };
@@ -7295,6 +7327,58 @@ function ProyeccionSection({ personal, onUpdate }) {
           <div style={{ color: WHITE, fontWeight: 800, fontSize: 16, letterSpacing: -0.2 }}>Proyección 2026</div>
           <div style={{ color: GRAY, fontSize: 12 }}>De {fmtUSD0(metas.mrrActual)}/mes ({metas.startDate}) a {fmtUSD0(metas.metaFinal)}/mes — hito {fmtUSD0(metas.hitoIntermedio)}/mes</div>
         </div>
+      </div>
+
+      {/* ── QUÉ HACER AHORA ── */}
+      <div style={{ background: hayDatosReales ? (gapVsPlan>=0 ? "rgba(34,197,94,0.06)" : "rgba(239,68,68,0.06)") : CARD, border: `1px solid ${hayDatosReales ? (gapVsPlan>=0 ? "#22C55E55" : "#EF444455") : BORDER}`, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+        <div style={{ color: GOLD, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>🎯 Qué hacer ahora</div>
+        {!hayDatosReales ? (
+          <div style={{ color: GRAY, fontSize: 12, lineHeight: 1.6 }}>
+            Todavía no cargaste facturación real en <b style={{ color: WHITE }}>Finanzas → Mensual</b>. En cuanto la cargues, acá te va a decir si vas arriba o abajo del plan y qué hacer al respecto.
+          </div>
+        ) : (
+          <div style={{ color: GRAY, fontSize: 12, lineHeight: 1.7 }}>
+            Estás en <b style={{ color: WHITE }}>Mes {currentMesN}</b> desde que arrancó la proyección ({metas.startDate}), siguiendo el <b style={{ color: WHITE }}>Escenario {escActivaTop}</b>.
+            {!hayMesProyectado ? (
+              <div style={{ marginTop: 6 }}>Todavía no agregaste "Mes {currentMesN}" en Resumen Mensual, así que no hay plan con el que comparar tu facturación real — agregalo ahí para ver el avance.</div>
+            ) : (
+              <div style={{ marginTop: 6 }}>
+                Facturación real acumulada: <b style={{ color: WHITE }}>{fmtUSD0(facturacionAcumulada)}</b> · Plan del Escenario {escActivaTop} a esta altura: <b style={{ color: WHITE }}>{fmtUSD0(targetAcumuladoHastaAhora)}</b>
+                <div style={{ marginTop: 6, fontWeight: 700, color: gapVsPlan>=0 ? "#22C55E" : "#EF4444" }}>
+                  {gapVsPlan>=0
+                    ? `Vas ${fmtUSD0(gapVsPlan)} arriba del plan — seguí al mismo ritmo.`
+                    : `Vas ${fmtUSD0(Math.abs(gapVsPlan))} abajo del plan. Para ponerte al día necesitás cerrar ${clientesParaPonerseAlDia} cliente${clientesParaPonerseAlDia===1?"":"s"} más${metas.ticketNuevo?` (ticket ${fmtUSD0(metas.ticketNuevo)})`:""}.`}
+                </div>
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 20, marginTop: 10, flexWrap: "wrap" }}>
+              <span>Al hito $10K te faltan <b style={{ color: WHITE }}>{fmtUSD0(gapAlHito)}</b></span>
+              <span>A la meta {fmtUSD0(metas.metaFinal)} te faltan <b style={{ color: WHITE }}>{fmtUSD0(gapALaMeta)}</b></span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── CÓMO USAR ESTO ── */}
+      <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
+        <div onClick={() => setGuiaOpen(o => !o)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
+          <div style={{ color: GOLD, fontWeight: 700, fontSize: 13 }}>📘 Cómo usar esto</div>
+          <span style={{ color: GRAY, fontSize: 11 }}>{guiaOpen ? "ocultar ▲" : "ver ▼"}</span>
+        </div>
+        {guiaOpen && (
+          <div style={{ color: GRAY, fontSize: 12, lineHeight: 1.7, marginTop: 12 }}>
+            Esta sección tiene 4 pestañas — usalas en este orden:
+            <ol style={{ margin: "8px 0", paddingLeft: 18 }}>
+              <li style={{ marginBottom: 6 }}><b style={{ color: WHITE }}>A · Resumen Anual</b> — arrancá acá. Cargá tus 4 tasas reales (Agenda/Calificación/Show Up/Cierre) y tu ticket — con eso el sistema calcula cuántos leads necesitás en el año. Los campos Q1-Q4 son opcionales, para cuando quieras metas por trimestre.</li>
+              <li style={{ marginBottom: 6 }}><b style={{ color: WHITE }}>B · Resumen Mensual</b> — elegí Escenario A o B (ya vienen precargados con números reales). Acá ves mes a mes cuánto deberías facturar — es la que más te sirve para saber si vas bien o mal este mes en particular.</li>
+              <li style={{ marginBottom: 6 }}><b style={{ color: WHITE }}>C · Optimización de Métricas</b> — cuando alguna tasa esté por debajo del objetivo, entrá acá y anotá qué acciones concretas vas a tomar para mejorarla, con fecha.</li>
+              <li><b style={{ color: WHITE }}>D · Seguimiento Diario</b> — opcional. Solo si querés registrar cada lead/llamada/cierre día por día para calcular tu costo de adquisición (CAC) real. Si no tenés tiempo para esto, no pasa nada — con la Mensual alcanza.</li>
+            </ol>
+            <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 10, marginTop: 4 }}>
+              <b style={{ color: WHITE }}>Glosario rápido:</b> Tasa de Cierre = % de llamadas que terminan en cliente pagando · Show Up = % que se presenta a la llamada que agendó · FECCU/FECCP/BECC = las 3 partes en que se cobra un cliente (pago inicial ~70% / segundo pago ~20% / saldo final ~10%) · AOV/Ticket = lo que paga un cliente en promedio · MRR = facturación mensual recurrente.
+            </div>
+          </div>
+        )}
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 20 }}>
