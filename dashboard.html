@@ -219,7 +219,7 @@ function storageSetTs(ts) {
   try { localStorage.setItem(STORAGE_KEY + "_ts", ts.toString()); } catch(_) {}
 }
 
-// ─── GEMA TASKS (205 activas — 65 archivadas 2026-07-31, ver bloque más abajo) ──
+// ─── GEMA TASKS (202 activas — 65 archivadas + 6 consolidadas en 4 + 3 repuestas [pipeline/tags/pixel], 2026-07-31) ──
 // n:262-264 = [GP] agregadas 2026-07-22, ver data/changelog.md — cubren el hueco de
 // clientes SIN equipo comercial propio (dueño/socio es su propio vendedor), caso
 // origen: Alexander Odontólogo.
@@ -264,10 +264,7 @@ const GEMA_TASKS = [
   { n:54, week:"Semana 1", area:"Tráfico y Sistemas", title:"[TUYO] Verificar negocio en Facebook.", owner:"JP" },
   { n:55, week:"Semana 1", area:"Administrativo", title:"[REVISAR 2026-07-31] [TUYO] Verificar que hayan enviando Rut y camara y comercio (Subir documentos).", owner:"JP" },
   { n:56, week:"Semana 1", area:"Administrativo", title:"[GEMA V4] Verificación comercial del negocio en Meta (Documentos legales).", owner:"COO" },
-  { n:60, week:"Semana 1", area:"Tráfico y Sistemas", title:"[REVISAR 2026-07-31] [TUYO] Creacion de Whatsapp API.", owner:"JP" },
-  { n:61, week:"Semana 1", area:"Tráfico y Sistemas", title:"[REVISAR 2026-07-31] [GEMA V4] Activación del Caso de Uso de WhatsApp y vinculación de número oficial.", owner:"CAIO" },
-  { n:62, week:"Semana 1", area:"Tráfico y Sistemas", title:"[REVISAR 2026-07-31] [GEMA V4] Generación del Token de Acceso Permanente.", owner:"CAIO" },
-  { n:63, week:"Semana 1", area:"Tráfico y Sistemas", title:"[REVISAR 2026-07-31] [GEMA V4] Pruebas de envío Graph API para asegurar conexión.", owner:"CAIO" },
+  { n:60, week:"Semana 1", area:"Tráfico y Sistemas", title:"[REVISAR 2026-07-31] [CONSOLIDADA — antes n:60-63] Conectar WhatsApp Business API: activar caso de uso + vincular número oficial + generar token de acceso permanente + probar envío vía Graph API. Pendiente: confirmar si esto es manual o ya lo hace GHL automáticamente al conectar el número (S1-01).", owner:"CAIO" },
   { n:67, week:"Semana 1", area:"Tráfico y Sistemas", title:"[TUYO] Crear Fan Page FB con: Nombre, Nombre de usuario, Descripción, Categorías, Web.", owner:"JP" },
   { n:68, week:"Semana 1", area:"Tráfico y Sistemas", title:"[REVISAR 2026-07-31] [TUYO] Dar administracion de fan page a Diseño y comercial.", owner:"JP" },
   { n:69, week:"Semana 1", area:"Tráfico y Sistemas", title:"[TUYO] Conectar Whatsapp a fanpage.", owner:"JP" },
@@ -305,6 +302,8 @@ const GEMA_TASKS = [
   { n:107, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] Conectar WhatsApp Api al CRM.", owner:"JP" },
   { n:108, week:"Semana 2", area:"Tráfico y Sistemas", title:"[REVISAR 2026-07-31] [TUYO] conectar facebook al crm.", owner:"JP" },
   { n:109, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] conectar instagram al crm.", owner:"JP" },
+  { n:271, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GP] Crear pipeline en GHL con las etapas exactas de 01_FLUJO_CRM.md del cliente (mapeo del SOP maestro de 11 stages) — repone la acción real que n:105/106 describían mal (Kommo, ver TAREA S1-02, proceso_0_servicios.md). Añadida 2026-07-31 al detectar el hueco tras archivar.", owner:"CAIO" },
+  { n:272, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GP] Configurar tags en GHL (fuente, servicio, temperatura, calificación, pérdida) y documentarlos en 04_Sistema_GHL/tags.md del cliente (ver TAREA S1-03, proceso_0_servicios.md). Añadida 2026-07-31.", owner:"CAIO" },
   { n:110, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] Revisar el perfil de Whatsapp (Foto, Descripcion, Mapa, Web, Apagar bienvenida).", owner:"JP" },
   { n:111, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] configurar whatsapp/ horarios.", owner:"JP" },
   { n:112, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] configurar whatsapp/ inf.", owner:"JP" },
@@ -342,7 +341,7 @@ const GEMA_TASKS = [
   { n:263, week:"Semana 3", area:"Comercial", title:"[GP] Acordar día y hora fija de la reunión semanal de revisión con el cliente — queda agendada en firme, nunca \"para coordinar después\".", owner:"AM" },
   { n:152, week:"Semana 3", area:"Administrativo", title:"[REVISAR 2026-07-31] [TUYO] CREAR DENTRO DEL ARCHIVO METODOLOGIA UNA PESTAÑA DE know-how.", owner:"JP" },
   { n:153, week:"Semana 3", area:"Administrativo", title:"[REVISAR 2026-07-31] [TUYO] manual de funciones.", owner:"JP" },
-  { n:154, week:"Semana 3", area:"Administrativo", title:"[REVISAR 2026-07-31] [TUYO] cronograma de funciones.", owner:"JP" },
+  { n:154, week:"Semana 3", area:"Administrativo", title:"[REVISAR 2026-07-31] [CONSOLIDADA — antes n:154 y n:165, eran el mismo ítem duplicado] Tener creado cronograma de funciones. Pendiente: confirmar contenido — ¿corresponde a roles_equipo.md o es documento nuevo por cliente?", owner:"JP" },
   { n:155, week:"Semana 3", area:"Comercial", title:"[TUYO] estructura de bots.", owner:"JP" },
   { n:156, week:"Semana 3", area:"Administrativo", title:"[REVISAR 2026-07-31] [TUYO] manual de herramientas y cómo usarlas.", owner:"JP" },
   { n:157, week:"Semana 3", area:"Comercial", title:"[TUYO] manual de servicio o producto.", owner:"JP" },
@@ -352,7 +351,6 @@ const GEMA_TASKS = [
   { n:161, week:"Semana 3", area:"Comercial", title:"[TUYO] paso a paso post cierre de venta.", owner:"JP" },
   { n:162, week:"Semana 3", area:"Comercial", title:"[TUYO] manual de objeciones y cómo gestionarlos.", owner:"JP" },
   { n:164, week:"Semana 3", area:"Administrativo", title:"[REVISAR 2026-07-31] [TUYO] Pasar la instruccion que se añada al archivo de consolidados esa empresa.", owner:"JP" },
-  { n:165, week:"Semana 3", area:"Administrativo", title:"[REVISAR 2026-07-31] [TUYO] Tener creado cronograma de funciones.", owner:"JP" },
   { n:166, week:"Semana 3", area:"Administrativo", title:"[REVISAR 2026-07-31] [TUYO] Consolidados.", owner:"JP" },
   { n:168, week:"Semana 3", area:"Comercial", title:"[REVISAR 2026-07-31] [TUYO] Estrategia comercial: Crear del archivo de seguimiento.", owner:"JP" },
   { n:169, week:"Semana 3", area:"Comercial", title:"[REVISAR 2026-07-31] [GEMA V4] Sesión 1: Psicología del lead digital vs lead tradicional.", owner:"AM" },
@@ -360,8 +358,7 @@ const GEMA_TASKS = [
   { n:172, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Capacitación en manejo de objeciones (Precio, Tiempo, Confianza).", owner:"AM" },
   { n:173, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Entrenamiento en tipificación de leads (Etiquetas y Notas).", owner:"AM" },
   { n:174, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Capacitación: Cómo leer el trabajo previo de la IA.", owner:"AM" },
-  { n:177, week:"Semana 3", area:"Comercial", title:"[REVISAR 2026-07-31] [GEMA V4] Roleplay 1: Simulación de leads calificados.", owner:"AM" },
-  { n:178, week:"Semana 3", area:"Comercial", title:"[REVISAR 2026-07-31] [GEMA V4] Roleplay 2: Simulación de leads difíciles/quemados.", owner:"AM" },
+  { n:177, week:"Semana 3", area:"Comercial", title:"[REVISAR 2026-07-31] [CONSOLIDADA — antes n:177-178] Roleplay de ventas: leads calificados + leads difíciles/quemados. Pendiente: confirmar si el roleplay es parte formal de la capacitación (Etapa 6).", owner:"AM" },
   { n:179, week:"Semana 3", area:"Comercial", title:"[REVISAR 2026-07-31] [GEMA V4] Capacitación en herramientas de seguimiento (Audio/Video).", owner:"AM" },
   { n:270, week:"Semana 3", area:"Comercial", title:"[GP] Escribir guía de uso del CRM + grabar video tutorial (notas, tareas, cómo agendar en el calendario) para el equipo del cliente (agregado 2026-07-30).", owner:"AM" },
   { n:180, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Estructuración de la agenda diaria del vendedor.", owner:"AM" },
@@ -374,12 +371,12 @@ const GEMA_TASKS = [
   { n:186, week:"Semana 3", area:"Comercial", title:"[REVISAR 2026-07-31] [GEMA V4] Feedback individual de desempeño pre-lanzamiento.", owner:"AM" },
   { n:189, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Ejecución del Dry-Run: Prueba completa Meta -> IA -> Humano.", owner:"AM" },
   { n:190, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Verificación Dry-Run: ¿La IA perfiló según el script?", owner:"AM" },
-  { n:193, week:"Semana 3", area:"Comercial", title:"[REVISAR 2026-07-31] [TUYO] Agendar presentacion PLAN TEORICO al cliente y al equipo del trabajo del cliente.", owner:"JP" },
-  { n:194, week:"Semana 3", area:"Comercial", title:"[REVISAR 2026-07-31] [TUYO] Agendar presentacion PLAN PRACTICO al cliente y al equipo del trabajo del cliente.", owner:"JP" },
+  { n:193, week:"Semana 3", area:"Comercial", title:"[REVISAR 2026-07-31] [CONSOLIDADA — antes n:193-194] Agendar presentación del plan al cliente y su equipo: teórico + práctico. Pendiente: confirmar si es el mismo evento que la Etapa 5/6 del Anexo 1 con otro nombre.", owner:"JP" },
   { n:195, week:"Semana 3", area:"Estrategia", title:"[TUYO] Creacion estrategia de trafico.", owner:"JP" },
   { n:196, week:"Semana 3", area:"Tráfico y Sistemas", title:"[TUYO] Recepcion de estrategia de trafico.", owner:"JP" },
   { n:197, week:"Semana 3", area:"Tráfico y Sistemas", title:"[GEMA V4] Conexión de Fanpage e IG al Business Manager verificado.", owner:"CAIO" },
   { n:198, week:"Semana 3", area:"Tráfico y Sistemas", title:"[GEMA V4] Verificación de Cuenta Publicitaria y método de pago del cliente.", owner:"CAIO" },
+  { n:273, week:"Semana 3", area:"Tráfico y Sistemas", title:"[GP] Instalar Meta Pixel real vía Events Manager e integrarlo en GHL (NO en landing page — GP es 100% click-to-WhatsApp); verificar PageView + evento Lead en Test Events — repone la acción real que n:199 describía mal (landing page, ver TAREA S1-05, proceso_0_servicios.md). Añadida 2026-07-31 al detectar el hueco tras archivar.", owner:"CAIO" },
   { n:200, week:"Semana 3", area:"Tráfico y Sistemas", title:"[REVISAR 2026-07-31] [GEMA V4] Configuración de Eventos de Conversión (Prioridad: Agendamiento).", owner:"CAIO" },
   { n:201, week:"Semana 3", area:"Tráfico y Sistemas", title:"[REVISAR 2026-07-31] [GEMA V4] Creación de Públicos de Intereses B2C específicos.", owner:"Media Buyer" },
   { n:203, week:"Semana 3", area:"Tráfico y Sistemas", title:"[GEMA V4] Creación de Públicos de Retargeting (Omnipresencia).", owner:"Media Buyer" },
@@ -6711,7 +6708,7 @@ function ProyeccionSection({ personal, onUpdate }) {
   const [guiaOpen, setGuiaOpen] = us(true);
   const [expandedMetrica, setExpandedMetrica] = us(null);
   const [newAccInputs, setNewAccInputs] = us({});
-  const emptyEntryForm = () => ({ date: new Date().toISOString().slice(0,10), inversionAds: "", gastosMarketing: "", comisionesVenta: "", leads: "", llamadas: "", llamadasCanceladas: "", noShows: "", llamadasEfectivas: "", cierres: "", feccu: "", feccp: "", becc: "", ingresosTotales: "" });
+  const emptyEntryForm = () => ({ date: new Date().toISOString().slice(0,10), inversionAds: "", gastosMarketing: "", comisionesVenta: "", leads: "", llamadas: "", llamadasCanceladas: "", noShows: "", llamadasEfectivas: "", cierres: "", mesesMinimos: "", feccu: "", feccp: "", becc: "", ingresosTotales: "" });
   const [entryForm, setEntryForm] = us(emptyEntryForm());
   const [selMesN, setSelMesN] = us(null);
 
@@ -6777,6 +6774,25 @@ function ProyeccionSection({ personal, onUpdate }) {
   const updateMensual = (patch) => updateProy({ mensual: { ...mensual, ...patch } });
   const updateOptim   = (patch) => updateProy({ optimizacion: { ...optim, ...patch } });
   const updateDiario  = (patch) => updateProy({ diario: { ...diario, ...patch } });
+
+  // ── Ingresos recurrentes comprometidos (compartido entre Vista B y Vista D) ──
+  // Por cada entrada de Seguimiento Diario con Cierres + Meses Mínimos cargados, el ticket de
+  // ese día (Ing. Totales ÷ Cierres) se repite esa cantidad de meses desde la fecha del cierre.
+  const diarioEntries = diario.entries || [];
+  const recurringByMesN = {};
+  diarioEntries.forEach(e => {
+    const cCierres = parseFloat(e.cierres) || 0;
+    const cMesesMin = parseFloat(e.mesesMinimos) || 0;
+    if (cCierres <= 0 || cMesesMin <= 0) return;
+    const cIngresos = parseFloat(e.ingresosTotales) || 0;
+    const ticketMensual = cIngresos / cCierres;
+    const startN = mesNForDate(e.date);
+    if (!startN) return;
+    for (let i = 0; i < cMesesMin; i++) {
+      const n = startN + i;
+      recurringByMesN[n] = (recurringByMesN[n] || 0) + ticketMensual * cCierres;
+    }
+  });
 
   // ── Combinada / Leads Necesarios (bloque A) ──
   const combinedRate = ((kpis.tasaAgenda||0)/100) * ((kpis.tasaCalificacion||0)/100) * ((kpis.showUpRate||0)/100) * ((kpis.tasaCierre||0)/100);
@@ -7055,8 +7071,10 @@ function ProyeccionSection({ personal, onUpdate }) {
               <tr>
                 <th style={{ ...thStyle, textAlign: "left" }}>Métrica</th>
                 {meses.map(m => {
-                  const key = mesNKey(parseInt(m.label.replace(/\D/g,""),10) || 1);
+                  const mesN = parseInt(m.label.replace(/\D/g,""),10) || 1;
+                  const key = mesNKey(mesN);
                   const realUSD = cashCollectedUSD(key);
+                  const comprometidoUSD = recurringByMesN[mesN] || 0;
                   return (
                     <th key={m.id} style={{ ...thStyle, minWidth: 110, whiteSpace: "normal", verticalAlign: "top" }}>
                       <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -7066,6 +7084,7 @@ function ProyeccionSection({ personal, onUpdate }) {
                         <input value={m.convDia||""} onChange={e => updateMes(m.id, { convDia: e.target.value })} placeholder="conv/día"
                           style={{ display: "block", width: "100%", background: "transparent", border: "none", color: GRAY, fontSize: 9, textAlign: "right", outline: "none", boxSizing: "border-box" }} />
                         {realUSD > 0 && <div style={{ color: "#22C55E", fontSize: 9, fontWeight: 700 }}>Real: {fmtUSD0(realUSD)}</div>}
+                        {comprometidoUSD > 0 && <div style={{ color: "#60A5FA", fontSize: 9, fontWeight: 700 }}>Comprometido: {fmtUSD0(comprometidoUSD)}</div>}
                         <button onClick={() => removeMes(m.id)} title="Eliminar mes" style={{ display: "block", marginLeft: "auto", background: "none", border: "none", color: "#E06C6C", fontSize: 10, cursor: "pointer", padding: 0 }}>eliminar</button>
                       </div>
                     </th>
@@ -7093,7 +7112,7 @@ function ProyeccionSection({ personal, onUpdate }) {
             </tbody>
           </table>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-            <div style={{ color: GRAY, fontSize: 10 }}>Ingresos Totales = FECCU+FECCP+BECC. "Real" bajo cada mes = facturación cargada en Finanzas para ese mes calendario, convertida a USD.</div>
+            <div style={{ color: GRAY, fontSize: 10 }}>Ingresos Totales = FECCU+FECCP+BECC (Plan, editable). "Real" bajo cada mes = facturación cargada en Finanzas para ese mes calendario, convertida a USD. "Comprometido" = se calcula solo desde Seguimiento Diario: cierres con Meses Mínimos cargados cuyo contrato todavía cubre ese mes.</div>
             <button onClick={addMes} style={{ padding: "7px 16px", background: GOLD, color: "#141414", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>+ Agregar mes</button>
           </div>
         </div>
@@ -7229,10 +7248,13 @@ function ProyeccionSection({ personal, onUpdate }) {
     const feccuCacRatio = cacBlended ? rFeccu / cacBlended : null;
     const aovCacRatio   = cac ? aovTCMes / cac : null;
 
+    // "recurringByMesN" viene calculado a nivel de componente (se comparte con Vista B).
+    const proximosMesesN = Array.from({ length: 6 }, (_, i) => todayMesN + i).filter(n => n > 0);
+
     const entryFields = [
       ["date","Fecha","date"], ["inversionAds","Inversión Ads","number"], ["gastosMarketing","Gastos Mkt","number"], ["comisionesVenta","Comisiones","number"],
       ["leads","Leads","number"], ["llamadas","Llamadas","number"], ["llamadasCanceladas","Canceladas","number"], ["noShows","No Shows","number"],
-      ["llamadasEfectivas","Efectivas","number"], ["cierres","Cierres","number"], ["feccu","FECCU","number"], ["feccp","FECCP","number"], ["becc","BECC","number"], ["ingresosTotales","Ing. Totales","number"],
+      ["llamadasEfectivas","Efectivas","number"], ["cierres","Cierres","number"], ["mesesMinimos","Meses Mín.","number"], ["feccu","FECCU","number"], ["feccp","FECCP","number"], ["becc","BECC","number"], ["ingresosTotales","Ing. Totales","number"],
     ];
 
     return (
@@ -7330,6 +7352,20 @@ function ProyeccionSection({ personal, onUpdate }) {
             </div>
           </div>
         </div>
+
+        {/* Ingresos recurrentes comprometidos (basado en Meses Mínimos de cada cierre) */}
+        <div style={{ ...cardStyle, marginTop: 12 }}>
+          <div style={labelStyle}>Ingresos Recurrentes Comprometidos</div>
+          <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginTop: 4 }}>
+            {proximosMesesN.map(n => (
+              <div key={n} style={{ minWidth: 90 }}>
+                <div style={{ color: GRAY, fontSize: 10 }}>Mes {n}{n===todayMesN ? " (actual)" : ""}</div>
+                <div style={{ color: GOLD, fontSize: 14, fontWeight: 700 }}>{fmtUSD0(recurringByMesN[n]||0)}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ color: GRAY, fontSize: 10, marginTop: 10 }}>Se calcula solo: cada entrada con Cierres y Meses Mínimos cargados repite su ticket (Ing. Totales ÷ Cierres) durante esa cantidad de meses desde la fecha del cierre — así la proyección ya cuenta el ingreso recurrente de contratos vigentes sin que tengas que volver a cargarlo mes a mes.</div>
+        </div>
       </div>
     );
   };
@@ -7387,7 +7423,7 @@ function ProyeccionSection({ personal, onUpdate }) {
               <li style={{ marginBottom: 6 }}><b style={{ color: WHITE }}>A · Resumen Anual</b> — arrancá acá. Cargá tus 4 tasas reales (Agenda/Calificación/Show Up/Cierre) y tu ticket — con eso el sistema calcula cuántos leads necesitás en el año. Los campos Q1-Q4 son opcionales, para cuando quieras metas por trimestre.</li>
               <li style={{ marginBottom: 6 }}><b style={{ color: WHITE }}>B · Resumen Mensual</b> — elegí Escenario A o B (ya vienen precargados con números reales). Acá ves mes a mes cuánto deberías facturar — es la que más te sirve para saber si vas bien o mal este mes en particular.</li>
               <li style={{ marginBottom: 6 }}><b style={{ color: WHITE }}>C · Optimización de Métricas</b> — cuando alguna tasa esté por debajo del objetivo, entrá acá y anotá qué acciones concretas vas a tomar para mejorarla, con fecha.</li>
-              <li><b style={{ color: WHITE }}>D · Seguimiento Diario</b> — opcional. Solo si querés registrar cada lead/llamada/cierre día por día para calcular tu costo de adquisición (CAC) real. Si no tenés tiempo para esto, no pasa nada — con la Mensual alcanza.</li>
+              <li><b style={{ color: WHITE }}>D · Seguimiento Diario</b> — opcional. Solo si querés registrar cada lead/llamada/cierre día por día para calcular tu costo de adquisición (CAC) real. Si no tenés tiempo para esto, no pasa nada — con la Mensual alcanza. En cada cierre cargá también <b style={{ color: WHITE }}>Meses Mín.</b> (el mínimo de meses acordado con ese cliente) — con eso el sistema proyecta solo los ingresos recurrentes comprometidos en "Ingresos Recurrentes Comprometidos", sin que tengas que volver a cargarlos mes a mes.</li>
             </ol>
             <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 10, marginTop: 4 }}>
               <b style={{ color: WHITE }}>Glosario rápido:</b> Tasa de Cierre = % de llamadas que terminan en cliente pagando · Show Up = % que se presenta a la llamada que agendó · FECCU/FECCP/BECC = las 3 partes en que se cobra un cliente (pago inicial ~70% / segundo pago ~20% / saldo final ~10%) · AOV/Ticket = lo que paga un cliente en promedio · MRR = facturación mensual recurrente.
