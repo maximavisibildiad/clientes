@@ -219,7 +219,7 @@ function storageSetTs(ts) {
   try { localStorage.setItem(STORAGE_KEY + "_ts", ts.toString()); } catch(_) {}
 }
 
-// ─── GEMA TASKS (265) ─────────────────────────────────────────────────────────
+// ─── GEMA TASKS (270) ─────────────────────────────────────────────────────────
 // n:262-264 = [GP] agregadas 2026-07-22, ver data/changelog.md — cubren el hueco de
 // clientes SIN equipo comercial propio (dueño/socio es su propio vendedor), caso
 // origen: Alexander Odontólogo.
@@ -234,6 +234,7 @@ const GEMA_TASKS = [
   { n:8, week:"Semana 1", area:"Estrategia", title:"[TUYO] Realizar brief comercial (data/cuestionario_diagnostico_comercial.md — Anexo 2).", owner:"JP" },
   { n:9, week:"Semana 1", area:"Estrategia", title:"[TUYO] Realizar brief general (data/brief_general_base.md — síntesis, después del brief comercial).", owner:"JP" },
   { n:10, week:"Semana 1", area:"Administrativo", title:"[TUYO] De acuerdo al brief comercial y brief general, agendar reuniones internas.", owner:"JP" },
+  { n:266, week:"Semana 1", area:"Administrativo", title:"[GP] Bloquear en el calendario las fechas de TODAS las reuniones requeridas y de grabación/entrega de material con el cliente — desde el diagnóstico, no a medida que se necesitan (agregado 2026-07-30, JP: 'para así salir en el tiempo que es').", owner:"JP" },
   { n:11, week:"Semana 1", area:"Comercial", title:"[GEMA V4] Activación de la 'Regla 48h' (Notificación de pausa por falta de activos).", owner:"AM" },
   { n:12, week:"Semana 1", area:"Comercial", title:"[GEMA V4] Envío de formulario 'Diagnóstico Comercial' (13 puntos estratégicos — data/cuestionario_diagnostico_comercial.md, Anexo 2).", owner:"AM" },
   { n:13, week:"Semana 1", area:"Comercial", title:"[GEMA V4] Envío de formulario 'Solicitud de Datos y Activos' (Accesos, Branding — data/alcance_primeras_4_semanas_base.md, Sección 1).", owner:"AM" },
@@ -315,6 +316,7 @@ const GEMA_TASKS = [
   { n:88, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GEMA V4] Diseño del Loop 2 (Email): Secuencia de bienvenida y rescate frío.", owner:"CAIO" },
   { n:89, week:"Semana 2", area:"Estrategia", title:"[TUYO] Programar grabacion de anuncios.", owner:"JP" },
   { n:90, week:"Semana 2", area:"Estrategia", title:"[TUYO] Programar grabacion de VSL.", owner:"JP" },
+  { n:267, week:"Semana 2", area:"Estrategia", title:"[GP] Producir mínimo 1 imagen por línea de negocio para lanzar el MVP — el MVP sale con imágenes como ads primero, mientras se gestiona la grabación y edición del video para el Full Launch (agregado 2026-07-30).", owner:"JP" },
   { n:91, week:"Semana 2", area:"Estrategia", title:"[GEMA V4] Redacción de Guion VSL (Hook, Contexto, Mecanismo, Filtro).", owner:"JP" },
   { n:92, week:"Semana 2", area:"Estrategia", title:"[GEMA V4] Redacción de 5 Guiones UGC (9:16) con requerimientos de B-roll.", owner:"JP" },
   { n:93, week:"Semana 2", area:"Estrategia", title:"[GEMA V4] Aprobación interna de guiones por Dirección Comercial.", owner:"JP" },
@@ -328,7 +330,7 @@ const GEMA_TASKS = [
   { n:101, week:"Semana 2", area:"Estrategia", title:"[TUYO] Creacion de copys para responder comentarios de acuerdo a la estrategia.", owner:"JP" },
   { n:102, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] hacer entrega de los cometarios al diseñador y colocarlos en el excel.", owner:"JP" },
   { n:103, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GEMA V4] Aprobación final del paquete creativo para Tráfico.", owner:"JP" },
-  { n:104, week:"Semana 2", area:"Comercial", title:"[TUYO] crear crm y colocar los accesos en el excel accesos rr.ss.", owner:"JP" },
+  { n:104, week:"Semana 1", area:"Comercial", title:"[TUYO] crear crm y colocar los accesos en el excel accesos rr.ss. (movido de Semana 2 a Semana 1, 2026-07-30 — la creación del CRM arranca desde el diagnóstico, no después).", owner:"JP" },
   { n:105, week:"Semana 2", area:"Comercial", title:"[GEMA V4] Creación del Pipeline visual (Embudo) en Kommo/SaaS.", owner:"CAIO" },
   { n:106, week:"Semana 2", area:"Comercial", title:"[GEMA V4] Configuración de etapas: Prospecto -> IA Activa -> Perfilado -> Agendado.", owner:"CAIO" },
   { n:107, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] Conectar WhatsApp Api al CRM.", owner:"JP" },
@@ -373,6 +375,7 @@ const GEMA_TASKS = [
   { n:146, week:"Semana 3", area:"Administrativo", title:"[TUYO] Creacion de portales necesarios para la operacion (creditos, despachos) y tutoriales.", owner:"JP" },
   { n:147, week:"Semana 3", area:"Estrategia", title:"[TUYO] Creacion de speech de venta con todas las variables.", owner:"JP" },
   { n:148, week:"Semana 3", area:"Estrategia", title:"[TUYO] Creacion de speech presencial con objeciones.", owner:"JP" },
+  { n:269, week:"Semana 3", area:"Estrategia", title:"[GP] Personalizar el speech del doctor de 3 capas (data/manual_speech_consultorio.md) para este cliente — enfocado en cierre, el doctor debe cerrar sí o sí (agregado 2026-07-30).", owner:"JP" },
   { n:149, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Creación de usuarios y permisos en CRM para vendedores.", owner:"CAIO" },
   { n:150, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Entrega de manuales de atención 'Método de la Agencia'.", owner:"AM" },
   { n:262, week:"Semana 3", area:"Comercial", title:"[GP] Entrega del Cuadro Diario Comercial + manuales de recordatorio de cita y consultorio — solo si el cliente NO tiene equipo comercial propio (el dueño/socio hace sus propias llamadas).", owner:"AM" },
@@ -406,9 +409,11 @@ const GEMA_TASKS = [
   { n:177, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Roleplay 1: Simulación de leads calificados.", owner:"AM" },
   { n:178, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Roleplay 2: Simulación de leads difíciles/quemados.", owner:"AM" },
   { n:179, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Capacitación en herramientas de seguimiento (Audio/Video).", owner:"AM" },
+  { n:270, week:"Semana 3", area:"Comercial", title:"[GP] Escribir guía de uso del CRM + grabar video tutorial (notas, tareas, cómo agendar en el calendario) para el equipo del cliente (agregado 2026-07-30).", owner:"AM" },
   { n:180, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Estructuración de la agenda diaria del vendedor.", owner:"AM" },
   { n:181, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Estrategia de recuperación de 'muertos' (Leads fríos).", owner:"AM" },
-  { n:182, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Definición de estructura de llamada de cierre/valoración.", owner:"AM" },
+  { n:268, week:"Semana 3", area:"Comercial", title:"[GP] Crear speech/secuencia de reactivación para leads con cita agendada que no asistieron (no-show) — máximo 3 toques, objetivo único: reagendar, no volver a presentar la línea desde cero (agregado 2026-07-30).", owner:"JP" },
+  { n:182, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Definición de estructura de llamada de cierre/valoración — 2 speeches de contactabilidad (quien eligió categoría / quien no ha elegido), cada uno con tiempos y número de intentos definidos (agregado 2026-07-30).", owner:"AM" },
   { n:183, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Capacitación en técnicas de urgencia y escasez real.", owner:"AM" },
   { n:184, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Configuración de plantillas de respuesta rápida.", owner:"CAIO" },
   { n:185, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Prueba técnica de conocimientos comerciales al equipo.", owner:"AM" },
@@ -461,7 +466,7 @@ const GEMA_TASKS = [
   { n:231, week:"Semana 4+", area:"Comercial", title:"[GEMA V4] Clínica de ventas quincenal correctiva.", owner:"AM" },
   { n:232, week:"Semana 4+", area:"Comercial", title:"[GEMA V4] Supervisión de Pipeline: Limpieza de leads estancados.", owner:"AM" },
   { n:233, week:"Semana 4+", area:"Comercial", title:"[GEMA V4] Refuerzo de guiones según nuevas objeciones detectadas.", owner:"AM" },
-  { n:234, week:"Semana 4+", area:"Comercial", title:"[GEMA V4] Seteo de recordatorios automáticos de citas.", owner:"CAIO" },
+  { n:234, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Seteo de recordatorios automáticos de citas por WhatsApp — 24h antes y el mismo día (movido de Semana 4+ a Semana 3, 2026-07-30 — tiene que estar activo desde el Día 31, no un mes después del lanzamiento).", owner:"CAIO" },
   { n:235, week:"Semana 4+", area:"Comercial", title:"[GEMA V4] Evaluación de calidad de notas de voz del vendedor.", owner:"AM" },
   { n:236, week:"Semana 4+", area:"Administrativo", title:"[GEMA V4] Sesión de motivación y alineación de incentivos comerciales.", owner:"COO" },
   { n:237, week:"Semana 4+", area:"Tráfico y Sistemas", title:"[GEMA V4] Solicitud de nuevos creativos (Evitar fatiga).", owner:"Media Buyer" },
@@ -515,14 +520,14 @@ const NODE_TYPES = {
 
 // ─── LAUNCH STEPS ─────────────────────────────────────────────────────────────
 const MVP_STEPS = [
-  { n:1,  title:"Diagnóstico",             desc:"Cuestionario en llamada o llenado por el cliente" },
-  { n:2,  title:"Proyección financiera",   desc:"LTV, CAC, CPA máximo, proyección 3 meses" },
-  { n:3,  title:"Creación de oferta",      desc:"Oferta + guiones + VSL + imágenes para el mínimo viable" },
-  { n:4,  title:"Estrategia general",      desc:"Todos los loops del sistema de captación" },
-  { n:5,  title:"Estrategia comercial",    desc:"Loop de contacto humano con el lead" },
-  { n:6,  title:"CRM + guiones de venta",  desc:"Crear CRM y guiones para el equipo comercial" },
-  { n:7,  title:"Entrenamiento comercial", desc:"Capacitar al equipo en los guiones y el proceso" },
-  { n:8,  title:"Lanzamiento de campaña",  desc:"Activación y primeras 48h de seguimiento" },
+  { n:1,  title:"Diagnóstico",             desc:"Brief Comercial + Información del Cliente devueltos · Requerimientos de Arranque confirmados (accesos, Authenticator, 2 líneas WhatsApp, logo/paleta) · acceso y validación completa de BM + conexión de API · creación de CRM arranca desde acá, no después · fechas de todas las reuniones requeridas y de grabación/entrega de material bloqueadas en calendario desde el inicio, para salir en el tiempo que es" },
+  { n:2,  title:"Proyección financiera",   desc:"Con datos reales del Brief Comercial (margen, ticket): CAC objetivo, LTV, CPA máximo permitido · 3 escenarios (conservador/esperado/óptimo)" },
+  { n:3,  title:"Creación de oferta",      desc:"Punto 0 (líneas, sub-categorías, precio, mensaje diferenciador) · Ficha ISL/VSL por línea con base visual clara (dolor, deseo, objeción, formato) · specs del Director de Arte · mínimo 1 imagen por línea de negocio — el MVP sale con imágenes como ads primero, mientras producción y edición de video se entrega a GP para el Full Launch · Banco de Recursos (mín. 5 hooks/ganchos/CTAs por línea)" },
+  { n:4,  title:"Estrategia general",      desc:"Organigrama completo — Estrategia y Ciclo del Cliente: tráfico actual, equipo comercial real, evento de conversión exacto, atribución del anuncio, mapeo del SOP de 11 stages, con análisis de responde/no responde en cada punto del flujo" },
+  { n:5,  title:"Estrategia comercial",    desc:"Scripts del proceso comercial completo: saludo por línea de negocio y procedimiento · seguimientos etapa general (nurturing) y etapa no-show · speech de contactabilidad — 2 versiones (eligió categoría / no ha elegido) con tiempos y número de intentos por llamada · speech de agenda (recordatorio mismo día) · recordatorios de cita por WhatsApp (24h antes y mismo día) · speech del doctor 3 capas, orientado a cierre" },
+  { n:6,  title:"CRM + guiones de venta",  desc:"Pipeline con las etapas del Flujo CRM ya definido · tags configurados · los scripts de Estrategia Comercial (paso 5) cargados donde corresponda" },
+  { n:7,  title:"Entrenamiento comercial", desc:"Guía escrita de uso del CRM + video tutorial de uso (notas y tareas) · cómo agendar en el calendario · qué se carga a diario y qué se carga semanal · cómo usar cada guion · si hay comercial propio: cuadro diario + reunión semanal fija" },
+  { n:8,  title:"Lanzamiento de campaña",  desc:"Gate MVP verificado (bot <5min, pipeline activo, 1er workflow nurturing, canales conectados, pixel instalado) · primer anuncio activo, objetivo Mensajes — sin UTMs (el tráfico va directo a WhatsApp, no a una web con link rastreable) · atribución vía Pixel + tag de fuente en GHL" },
 ];
 
 const FULL_STEPS = [
