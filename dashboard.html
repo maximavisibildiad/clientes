@@ -2694,7 +2694,7 @@ function LaunchTab({ client, onChange, globalLaunchPhases, globalMvpSteps, globa
       {LAUNCH_GROUPS.map((grp) => {
         const grpPhases = phases.filter(p => p.group === grp.id);
         const grpDone = grpPhases.filter(p => getP(p.id).done).length;
-        const grpFromDate = grp.id !== "pre" ? fmtD(addOffset(grpPhases[0].offset)) : null;
+        const grpFromDate = grp.id !== "pre" && grpPhases.length > 0 ? fmtD(addOffset(grpPhases[0].offset)) : null;
 
         return (
           <div key={grp.id} style={{ marginBottom:22 }}>
