@@ -219,7 +219,7 @@ function storageSetTs(ts) {
   try { localStorage.setItem(STORAGE_KEY + "_ts", ts.toString()); } catch(_) {}
 }
 
-// ─── GEMA TASKS (202 activas — 65 archivadas + 6 consolidadas en 4 + 3 repuestas [pipeline/tags/pixel], 2026-07-31) ──
+// ─── GEMA TASKS (203 activas — 65 archivadas + 6 consolidadas en 4 + 3 repuestas [pipeline/tags/pixel] + 1 nueva [n:274], 2026-08-01; campo `gate` MVP/FULL/POST/PENDING agregado 2026-08-02) ──
 // n:262-264 = [GP] agregadas 2026-07-22, ver data/changelog.md — cubren el hueco de
 // clientes SIN equipo comercial propio (dueño/socio es su propio vendedor), caso
 // origen: Alexander Odontólogo.
@@ -798,8 +798,24 @@ function getInitialData(savedOverride) {
       }),
       ...defaults.globalTasks.filter(t => !savedIds.has(t.id)), // nuevas tareas añadidas al código
     ];
+    // Mismo criterio que globalTasks arriba — antes globalLaunchPhases/globalMvpSteps/globalFullSteps
+    // solo usaban `saved || defaults` sin refrescar nunca: un cambio de código (fechas, notas, fases
+    // nuevas) quedaba invisible para cualquier sesión que ya tuviera datos guardados, a diferencia de
+    // GEMA_TASKS que sí se refrescaba. Bug encontrado y corregido 2026-08-03 — JP: "pero no quedo en
+    // el dashboard" sobre la reestructuración de LAUNCH_PHASES del 2026-08-02.
+    const mergeGlobalList = (savedList, defaultList) => {
+      const freshMap = new Map(defaultList.map(x => [x.id, x]));
+      const savedListIds = new Set((savedList || []).map(x => x.id));
+      return [
+        ...(savedList || []).map(x => { const fresh = freshMap.get(x.id); return fresh ? { ...x, ...fresh } : x; }),
+        ...defaultList.filter(x => !savedListIds.has(x.id)),
+      ];
+    };
+    const mergedPhases   = mergeGlobalList(saved.globalLaunchPhases, defaults.globalLaunchPhases);
+    const mergedMvpSteps = mergeGlobalList(saved.globalMvpSteps,     defaults.globalMvpSteps);
+    const mergedFullSteps= mergeGlobalList(saved.globalFullSteps,    defaults.globalFullSteps);
     const freshClients = syncTasksToClients(
-      syncPhasesToClients(saved.clients, saved.globalLaunchPhases || defaults.globalLaunchPhases),
+      syncPhasesToClients(saved.clients, mergedPhases),
       mergedTasks
     );
     return {
@@ -807,9 +823,9 @@ function getInitialData(savedOverride) {
       ...saved,
       personal: saved.personal ? { ...defaults.personal, ...saved.personal } : defaults.personal,
       globalTasks: mergedTasks,
-      globalMvpSteps: saved.globalMvpSteps || defaults.globalMvpSteps,
-      globalFullSteps: saved.globalFullSteps || defaults.globalFullSteps,
-      globalLaunchPhases: saved.globalLaunchPhases || defaults.globalLaunchPhases,
+      globalMvpSteps: mergedMvpSteps,
+      globalFullSteps: mergedFullSteps,
+      globalLaunchPhases: mergedPhases,
       teamFlow: saved.teamFlow || defaults.teamFlow,
       clients: freshClients,
     };
