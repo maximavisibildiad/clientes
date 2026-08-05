@@ -219,7 +219,7 @@ function storageSetTs(ts) {
   try { localStorage.setItem(STORAGE_KEY + "_ts", ts.toString()); } catch(_) {}
 }
 
-// ─── GEMA TASKS (203 activas — 65 archivadas + 6 consolidadas en 4 + 3 repuestas [pipeline/tags/pixel] + 1 nueva [n:274], 2026-08-01; campo `gate` MVP/FULL/POST/PENDING agregado 2026-08-02) ──
+// ─── GEMA TASKS (205 activas — 65 archivadas + 6 consolidadas en 4 + 3 repuestas [pipeline/tags/pixel] + 1 nueva [n:274], 2026-08-01 + 1 nueva [n:275, ISL/VSL→bot], 2026-08-04 + 1 nueva [n:276, programa de capacitación], 2026-08-03; campo `gate` MVP/FULL/POST/PENDING agregado 2026-08-02; campo `phase` (+ `phaseUncertain`) agregado 2026-08-03) ──
 // n:262-264 = [GP] agregadas 2026-07-22, ver data/changelog.md — cubren el hueco de
 // clientes SIN equipo comercial propio (dueño/socio es su propio vendedor), caso
 // origen: Alexander Odontólogo.
@@ -284,10 +284,11 @@ const GEMA_TASKS = [
   { n:87, week:"Semana 2", area:"Tráfico y Sistemas", title:"[REVISAR 2026-07-31] [GEMA V4] Diseño del Loop 1 (WhatsApp): Arquitectura de perfilamiento IA.", owner:"CAIO", gate:"PENDING", phase:"metodologia" },
   { n:89, week:"Semana 2", area:"Estrategia", title:"[TUYO] Programar grabacion de anuncios.", owner:"JP", gate:"MVP", phase:"ads" },
   { n:90, week:"Semana 2", area:"Estrategia", title:"[TUYO] Programar grabacion de VSL.", owner:"JP", gate:"MVP", phase:"ads" },
-  { n:267, week:"Semana 2", area:"Estrategia", title:"[GP] Producir mínimo 1 imagen por línea de negocio para lanzar el MVP — el MVP sale con imágenes como ads primero, mientras se gestiona la grabación y edición del video para el Full Launch (agregado 2026-07-30).", owner:"JP", gate:"MVP", phase:"ads" },
+  { n:267, week:"Semana 2", area:"Estrategia", title:"[GP] Producir mínimo 1 imagen por línea de negocio para lanzar el MVP — imágenes como ads primero, video para el Full Launch. (ver MECÁNICA DE PRODUCCIÓN, data/system_prompt_director_arte_isl.md)", owner:"JP", gate:"MVP", phase:"ads" },
   { n:91, week:"Semana 2", area:"Estrategia", title:"[REVISAR 2026-07-31] [GEMA V4] Redacción de Guion VSL (Hook, Contexto, Mecanismo, Filtro).", owner:"JP", gate:"PENDING", phase:"ads" },
   { n:92, week:"Semana 2", area:"Estrategia", title:"[GEMA V4] Redacción de 5 Guiones UGC (9:16) con requerimientos de B-roll.", owner:"JP", gate:"FULL", phase:"creativos_full" },
   { n:93, week:"Semana 2", area:"Estrategia", title:"[REVISAR 2026-07-31] [GEMA V4] Aprobación interna de guiones por Dirección Comercial.", owner:"JP", gate:"PENDING", phase:"ads" },
+  { n:275, week:"Semana 2", area:"Estrategia", title:"[GP] Producir el ISL/VSL de cada línea y cargarlo en WF_NUTRICION_LINEA del bot — proceso interno, distinto de n:267 (ads). (ver TAREA S1-07B, proceso_0_servicios.md)", owner:"CAIO", gate:"MVP", phase:"ads" },
   { n:94, week:"Semana 2", area:"Comercial", title:"[GEMA V4] Envío de guiones al founder con tutorial de grabación. (ver TAREA S1-10, proceso_0_servicios.md)", owner:"AM", gate:"MVP", phase:"ads" },
   { n:95, week:"Semana 2", area:"Comercial", title:"[GEMA V4] Seguimiento agresivo de grabación (Recordatorio 48h).", owner:"AM", gate:"MVP", phase:"ads" },
   { n:96, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GEMA V4] Recepción y auditoría de calidad de videos crudos.", owner:"Media Buyer", gate:"FULL", phase:"creativos_full" },
@@ -340,6 +341,7 @@ const GEMA_TASKS = [
   { n:262, week:"Semana 3", area:"Comercial", title:"[GP] Entrega del Cuadro Diario Comercial — solo si el cliente NO tiene equipo comercial propio (el dueño/socio hace sus propias llamadas). Ya no incluye los manuales de recordatorio/consultorio — esos son requisito mínimo para TODO cliente, ver n:274 y n:269 (separado 2026-08-01).", owner:"AM", gate:"MVP", phase:"reporte_dia" },
   { n:263, week:"Semana 3", area:"Comercial", title:"[GP] Acordar día y hora fija de la reunión semanal de revisión con el cliente — queda agendada en firme, nunca \"para coordinar después\".", owner:"AM", gate:"MVP", phase:"closers" },
   { n:274, week:"Semana 3", area:"Comercial", title:"[GP] Personalizar y entregar el speech de recordatorio del día de la cita / reagendar (data/manual_recordatorio_dia_cita.md) para este cliente — aplica a TODO cliente, tenga o no comercial propio (Stage 06 del SOP es universal, distinto del Cuadro Diario que sí es condicional — n:262) (agregado 2026-08-01).", owner:"AM", gate:"MVP", phase:"closers" },
+  { n:276, week:"Semana 3", area:"Comercial", title:"[GP] Ejecutar el programa de capacitación comercial (data/programa_capacitacion_comercial.md, Panorama 1 — comercial único + dueño/doctor) con el equipo del cliente: contexto de empresa, herramientas (CRM/calendario), técnica de los 3 speech ya personalizados (n:182/269/274), práctica acompañada, verificación de que aprendió. Panorama 2 (equipo dedicado Traffic Manager/Directora Comercial/Closer Leader/Auditor Comercial) sigue pendiente, no se usa todavía (agregado 2026-08-03).", owner:"AM", gate:"MVP", phase:"closers" },
   { n:152, week:"Semana 3", area:"Administrativo", title:"[REVISAR 2026-07-31] [TUYO] CREAR DENTRO DEL ARCHIVO METODOLOGIA UNA PESTAÑA DE know-how.", owner:"JP", gate:"PENDING", phase:"metodologia", phaseUncertain:true },
   { n:153, week:"Semana 3", area:"Administrativo", title:"[REVISAR 2026-07-31] [TUYO] manual de funciones.", owner:"JP", gate:"PENDING", phase:"metodologia", phaseUncertain:true },
   { n:154, week:"Semana 3", area:"Administrativo", title:"[REVISAR 2026-07-31] [CONSOLIDADA — antes n:154 y n:165, eran el mismo ítem duplicado] Tener creado cronograma de funciones. Pendiente: confirmar contenido — ¿corresponde a roles_equipo.md o es documento nuevo por cliente?", owner:"JP", gate:"PENDING", phase:"metodologia", phaseUncertain:true },
