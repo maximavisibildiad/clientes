@@ -7455,25 +7455,25 @@ function JesusSection() {
   const OR_TINT = "rgba(232,93,4,0.07)";
   const OR_TINT2 = "rgba(232,93,4,0.11)";
 
-  const pageStyle = { maxWidth: 820, margin: "0 auto", background: "#FFFFFF", borderRadius: 20, padding: "44px 40px", boxShadow: "0 12px 48px rgba(0,0,0,0.4)", border: `1px solid ${PBORDER}` };
-  const titleStyle = { color: INK, fontWeight: 800, fontSize: 20, letterSpacing: -0.3 };
-  const kickerStyle = { color: INK_SOFT, fontSize: 14, marginTop: 6, marginBottom: 16, lineHeight: 1.6 };
-  const label = { color: OR, fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginTop: 22, marginBottom: 10 };
-  const list = { color: INK, fontSize: 16, lineHeight: 1.8, paddingLeft: 20 };
-  const body = { color: INK, fontSize: 16, lineHeight: 1.8 };
-  const sectionWrap = { marginTop: 40 };
+  const pageStyle = { maxWidth: 920, margin: "0 auto", background: "#FFFFFF", borderRadius: 24, padding: "52px 56px", boxShadow: "0 16px 60px rgba(0,0,0,0.45)", border: `1px solid ${PBORDER}` };
+  const titleStyle = { color: INK, fontWeight: 800, fontSize: 23, letterSpacing: -0.3 };
+  const kickerStyle = { color: INK_SOFT, fontSize: 15.5, marginTop: 6, marginBottom: 18, lineHeight: 1.65 };
+  const label = { color: OR, fontSize: 14, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginTop: 24, marginBottom: 12 };
+  const list = { color: INK, fontSize: 17.5, lineHeight: 1.85, paddingLeft: 22 };
+  const body = { color: INK, fontSize: 17.5, lineHeight: 1.85 };
+  const sectionWrap = { marginTop: 32, background: "#FFFEFB", border: `1.5px solid ${PBORDER}`, borderRadius: 18, padding: "30px 34px", boxShadow: "0 3px 14px rgba(90,60,20,0.06)" };
   const rule = <div style={{ height: 1, background: PBORDER, margin: "40px 0" }} />;
 
   const verseBox = (text, ref) => (
-    <div style={{ borderLeft: `4px solid ${OR}`, background: OR_TINT, padding: "16px 20px", borderRadius: "0 10px 10px 0", margin: "14px 0" }}>
-      <div style={{ color: INK, fontStyle: "italic", fontSize: 16, marginBottom: ref ? 6 : 0, lineHeight: 1.65 }}>{text}</div>
-      {ref && <div style={{ color: OR, fontSize: 12, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 700 }}>{ref}</div>}
+    <div style={{ borderLeft: `4px solid ${OR}`, background: OR_TINT, padding: "18px 22px", borderRadius: "0 10px 10px 0", margin: "16px 0" }}>
+      <div style={{ color: INK, fontStyle: "italic", fontSize: 17.5, marginBottom: ref ? 7 : 0, lineHeight: 1.7 }}>{text}</div>
+      {ref && <div style={{ color: OR, fontSize: 13, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 700 }}>{ref}</div>}
     </div>
   );
   const affirmBox = (text) => (
-    <div style={{ background: OR_TINT2, borderRadius: 12, padding: "16px 20px", margin: "14px 0" }}>
-      <div style={{ color: OR, fontSize: 11.5, letterSpacing: 1, textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>Afirmación</div>
-      <div style={{ color: INK, fontStyle: "italic", fontSize: 16, lineHeight: 1.65 }}>{text}</div>
+    <div style={{ background: OR_TINT2, borderRadius: 14, padding: "18px 22px", margin: "16px 0" }}>
+      <div style={{ color: OR, fontSize: 12.5, letterSpacing: 1, textTransform: "uppercase", fontWeight: 700, marginBottom: 7 }}>Afirmación</div>
+      <div style={{ color: INK, fontStyle: "italic", fontSize: 17.5, lineHeight: 1.7 }}>{text}</div>
     </div>
   );
 
@@ -7655,11 +7655,11 @@ function JesusSection() {
           <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 8, margin: "4px 0 8px" }}>
             {cicloCreencia.map(([t, d], i) => (
               <React.Fragment key={t}>
-                <div style={{ background: OR_TINT, border: `1px solid ${PBORDER}`, borderRadius: 10, padding: "12px 14px", minWidth: 150, maxWidth: 170, textAlign: "center" }}>
-                  <div style={{ color: OR, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{t}</div>
-                  <div style={{ color: INK, fontSize: 12.5, lineHeight: 1.4 }}>{d}</div>
+                <div style={{ background: OR_TINT, border: `1px solid ${PBORDER}`, borderRadius: 12, padding: "16px 18px", minWidth: 190, maxWidth: 210, textAlign: "center" }}>
+                  <div style={{ color: OR, fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{t}</div>
+                  <div style={{ color: INK, fontSize: 14.5, lineHeight: 1.5 }}>{d}</div>
                 </div>
-                {i < cicloCreencia.length - 1 && <div style={{ color: OR, fontSize: 20 }}>→</div>}
+                {i < cicloCreencia.length - 1 && <div style={{ color: OR, fontSize: 24 }}>→</div>}
               </React.Fragment>
             ))}
           </div>
@@ -7694,10 +7694,10 @@ function JesusSection() {
             {pasosMiedo.map(([t, d]) => <li key={t} style={{ marginBottom: 10 }}><b>{t}</b> {d}</li>)}
           </ol>
           {miedos.map(m => (
-            <div key={m.miedo} style={{ background: OR_TINT, border: `1px solid ${PBORDER}`, borderRadius: 14, padding: "18px 22px", marginTop: 16 }}>
-              <div style={{ color: OR, fontWeight: 700, fontSize: 15, marginBottom: 8 }}>{m.miedo}</div>
-              <div style={{ ...body, fontSize: 15 }}><b>La mentira:</b> {m.mentira}</div>
-              <div style={{ margin: "10px 0" }}>{verseBox(m.verse[0], m.verse[1])}</div>
+            <div key={m.miedo} style={{ background: OR_TINT, border: `1px solid ${PBORDER}`, borderRadius: 16, padding: "22px 26px", marginTop: 18 }}>
+              <div style={{ color: OR, fontWeight: 700, fontSize: 17 }}>{m.miedo}</div>
+              <div style={{ ...body, marginTop: 8 }}><b>La mentira:</b> {m.mentira}</div>
+              <div style={{ margin: "12px 0" }}>{verseBox(m.verse[0], m.verse[1])}</div>
               {affirmBox(m.afirmacion)}
             </div>
           ))}
