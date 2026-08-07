@@ -7448,25 +7448,34 @@ function ProyeccionSection({ personal, onUpdate }) {
 
 // ─── JESÚS SECTION ────────────────────────────────────────────────────────────
 function JesusSection() {
-  const cardStyle = { background: CARD, borderRadius: 14, padding: 24, border: `1px solid ${BORDER}` };
-  const titleStyle = { color: WHITE, fontWeight: 800, fontSize: 20, letterSpacing: -0.3 };
-  const kickerStyle = { color: GRAY, fontSize: 14, marginTop: 6, marginBottom: 16, lineHeight: 1.6 };
-  const label = { color: GOLD, fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginTop: 22, marginBottom: 10 };
-  const list = { color: WHITE, fontSize: 16, lineHeight: 1.8, paddingLeft: 20 };
-  const body = { color: WHITE, fontSize: 16, lineHeight: 1.8 };
+  const INK = "#221C14";
+  const INK_SOFT = "#6E6255";
+  const PBORDER = "#EDE4D3";
+  const OR = "#E85D04";
+  const OR_TINT = "rgba(232,93,4,0.07)";
+  const OR_TINT2 = "rgba(232,93,4,0.11)";
+
+  const pageStyle = { maxWidth: 820, margin: "0 auto", background: "#FFFFFF", borderRadius: 20, padding: "44px 40px", boxShadow: "0 12px 48px rgba(0,0,0,0.4)", border: `1px solid ${PBORDER}` };
+  const titleStyle = { color: INK, fontWeight: 800, fontSize: 20, letterSpacing: -0.3 };
+  const kickerStyle = { color: INK_SOFT, fontSize: 14, marginTop: 6, marginBottom: 16, lineHeight: 1.6 };
+  const label = { color: OR, fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginTop: 22, marginBottom: 10 };
+  const list = { color: INK, fontSize: 16, lineHeight: 1.8, paddingLeft: 20 };
+  const body = { color: INK, fontSize: 16, lineHeight: 1.8 };
+  const sectionWrap = { marginTop: 40 };
+  const rule = <div style={{ height: 1, background: PBORDER, margin: "40px 0" }} />;
+
   const verseBox = (text, ref) => (
-    <div style={{ borderLeft: `4px solid ${GOLD}`, background: "rgba(212,175,55,0.07)", padding: "16px 20px", borderRadius: "0 10px 10px 0", margin: "14px 0" }}>
-      <div style={{ color: WHITE, fontStyle: "italic", fontSize: 16, marginBottom: ref ? 6 : 0, lineHeight: 1.65 }}>{text}</div>
-      {ref && <div style={{ color: GRAY, fontSize: 12, letterSpacing: 0.5, textTransform: "uppercase" }}>{ref}</div>}
+    <div style={{ borderLeft: `4px solid ${OR}`, background: OR_TINT, padding: "16px 20px", borderRadius: "0 10px 10px 0", margin: "14px 0" }}>
+      <div style={{ color: INK, fontStyle: "italic", fontSize: 16, marginBottom: ref ? 6 : 0, lineHeight: 1.65 }}>{text}</div>
+      {ref && <div style={{ color: OR, fontSize: 12, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: 700 }}>{ref}</div>}
     </div>
   );
   const affirmBox = (text) => (
-    <div style={{ background: "rgba(212,175,55,0.09)", borderRadius: 12, padding: "16px 20px", margin: "14px 0" }}>
-      <div style={{ color: GOLD, fontSize: 11.5, letterSpacing: 1, textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>Afirmación</div>
-      <div style={{ color: WHITE, fontStyle: "italic", fontSize: 16, lineHeight: 1.65 }}>{text}</div>
+    <div style={{ background: OR_TINT2, borderRadius: 12, padding: "16px 20px", margin: "14px 0" }}>
+      <div style={{ color: OR, fontSize: 11.5, letterSpacing: 1, textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>Afirmación</div>
+      <div style={{ color: INK, fontStyle: "italic", fontSize: 16, lineHeight: 1.65 }}>{text}</div>
     </div>
   );
-  const divider = <div style={{ height: 1, background: BORDER, margin: "36px 0" }} />;
 
   const identidadVerses = [
     ['"Si alguno está en Cristo, nueva criatura es; las cosas viejas pasaron, ya son hechas nuevas."', "2 Corintios 5:17"],
@@ -7479,29 +7488,62 @@ function JesusSection() {
 
   const cicloCreencia = [
     ["Creencia", "¿En quién me estoy convirtiendo?"],
-    ["Acción", "Tomás acción masiva acá, con confianza en tus nuevas creencias."],
-    ["Realidad", "Proceso de transformación confirmado — tu nueva realidad haciéndose real."],
-    ["Feedback", "Recibís feedback y ajustás tus creencias y acciones en consecuencia."],
+    ["Acción", "Tomo acción masiva acá, con confianza en mis nuevas creencias."],
+    ["Realidad", "Proceso de transformación confirmado — mi nueva realidad haciéndose real."],
+    ["Feedback", "Recibo feedback y ajusto mis creencias y acciones en consecuencia."],
   ];
 
   const pasosMiedo = [
-    ["Nombralo con precisión.", "No \"miedo al fracaso\" — la escena exacta que te asusta. Qué pasa, quién está, qué se dice."],
-    ["Encontrá la mentira debajo.", "Qué tendría que ser cierto para que ese miedo tenga sentido. Casi siempre es \"mi valor depende de X\"."],
-    ["Contrastala con la Escritura.", "Buscá la verdad puntual que la contradice — no una genérica, una que hable directo a esa mentira."],
-    ["Definí la acción de esta semana.", "La hacés con el miedo presente, no cuando se vaya. Si esperás a no sentir miedo, no vas a actuar nunca."],
+    ["Nombrar con precisión.", "No \"miedo al fracaso\" — la escena exacta que me asusta. Qué pasa, quién está, qué se dice."],
+    ["Encontrar la mentira debajo.", "Qué tendría que ser cierto para que ese miedo tenga sentido. Casi siempre es \"mi valor depende de X\"."],
+    ["Contrastarla con la Escritura.", "La verdad puntual que la contradice — no una genérica, una que hable directo a esa mentira."],
+    ["Definir por qué realmente ya soy lo contrario.", "No alcanza con declararlo — la evidencia real de que ya es así."],
+  ];
+
+  const miedos = [
+    {
+      miedo: "Miedo a quedar mal",
+      mentira: "Mi valor depende de que nadie dude de mí, de nunca fallar en público.",
+      verse: ['"Si todavía tratara de agradar a los hombres, no sería siervo de Cristo."', "Gálatas 1:10"],
+      afirmacion: "No busco la aprobación de la gente porque ya tengo la de Dios. Y lo sé porque sigo diciéndole la verdad a un médico aunque no quiera escucharla, sin necesitar que todos estén de acuerdo conmigo.",
+    },
+    {
+      miedo: "Miedo a no poder crear sistemas",
+      mentira: "Si no tengo todo perfectamente sistematizado desde ya, mi negocio no es serio.",
+      verse: ['"Con sabiduría se edifica la casa, y con prudencia se afirma; y con ciencia se llenan las cámaras de todo bien preciado y agradable."', "Proverbios 24:3-4"],
+      afirmacion: "Sí puedo crear sistemas — porque ya lo hice: aprendí el método de entrega de Mike desde cero y hoy lo aplico con tres clientes médicos reales. No parto de cero, parto de lo que ya construí.",
+    },
+    {
+      miedo: "Miedo a no ser disciplinado",
+      mentira: "Mi pasado — haberme quebrado 3 veces — demuestra que no tengo disciplina real.",
+      verse: ['"Golpeo mi cuerpo, y lo pongo en servidumbre, no sea que, habiendo sido heraldo para otros, yo mismo venga a ser eliminado."', "1 Corintios 9:27"],
+      afirmacion: "Sí soy disciplinado — lo pruebo cada mañana con mi priming: respiración, gratitud, enfoque, antes de que nadie me lo pida. Nadie me obliga a hacerlo; lo hago porque ya lo decidí.",
+    },
+    {
+      miedo: "Miedo a no cumplir mi palabra",
+      mentira: "En algún momento voy a fallar un compromiso y eso me va a definir para siempre.",
+      verse: ['"Pero sea vuestro hablar: Sí, sí; no, no; porque lo que es más de esto, de mal procede."', "Mateo 5:37"],
+      afirmacion: "Cumplo mi palabra — lo sé porque ya lo hago: si le digo a un médico que la reunión es a las 3, estoy a las 3. Sigo con Cristian, Areiza y Alexander; no me fui de ninguno.",
+    },
+    {
+      miedo: "Miedo a que crean que vendo humo",
+      mentira: "Mi valor depende de convencer a todos de que soy real.",
+      verse: ['"Renunciamos a lo oculto y vergonzoso, no andando con astucia... sino por la manifestación de la verdad recomendándonos a toda conciencia humana delante de Dios."', "2 Corintios 4:2"],
+      afirmacion: "No vendo humo — vendo resultado medido: mi comisión con Cristian, Areiza y Alexander depende de que ellos facturen más, no de que yo hable bonito. Si no genero resultado, no cobro. Eso es lo contrario de vender humo.",
+    },
   ];
 
   const rasgos = [
-    ["Resiliente", "Volviste a empezar cada vez que hizo falta. No es aspiracional, ya es tu historial."],
-    ["Responsable", "Te hacés cargo de todo lo que te comprometés."],
+    ["Resiliente", "Volví a empezar cada vez que hizo falta. No es aspiracional, ya es mi historial."],
+    ["Responsable", "Me hago cargo de todo lo que me comprometo."],
     ["Disciplinado", "Priming, aprendizaje, entrenamiento, trabajo enfocado — sin necesitar que sea extremo."],
     ["Proveedor", "Que nunca falte nada, responsabilidades siempre cubiertas."],
-    ["Exigente con la excelencia", "No permitís faltas de respeto. Todo se hace en excelencia."],
-    ["Fiel a su palabra", "Si decís que sí, es que sí."],
-    ["De fe activa", "Biblia, oración y priming todos los días, no solo cuando te acordás."],
-    ["Empático", "Escuchás a tus clientes y a tu equipo antes de reaccionar."],
-    ["Paciente con procesos largos", "Sostenés el proceso con médicos de trayectoria sin apurar la venta — sabés que la confianza se construye."],
-    ["Recibe feedback sin tomarlo personal", "Separás la corrección de tu identidad — te hace mejor, no te define."],
+    ["Exigente con la excelencia", "No permito faltas de respeto. Todo se hace en excelencia."],
+    ["Fiel a mi palabra", "Si digo que sí, es que sí."],
+    ["De fe activa", "Biblia, oración y priming todos los días, no solo cuando me acuerdo."],
+    ["Empático", "Escucho a mis clientes y a mi equipo antes de reaccionar."],
+    ["Paciente con procesos largos", "Sostengo el proceso con médicos de trayectoria sin apurar la venta — sé que la confianza se construye."],
+    ["Recibo feedback sin tomarlo personal", "Separo la corrección de mi identidad — me hace mejor, no me define."],
   ];
 
   const mentores = [
@@ -7511,18 +7553,18 @@ function JesusSection() {
 
   const imagenPersonal = [
     ["Negocio", "Consultor serio en quien un médico con trayectoria confía el crecimiento de su práctica — no humo, resultado."],
-    ["Salud", "Hombre en control real de su cuerpo — de 104 a 87 kg con evidencia, no con filtro."],
-    ["Estilo", "Sobrio y cuidado, sin ostentar — coherente con la excelencia que exigís en tu trabajo."],
-    ["Fe", "Visible pero no performática — ora y lee la Biblia porque lo vive, no porque lo publica."],
+    ["Salud", "Estoy en control real de mi cuerpo — de 104 a 87 kg con evidencia, no con filtro."],
+    ["Estilo", "Sobrio y cuidado, sin ostentar — coherente con la excelencia que exijo en mi trabajo."],
+    ["Fe", "Visible pero no performática — oro y leo la Biblia porque lo vivo, no porque lo publico."],
     ["Familia", "Presente, no solo proveedor — el que está ahí, no solo el que paga."],
   ];
 
   const guiaImagenes = [
-    ["Fe", "Nada de cruces genéricas de stock. Mejor: una foto tuya real orando o leyendo, o un lugar concreto que te conecte con Dios."],
-    ["Negocio", "Vos presentando o cerrando con autoridad — la misma energía del hombre de traje hablando con convicción frente a otros, no una sala de juntas de stock. Capturas reales de tu dashboard y tu oficina también suman."],
-    ["Mentores", "\"[Nombre] + contexto específico\" (ej. \"en su oficina\", \"en una charla puntual\") en vez de un retrato genérico — así la imagen representa la cualidad que anotaste, no solo la cara."],
-    ["Salud", "Screenshots tipo bio-hacker — sueño, entrenamiento, progreso real — no un ideal genérico de stock. Tu propia foto de avance hacia los 87 kg / 10% pesa más que cualquier imagen ajena."],
-    ["Estilo de vida", "Lexus 600, Mercedes de tu esposa y tus hijos, cuentas llenas — las mismas imágenes de tu visualización del priming, no genéricas."],
+    ["Fe", "Nada de cruces genéricas de stock. Mejor: una foto mía real orando o leyendo, o un lugar concreto que me conecte con Dios."],
+    ["Negocio", "Yo presentando o cerrando con autoridad — la misma energía del hombre de traje hablando con convicción frente a otros, no una sala de juntas de stock. Capturas reales de mi dashboard y mi oficina también suman."],
+    ["Mentores", "\"[Nombre] + contexto específico\" (ej. \"en su oficina\", \"en una charla puntual\") en vez de un retrato genérico — así la imagen representa la cualidad que anoté, no solo la cara."],
+    ["Salud", "Screenshots tipo bio-hacker — sueño, entrenamiento, progreso real — no un ideal genérico de stock. Mi propia foto de avance hacia los 87 kg / 10% pesa más que cualquier imagen ajena."],
+    ["Estilo de vida", "Lexus 600, Mercedes de mi esposa y mis hijos, cuentas llenas — las mismas imágenes de mi visualización del priming, no genéricas."],
   ];
 
   const objetivos = [
@@ -7553,7 +7595,7 @@ function JesusSection() {
       titulo: "Disciplinas diarias",
       verse: ['"El fruto del Espíritu es amor, gozo, paz, paciencia... dominio propio."', "Gálatas 5:22-23"],
       items: [
-        "Sueño: acostarme entre 11pm y 1am, levantarme entre 7am y 10am. El hábito real no es levantarse temprano — es dormir bien, entre 6 y 8 horas.",
+        "Sueño: acostarme entre 11pm y 1am, levantarme entre 7am y 10am. El hábito real no es levantarme temprano — es dormir bien, entre 6 y 8 horas.",
         "Primera hora: priming (ver Ritual Diario).",
         "Aprendizaje: mínimo 1 hora todos los días, siempre al inicio.",
         "Entrenamiento después del bloque de aprendizaje.",
@@ -7576,176 +7618,190 @@ function JesusSection() {
     {
       titulo: "Estándares incuestionables",
       verse: ['"Todo aquel que me oye estas palabras y las hace, le compararé a un hombre prudente que edificó su casa sobre la roca."', "Mateo 7:24-25"],
-      items: ["Ser honesto.", "Mantenerme en mi visión y mi propósito en Dios.", "Ser el hombre que respalda a su hija, su esposa, su madre, y a los más débiles: hermano, papá."],
+      items: ["Ser honesto.", "Mantenerme en mi visión y mi propósito en Dios.", "Ser el hombre que respalda a mi hija, mi esposa y mi madre, y a los más débiles: mi hermano, mi papá."],
       afirmacion: "Soy hijo de Dios primero, y por eso puedo ser la roca de mi familia después. Lo que construyo hoy — honesto, con propósito en Dios — es lo que sostiene a los que dependen de mí.",
     },
   ];
 
   return (
-    <div style={{ maxWidth: 820 }}>
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ color: WHITE, fontWeight: 800, fontSize: 26, letterSpacing: -0.4 }}>Mapa de Jesús</div>
-        <div style={{ color: GOLD, fontSize: 13, fontWeight: 600, letterSpacing: 0.3, marginTop: 6 }}>Hijo de Dios · Consultor de Confianza para Médicos · Proveedor · Hombre de Palabra · Resiliente</div>
-        <div style={{ color: GRAY, fontSize: 14, marginTop: 8 }}>Leelo completo al despertar y otra vez antes de dormir.</div>
-      </div>
+    <div style={{ paddingBottom: 24 }}>
+      <div style={pageStyle}>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ color: INK, fontWeight: 800, fontSize: 26, letterSpacing: -0.4 }}>Mapa de Jesús</div>
+          <div style={{ color: OR, fontSize: 13, fontWeight: 600, letterSpacing: 0.3, marginTop: 6 }}>Hijo de Dios · Consultor de Confianza para Médicos · Proveedor · Hombre de Palabra · Resiliente</div>
+        </div>
 
-      <div style={{ ...cardStyle, marginBottom: 22, border: `1px solid ${GOLD}55` }}>
-        <div style={titleStyle}>Ruta de uso</div>
-        <ol style={{ ...list, marginTop: 14 }}>
-          <li style={{ marginBottom: 10 }}>Apenas te levantés, leé el Mapa completo.</li>
-          <li style={{ marginBottom: 10 }}>Mirá tu identidad y la persona en la que te estás convirtiendo — dejá que la emoción te inunde, no lo leas de corrido sin sentirlo.</li>
-          <li style={{ marginBottom: 10 }}>Leé tus afirmaciones en voz alta, con la escena mental completa — no de memoria automática.</li>
-          <li style={{ marginBottom: 10 }}>Tomá acción masiva en tu bloque de trabajo. Ejecutá el día exactamente como lo planeaste, sin negociar con la incomodidad.</li>
-          <li style={{ marginBottom: 10 }}>Cerrá el día revisando qué avanzó, registrando tus métricas, y planeando mañana en 5 minutos.</li>
-          <li>Dos horas antes de dormir, desconectá — nada de pantallas de trabajo. Dejá que tu mente y tu cuerpo se relajen, o tu cuerpo te va a obligar a hacerlo.</li>
-        </ol>
-      </div>
+        <div style={{ color: INK, fontWeight: 700, fontSize: 22, lineHeight: 1.35, letterSpacing: -0.2, borderLeft: `5px solid ${OR}`, paddingLeft: 18, margin: "24px 0" }}>
+          No lo leo para inspirarme. Lo leo porque ya es cierto.
+        </div>
 
-      <div style={{ ...cardStyle, marginBottom: 22 }}>
-        <div style={titleStyle}>I. Fundamentos</div>
-        <div style={kickerStyle}>El ciclo que produce todo cambio real. No cambiás el resultado directamente — cambiás la creencia que lo genera.</div>
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 8, margin: "4px 0 8px" }}>
-          {cicloCreencia.map(([t, d], i) => (
-            <React.Fragment key={t}>
-              <div style={{ background: "rgba(212,175,55,0.09)", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "12px 14px", minWidth: 150, maxWidth: 170, textAlign: "center" }}>
-                <div style={{ color: GOLD, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{t}</div>
-                <div style={{ color: WHITE, fontSize: 12.5, lineHeight: 1.4 }}>{d}</div>
-              </div>
-              {i < cicloCreencia.length - 1 && <div style={{ color: GOLD, fontSize: 20 }}>→</div>}
-            </React.Fragment>
+        <div style={{ color: INK_SOFT, fontSize: 14, marginBottom: 32 }}>Lo leo completo al despertar y otra vez antes de dormir.</div>
+
+        <div style={{ background: OR_TINT, borderRadius: 14, padding: "22px 24px", marginBottom: 8 }}>
+          <div style={titleStyle}>Ruta de uso</div>
+          <ol style={{ ...list, marginTop: 14 }}>
+            <li style={{ marginBottom: 10 }}>Apenas me levanto, leo el Mapa completo.</li>
+            <li style={{ marginBottom: 10 }}>Miro mi identidad y la persona en la que me estoy convirtiendo — dejo que la emoción me inunde, no lo leo de corrido sin sentirlo.</li>
+            <li style={{ marginBottom: 10 }}>Leo mis afirmaciones en voz alta, con la escena mental completa — no de memoria automática.</li>
+            <li style={{ marginBottom: 10 }}>Tomo acción masiva en mi bloque de trabajo. Ejecuto el día exactamente como lo planeé, sin negociar con la incomodidad.</li>
+            <li style={{ marginBottom: 10 }}>Cierro el día revisando qué avanzó, registrando mis métricas, y planeando mañana en 5 minutos.</li>
+            <li>Dos horas antes de dormir, desconecto — nada de pantallas de trabajo. Dejo que mi mente y mi cuerpo se relajen, o mi cuerpo me va a obligar a hacerlo.</li>
+          </ol>
+        </div>
+
+        <div style={sectionWrap}>
+          <div style={titleStyle}>I. Fundamentos</div>
+          <div style={kickerStyle}>El ciclo que produce todo cambio real. No cambio el resultado directamente — cambio la creencia que lo genera.</div>
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 8, margin: "4px 0 8px" }}>
+            {cicloCreencia.map(([t, d], i) => (
+              <React.Fragment key={t}>
+                <div style={{ background: OR_TINT, border: `1px solid ${PBORDER}`, borderRadius: 10, padding: "12px 14px", minWidth: 150, maxWidth: 170, textAlign: "center" }}>
+                  <div style={{ color: OR, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{t}</div>
+                  <div style={{ color: INK, fontSize: 12.5, lineHeight: 1.4 }}>{d}</div>
+                </div>
+                {i < cicloCreencia.length - 1 && <div style={{ color: OR, fontSize: 20 }}>→</div>}
+              </React.Fragment>
+            ))}
+          </div>
+          <div style={{ textAlign: "center", color: INK_SOFT, fontSize: 12, marginBottom: 18 }}>↺ el feedback vuelve a alimentar la creencia — el ciclo se repite hasta que el proceso queda afinado</div>
+          <ul style={list}>
+            <li style={{ marginBottom: 12 }}><b>Vivo al nivel de mis estándares, no de mis sueños.</b> Un estándar me obliga; un sueño no.</li>
+            <li style={{ marginBottom: 12 }}><b>Mi "personaje" se programó con repetición, y se puede reprogramar.</b> La pregunta es si el que tengo hoy puede lograr lo que digo que quiero.</li>
+            <li style={{ marginBottom: 12 }}><b>Estoy en tensión constante entre quién soy hoy y quién me estoy convirtiendo.</b> Reconozco las señales de una caída antes de que pase.</li>
+            <li><b>Soy responsable de lo que hago con lo que se me dio — no de haberme creado a mí mismo.</b> Eso me deja exactamente con lo que sí controlo: mi obediencia día a día.</li>
+          </ul>
+          {verseBox('"No se amolden al mundo actual, sino sean transformados mediante la renovación de su mente."', "Romanos 12:2")}
+        </div>
+
+        <div style={sectionWrap}>
+          <div style={titleStyle}>II. Identidad en Cristo</div>
+          <div style={kickerStyle}>Antes de definir qué voy a lograr — quién ya soy.</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
+            {identidadVerses.map(([t, r]) => <div key={r}>{verseBox(t, r)}</div>)}
+          </div>
+          <div style={{ ...body, marginTop: 14 }}>
+            <b>Por qué Efesios 2:10 me importa en particular:</b> conecta directo con lo que hago en Growth Partner. Las "buenas obras preparadas de antemano" no son solo actos de caridad — puede ser exactamente el trabajo de escalar negocios, si lo hago con integridad y para servir a alguien real, no solo para mí.
+          </div>
+          <div style={{ ...body, marginTop: 14 }}>
+            Mi ancla: <b>Romanos 8:1 — "ninguna condenación".</b> Lo que pasó en 2023 ya pasó. Hoy no cargo culpa de nada — actúo con la cabeza en alto porque en Cristo ya estoy perdonado, no en juicio. Cada decisión la tomo parado ahí: desde perdonado, no desde culpable.
+          </div>
+          {affirmBox("Ya no cargo la condena de las tres veces que me quebré. Eso fue lo que pasó, no lo que soy. Soy hijo de Dios, no un caso a corregir — y desde ahí actúo: perdonado, no culpable.")}
+        </div>
+
+        <div style={sectionWrap}>
+          <div style={titleStyle}>III. Mapa de Miedos</div>
+          <ol style={{ ...list, marginTop: 14 }}>
+            {pasosMiedo.map(([t, d]) => <li key={t} style={{ marginBottom: 10 }}><b>{t}</b> {d}</li>)}
+          </ol>
+          {miedos.map(m => (
+            <div key={m.miedo} style={{ background: OR_TINT, border: `1px solid ${PBORDER}`, borderRadius: 14, padding: "18px 22px", marginTop: 16 }}>
+              <div style={{ color: OR, fontWeight: 700, fontSize: 15, marginBottom: 8 }}>{m.miedo}</div>
+              <div style={{ ...body, fontSize: 15 }}><b>La mentira:</b> {m.mentira}</div>
+              <div style={{ margin: "10px 0" }}>{verseBox(m.verse[0], m.verse[1])}</div>
+              {affirmBox(m.afirmacion)}
+            </div>
           ))}
         </div>
-        <div style={{ textAlign: "center", color: GRAY, fontSize: 12, marginBottom: 18 }}>↺ el feedback vuelve a alimentar la creencia — el ciclo se repite hasta que el proceso queda afinado</div>
-        <ul style={list}>
-          <li style={{ marginBottom: 12 }}><b>Vivís al nivel de tus estándares, no de tus sueños.</b> Un estándar te obliga; un sueño no.</li>
-          <li style={{ marginBottom: 12 }}><b>Tu "personaje" se programó con repetición, y se puede reprogramar.</b> La pregunta es si el que tenés hoy puede lograr lo que decís que querés.</li>
-          <li style={{ marginBottom: 12 }}><b>Vas a estar en tensión constante entre quién sos hoy y quién te estás convirtiendo.</b> Reconocé las señales de una caída antes de que pase.</li>
-          <li><b>Sos responsable de lo que hacés con lo que se te dio — no de haberte creado a vos mismo.</b> Eso te deja exactamente con lo que sí controlás: tu obediencia día a día.</li>
-        </ul>
-        {verseBox('"No se amolden al mundo actual, sino sean transformados mediante la renovación de su mente."', "Romanos 12:2")}
-      </div>
 
-      <div style={{ ...cardStyle, marginBottom: 22 }}>
-        <div style={titleStyle}>II. Identidad en Cristo</div>
-        <div style={kickerStyle}>Antes de definir qué vas a lograr — quién ya sos.</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
-          {identidadVerses.map(([t, r]) => <div key={r}>{verseBox(t, r)}</div>)}
-        </div>
-        <div style={{ ...body, marginTop: 14 }}>
-          <b>Por qué Efesios 2:10 importa para vos en particular:</b> conecta directo con lo que hacés en Growth Partner. Las "buenas obras preparadas de antemano" no son solo actos de caridad — puede ser exactamente el trabajo de escalar negocios, si lo hacés con integridad y para servir a alguien real, no solo para vos.
-        </div>
-        <div style={{ ...body, marginTop: 14 }}>
-          Tu ancla: <b>Romanos 8:1 — "ninguna condenación".</b> Lo que pasó en 2023 ya pasó. Hoy no cargás culpa de nada — actuás con la cabeza en alto porque en Cristo ya estás perdonado, no en juicio. Cada decisión la tomás parado ahí: desde perdonado, no desde culpable.
-        </div>
-        {affirmBox("Ya no cargo la condena de las tres veces que me quebré. Eso fue lo que pasó, no lo que soy. Soy hijo de Dios, no un caso a corregir — y desde ahí actúo: perdonado, no culpable.")}
-      </div>
-
-      <div style={{ ...cardStyle, marginBottom: 22 }}>
-        <div style={titleStyle}>III. Mapa de Miedos</div>
-        <ol style={{ ...list, marginTop: 14 }}>
-          {pasosMiedo.map(([t, d]) => <li key={t} style={{ marginBottom: 10 }}><b>{t}</b> {d}</li>)}
-        </ol>
-        <div style={{ ...body, marginTop: 10 }}>
-          El miedo a volver a quebrarme no es sobre la plata — es creer que mi valor depende de que nunca falte. Pero "mi Dios suplirá todo lo que me falta conforme a sus riquezas en gloria en Cristo Jesús" (Filipenses 4:19). Por eso sumo clientes en paralelo — Cristian, Areiza, Alexander — no por pánico, sino por estrategia. Ya negocio desde la fe, no desde el miedo.
-        </div>
-        {affirmBox("Soy hijo de un Padre que provee, no un huérfano que tiene que resolverlo todo solo. La provisión para mi hija, mi novia y mi madre no depende solo de mí — trabajo con excelencia y descanso en que Dios ya la tiene resuelta.")}
-      </div>
-
-      <div style={{ ...cardStyle, marginBottom: 22 }}>
-        <div style={titleStyle}>IV. Ritual Diario — Priming</div>
-        <ol style={{ ...list, marginTop: 14 }}>
-          <li style={{ marginBottom: 12 }}><b>Orá.</b></li>
-          <li style={{ marginBottom: 12 }}><b>Respiración de fuego.</b> Sentado derecho. 30 veces: inhalás por nariz y boca subiendo los brazos, exhalás bajándolos.</li>
-          <li style={{ marginBottom: 12 }}><b>Gratitud real.</b> Manos en el centro del pecho, sintiendo el corazón. Visualizá, poniéndote en el lugar: cuando te mostraron a tu hija por primera vez; cuando tu novia te miró a los ojos y te dijo "confío en vos y te amo"; cuando tu madre te dijo "te admiro, hijo, y te amo". Agradecé en cada uno.</li>
-          <li style={{ marginBottom: 12 }}><b>Enfoque del día.</b> Inhalá y exhalá fuerte, manos en el mismo lugar. Visualizá 3 tareas que muevan la aguja: llamadas cerradas, contenido con grandes resultados, y una tercera que definís cada mañana.</li>
-          <li><b>Alter ego.</b> Repetí la respiración. Visualizá tu cuerpo ideal, la Lexus 600, la Mercedes de tu esposa y tus hijos, tus cuentas cripto y bancarias llenas.</li>
-        </ol>
-        <div style={{ ...body, marginTop: 14 }}>
-          Después: gratitud, un capítulo de la Biblia, oración. El día arranca siempre con aprendizaje — mínimo 1 hora. Después, entrenamiento. Trabajo enfocado: hoy 1 bloque de 3h con clientes, en construcción hacia 4 bloques de 2h (mejora de método, llamadas de cierre, contenido). Sol todos los días. Mañanas lentas — el hábito real no es levantarte temprano, es dormir bien.
-        </div>
-        <div style={label}>Cierre del día</div>
-        <ul style={list}>
-          <li style={{ marginBottom: 8 }}>Revisá: qué avanzó, qué te distrajo, qué métricas cargar en tus trackers.</li>
-          <li style={{ marginBottom: 8 }}>Planeá mañana en 5 minutos.</li>
-          <li>Dos horas antes de dormir: nada de pantallas de trabajo. Lectura + una línea de gratitud escrita a mano.</li>
-        </ul>
-      </div>
-
-      {divider}
-
-      <div style={{ ...cardStyle, marginBottom: 22 }}>
-        <div style={titleStyle}>V. Tu Manifiesto</div>
-        <div style={{ ...body, marginTop: 14 }}>
-          <p><b>Tu historia:</b> En 2023 arrancaste de cero como trafficker digital. Hoy facturás $1.500 USD/mes en promedio, con meses que llegaron a $7.000 USD — y seguís subiendo. Antes te quebraste tres veces; ninguna te frenó. Lo que cambió no fue el mercado: fue decidir dejar de trabajar en la calle y construir desde tu casa.</p>
-          <p><b>Tu identidad:</b> Hoy sos un hombre que se hace responsable de todo lo que se compromete. Te estás convirtiendo en el empresario que soñás — el hombre que cumple cada día y que busca a Dios. Tu identidad no viene de tus resultados: viene de tu Padre.</p>
-          {verseBox('"Porque no nos ha dado Dios espíritu de cobardía, sino de poder, de amor y de dominio propio."', "2 Timoteo 1:7")}
-          <p><b>Tu filosofía de negocio:</b> Un negocio bien hecho entrega el mejor servicio, sin excepción. No permitís faltas de respeto — ni las tuyas, ni las de nadie hacia el cliente o el equipo. Todo se gestiona y se hace en excelencia.</p>
-          <p><b>Estilo de vida:</b> Que nunca falte nada. Poder viajar cuando quieras. Poder regalarle a tu familia lo que quiera. Responsabilidades siempre cubiertas.</p>
-        </div>
-        {affirmBox("No soy el que se quebró tres veces. Soy hijo de Dios primero, y empresario después — el hombre que se hace responsable de cada compromiso, que cumple cada día, y cuya identidad está firme en su Padre, no en el resultado del mes.")}
-      </div>
-
-      <div style={{ ...cardStyle, marginBottom: 22 }}>
-        <div style={titleStyle}>VI. Rasgos, Estilo, Logros, Mentores, Imagen</div>
-
-        <div style={label}>Rasgos de carácter</div>
-        <ul style={list}>
-          {rasgos.map(([t, d]) => <li key={t} style={{ marginBottom: 8 }}><b>{t}</b> — {d}</li>)}
-        </ul>
-
-        <div style={label}>Estilo y cuidado personal</div>
-        <div style={body}>Trabajás con médicos con trayectoria — gente conservadora. Tu estilo transmite la misma excelencia que exigís en el trabajo: cuidado, sobrio, sin ostentar.</div>
-
-        <div style={label}>Logros</div>
-        <ul style={list}>
-          <li style={{ marginBottom: 8 }}>Pasar de ganar $0 como trafficker digital a facturar picos de $7.000 USD/mes — y seguís construyendo.</li>
-          <li style={{ marginBottom: 8 }}>Construir una cartera de clientes médicos reales (Dr. Cristian, Dr. Areiza, Dr. Alexander) con comisión atada a resultado real.</li>
-          <li>En camino: hito de $10.000 USD/mes para noviembre 2026, sobre la meta de $40.000 USD/mes de Growth Partner.</li>
-        </ul>
-
-        <div style={label}>Mentores</div>
-        <ul style={list}>
-          {mentores.map(([n, d]) => <li key={n} style={{ marginBottom: 8 }}><b>{n}</b> — {d}</li>)}
-        </ul>
-
-        <div style={label}>Imagen personal</div>
-        <ul style={list}>
-          {imagenPersonal.map(([a, d]) => <li key={a} style={{ marginBottom: 8 }}><b>{a}:</b> {d}</li>)}
-        </ul>
-      </div>
-
-      {divider}
-
-      <div style={{ ...cardStyle, marginBottom: 22 }}>
-        <div style={titleStyle}>VII. Objetivos</div>
-        {objetivos.map(o => (
-          <div key={o.titulo} style={{ marginTop: 22 }}>
-            <div style={{ color: GOLD, fontSize: 15, fontWeight: 700 }}>{o.titulo}</div>
-            {verseBox(o.verse[0], o.verse[1])}
-            <ul style={{ ...list, margin: "8px 0" }}>
-              {o.items.map((it, i) => <li key={i} style={{ marginBottom: 8 }}>{it}</li>)}
-            </ul>
-            {affirmBox(o.afirmacion)}
+        <div style={sectionWrap}>
+          <div style={titleStyle}>IV. Ritual Diario — Priming</div>
+          <ol style={{ ...list, marginTop: 14 }}>
+            <li style={{ marginBottom: 12 }}><b>Oro.</b></li>
+            <li style={{ marginBottom: 12 }}><b>Respiración de fuego.</b> Sentado derecho. 30 veces: inhalo por nariz y boca subiendo los brazos, exhalo bajándolos.</li>
+            <li style={{ marginBottom: 12 }}><b>Gratitud real.</b> Manos en el centro del pecho, sintiendo el corazón. Visualizo, poniéndome en el lugar: cuando me mostraron a mi hija por primera vez; cuando mi novia me miró a los ojos y me dijo "confío en vos y te amo"; cuando mi madre me dijo "te admiro, hijo, y te amo". Agradezco en cada uno.</li>
+            <li style={{ marginBottom: 12 }}><b>Enfoque del día.</b> Inhalo y exhalo fuerte, manos en el mismo lugar. Visualizo 3 tareas que mueven la aguja: llamadas cerradas, contenido con grandes resultados, y una tercera que defino cada mañana.</li>
+            <li><b>Alter ego.</b> Repito la respiración. Visualizo mi cuerpo ideal, la Lexus 600, la Mercedes de mi esposa y mis hijos, mis cuentas cripto y bancarias llenas.</li>
+          </ol>
+          <div style={{ ...body, marginTop: 14 }}>
+            Después: gratitud, un capítulo de la Biblia, oración. El día arranca siempre con aprendizaje — mínimo 1 hora. Después, entrenamiento. Trabajo enfocado: hoy 1 bloque de 3h con clientes, en construcción hacia 4 bloques de 2h (mejora de método, llamadas de cierre, contenido). Sol todos los días. Mañanas lentas — el hábito real no es levantarme temprano, es dormir bien.
           </div>
-        ))}
-      </div>
-
-      <div style={{ ...cardStyle, marginBottom: 22 }}>
-        <div style={titleStyle}>VIII. Cierre — Oración</div>
-        <div style={{ marginTop: 14 }}>
-          {verseBox('"Padre, gracias por mi vida y por la conciencia para poder trabajarla. Te pido que lo que acabo de leer se vuelva verdad en mí, no por mi propia fuerza, sino porque vos ya lo hiciste posible. Ayudame a vivir hoy de acuerdo a esto, no solo a leerlo."')}
-        </div>
-      </div>
-
-      <div style={cardStyle}>
-        <div style={titleStyle}>IX. Guía de imágenes por área</div>
-        <div style={kickerStyle}>Cómo buscar, no solo qué buscar — para que el resultado sea tuyo y no un stock genérico.</div>
-        {guiaImagenes.map(([a, d]) => (
-          <div key={a} style={{ marginBottom: 14 }}>
-            <div style={{ color: GOLD, fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{a}</div>
-            <div style={body}>{d}</div>
+          <div style={{ ...body, marginTop: 14, fontStyle: "italic", color: OR }}>
+            Este es el hombre que ya soy en Cristo, viviéndose por adelantado.
           </div>
-        ))}
+          <div style={label}>Cierre del día</div>
+          <ul style={list}>
+            <li style={{ marginBottom: 8 }}>Reviso: qué avanzó, qué me distrajo, qué métricas cargar en mis trackers.</li>
+            <li style={{ marginBottom: 8 }}>Planeo mañana en 5 minutos.</li>
+            <li>Dos horas antes de dormir: nada de pantallas de trabajo. Lectura + una línea de gratitud escrita a mano.</li>
+          </ul>
+        </div>
+
+        {rule}
+
+        <div style={sectionWrap}>
+          <div style={titleStyle}>V. Mi Manifiesto</div>
+          <div style={{ ...body, marginTop: 14 }}>
+            <p><b>Mi historia:</b> En 2023 arranqué de cero como trafficker digital. Hoy facturo $1.500 USD/mes en promedio, con meses que llegaron a $7.000 USD — y sigo subiendo. Antes me quebré tres veces; ninguna me frenó. Lo que cambió no fue el mercado: fue decidir dejar de trabajar en la calle y construir desde mi casa.</p>
+            <p><b>Mi identidad:</b> Hoy soy un hombre que se hace responsable de todo lo que se compromete. Me estoy convirtiendo en el empresario que sueño — el hombre que cumple cada día y que busca a Dios. Mi identidad no viene de mis resultados: viene de mi Padre.</p>
+            {verseBox('"Porque no nos ha dado Dios espíritu de cobardía, sino de poder, de amor y de dominio propio."', "2 Timoteo 1:7")}
+            <p><b>Mi filosofía de negocio:</b> Un negocio bien hecho entrega el mejor servicio, sin excepción. No permito faltas de respeto — ni las mías, ni las de nadie hacia el cliente o el equipo. Todo se gestiona y se hace en excelencia.</p>
+            <p><b>Mi estilo de vida:</b> Que nunca falte nada. Poder viajar cuando quiera. Poder regalarle a mi familia lo que quiera. Responsabilidades siempre cubiertas.</p>
+          </div>
+          {affirmBox("No soy el que se quebró tres veces. Soy hijo de Dios primero, y empresario después — el hombre que se hace responsable de cada compromiso, que cumple cada día, y cuya identidad está firme en su Padre, no en el resultado del mes.")}
+        </div>
+
+        <div style={sectionWrap}>
+          <div style={titleStyle}>VI. Rasgos, Estilo, Logros, Mentores, Imagen</div>
+
+          <div style={label}>Rasgos de carácter</div>
+          <ul style={list}>
+            {rasgos.map(([t, d]) => <li key={t} style={{ marginBottom: 8 }}><b>{t}</b> — {d}</li>)}
+          </ul>
+
+          <div style={label}>Estilo y cuidado personal</div>
+          <div style={body}>Trabajo con médicos con trayectoria — gente conservadora. Mi estilo transmite la misma excelencia que exijo en el trabajo: cuidado, sobrio, sin ostentar.</div>
+
+          <div style={label}>Logros</div>
+          <ul style={list}>
+            <li style={{ marginBottom: 8 }}>Pasé de ganar $0 como trafficker digital a facturar picos de $7.000 USD/mes — y sigo construyendo.</li>
+            <li style={{ marginBottom: 8 }}>Construí una cartera de clientes médicos reales (Dr. Cristian, Dr. Areiza, Dr. Alexander) con comisión atada a resultado real.</li>
+            <li>En camino: hito de $10.000 USD/mes para noviembre 2026, sobre la meta de $40.000 USD/mes de Growth Partner.</li>
+          </ul>
+
+          <div style={label}>Mentores</div>
+          <ul style={list}>
+            {mentores.map(([n, d]) => <li key={n} style={{ marginBottom: 8 }}><b>{n}</b> — {d}</li>)}
+          </ul>
+
+          <div style={label}>Imagen personal</div>
+          <ul style={list}>
+            {imagenPersonal.map(([a, d]) => <li key={a} style={{ marginBottom: 8 }}><b>{a}:</b> {d}</li>)}
+          </ul>
+        </div>
+
+        {rule}
+
+        <div style={sectionWrap}>
+          <div style={titleStyle}>VII. Objetivos</div>
+          {objetivos.map(o => (
+            <div key={o.titulo} style={{ marginTop: 22 }}>
+              <div style={{ color: OR, fontSize: 15, fontWeight: 700 }}>{o.titulo}</div>
+              {verseBox(o.verse[0], o.verse[1])}
+              <ul style={{ ...list, margin: "8px 0" }}>
+                {o.items.map((it, i) => <li key={i} style={{ marginBottom: 8 }}>{it}</li>)}
+              </ul>
+              {affirmBox(o.afirmacion)}
+            </div>
+          ))}
+        </div>
+
+        <div style={sectionWrap}>
+          <div style={titleStyle}>VIII. Cierre — Oración</div>
+          <div style={{ marginTop: 14 }}>
+            {verseBox('"Padre, gracias por mi vida y por la conciencia para poder trabajarla. Te pido que lo que acabo de leer se vuelva verdad en mí, no por mi propia fuerza, sino porque vos ya lo hiciste posible. Ayudame a vivir hoy de acuerdo a esto, no solo a leerlo."')}
+          </div>
+        </div>
+
+        <div style={sectionWrap}>
+          <div style={titleStyle}>IX. Guía de imágenes por área</div>
+          <div style={kickerStyle}>Cómo buscar, no solo qué buscar — para que el resultado sea mío y no un stock genérico.</div>
+          {guiaImagenes.map(([a, d]) => (
+            <div key={a} style={{ marginBottom: 14 }}>
+              <div style={{ color: OR, fontSize: 14, fontWeight: 700, marginBottom: 4 }}>{a}</div>
+              <div style={body}>{d}</div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
