@@ -6708,9 +6708,11 @@ function ProyeccionSection({ personal, onUpdate }) {
   const [guiaOpen, setGuiaOpen] = us(true);
   const [expandedMetrica, setExpandedMetrica] = us(null);
   const [newAccInputs, setNewAccInputs] = us({});
-  const emptyEntryForm = () => ({ date: new Date().toISOString().slice(0,10), inversionAds: "", gastosMarketing: "", comisionesVenta: "", leads: "", llamadas: "", llamadasCanceladas: "", noShows: "", llamadasEfectivas: "", cierres: "", mesesMinimos: "", feccu: "", feccp: "", becc: "", ingresosTotales: "" });
+  const emptyEntryForm = () => ({ date: new Date().toISOString().slice(0,10), inversionAds: "", gastosMarketing: "", comisionesVenta: "", leads: "", llamadas: "", llamadasCanceladas: "", noShows: "", llamadasEfectivas: "", cierres: "", mesesMinimos: "", feccu: "", feccp: "", becc: "", ingresosTotales: "", notas: "" });
   const [entryForm, setEntryForm] = us(emptyEntryForm());
   const [selMesN, setSelMesN] = us(null);
+  const emptyPipelineForm = () => ({ nombre: "", fecha: new Date().toISOString().slice(0,10), estado: "por_confirmar", notas: "" });
+  const [pipelineForm, setPipelineForm] = us(emptyPipelineForm());
 
   // ── Formatters ──
   const fmtUSD0 = (v) => (v || v===0) ? "$"+Math.round(v).toLocaleString("en-US") : "—";
@@ -6776,8 +6778,8 @@ function ProyeccionSection({ personal, onUpdate }) {
   const updateDiario  = (patch) => updateProy({ diario: { ...diario, ...patch } });
 
   // ── Ingresos recurrentes comprometidos (compartido entre Vista B y Vista D) ──
-  // Por cada entrada de Seguimiento Diario con Cierres + Meses Mínimos cargados, el ticket de
-  // ese día (Ing. Totales ÷ Cierres) se repite esa cantidad de meses desde la fecha del cierre.
+  // Por cada entrada de Seguimiento Semanal con Cierres + Meses Mínimos cargados, el ticket de
+  // esa semana (Ing. Totales ÷ Cierres) se repite esa cantidad de meses desde la fecha del cierre.
   const diarioEntries = diario.entries || [];
   const recurringByMesN = {};
   diarioEntries.forEach(e => {
@@ -7112,7 +7114,7 @@ function ProyeccionSection({ personal, onUpdate }) {
             </tbody>
           </table>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-            <div style={{ color: GRAY, fontSize: 10 }}>Ingresos Totales = FECCU+FECCP+BECC (Plan, editable). "Real" bajo cada mes = facturación cargada en Finanzas para ese mes calendario, convertida a USD. "Comprometido" = se calcula solo desde Seguimiento Diario: cierres con Meses Mínimos cargados cuyo contrato todavía cubre ese mes.</div>
+            <div style={{ color: GRAY, fontSize: 10 }}>Ingresos Totales = FECCU+FECCP+BECC (Plan, editable). "Real" bajo cada mes = facturación cargada en Finanzas para ese mes calendario, convertida a USD. "Comprometido" = se calcula solo desde Seguimiento Semanal: cierres con Meses Mínimos cargados cuyo contrato todavía cubre ese mes.</div>
             <button onClick={addMes} style={{ padding: "7px 16px", background: GOLD, color: "#141414", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>+ Agregar mes</button>
           </div>
         </div>
@@ -7214,8 +7216,17 @@ function ProyeccionSection({ personal, onUpdate }) {
   };
 
   // ═══════════════════════════════════════════════════════════════════════
-  // VISTA D — SEGUIMIENTO DIARIO
+  // VISTA D — SEGUIMIENTO SEMANAL
   // ═══════════════════════════════════════════════════════════════════════
+  const ESTADOS_PIPELINE = [
+    ["por_confirmar", "Por confirmar"],
+    ["agendado", "Agendado"],
+    ["reprogramado", "Reprogramado"],
+    ["realizado", "Reunión realizada"],
+    ["no_califica", "No calificó"],
+  ];
+  const ESTADOS_TERMINALES = ["realizado", "no_califica"];
+
   const renderDiario = () => {
     const entries = diario.entries || [];
     const todayMesN = mesNForDate(new Date().toISOString().slice(0,10));
@@ -7232,6 +7243,7 @@ function ProyeccionSection({ personal, onUpdate }) {
       setEntryForm(emptyEntryForm());
     };
     const removeEntry = (id) => updateDiario({ entries: entries.filter(e => e.id !== id) });
+    const updateEntry = (id, patch) => updateDiario({ entries: entries.map(e => e.id === id ? { ...e, ...patch } : e) });
 
     const entriesForMes = entries.filter(e => mesNForDate(e.date) === activeMesN).sort((a,b) => a.date.localeCompare(b.date));
     const sum = (key) => entriesForMes.reduce((s,e) => s + (parseFloat(e[key])||0), 0);
@@ -7251,8 +7263,33 @@ function ProyeccionSection({ personal, onUpdate }) {
     // "recurringByMesN" viene calculado a nivel de componente (se comparte con Vista B).
     const proximosMesesN = Array.from({ length: 6 }, (_, i) => todayMesN + i).filter(n => n > 0);
 
+    // Tendencia de CAC Blended semana a semana, cruzando meses — responde "¿mejora o empeora al escalar?"
+    const cacHistory = entries
+      .filter(e => (parseFloat(e.cierres)||0) > 0)
+      .sort((a,b) => a.date.localeCompare(b.date))
+      .map(e => {
+        const c = parseFloat(e.cierres) || 0;
+        const gasto = (parseFloat(e.inversionAds)||0) + (parseFloat(e.gastosMarketing)||0) + (parseFloat(e.comisionesVenta)||0);
+        return { date: e.date, cac: gasto / c };
+      });
+    const cacHistoryRecent = cacHistory.slice(-10);
+
+    // Leads pendientes de seguimiento — lista independiente, no atada a una semana puntual
+    const pipeline = diario.pipeline || [];
+    const setPipelineField = (k, v) => setPipelineForm(f => ({ ...f, [k]: v }));
+    const addPipelineItem = () => {
+      if (!pipelineForm.fecha) return;
+      const item = { id: "pl_"+uid(), ...pipelineForm };
+      updateDiario({ pipeline: [...pipeline, item] });
+      setPipelineForm(emptyPipelineForm());
+    };
+    const updatePipelineItem = (id, patch) => updateDiario({ pipeline: pipeline.map(p => p.id === id ? { ...p, ...patch } : p) });
+    const removePipelineItem = (id) => updateDiario({ pipeline: pipeline.filter(p => p.id !== id) });
+    const todayStrPipeline = new Date().toISOString().slice(0,10);
+    const pipelineSorted = [...pipeline].sort((a,b) => (a.fecha||"").localeCompare(b.fecha||""));
+
     const entryFields = [
-      ["date","Fecha","date"], ["inversionAds","Inversión Ads","number"], ["gastosMarketing","Gastos Mkt","number"], ["comisionesVenta","Comisiones","number"],
+      ["date","Semana (fecha de cierre)","date"], ["inversionAds","Inversión Ads","number"], ["gastosMarketing","Gastos Mkt","number"], ["comisionesVenta","Comisiones","number"],
       ["leads","Leads","number"], ["llamadas","Llamadas","number"], ["llamadasCanceladas","Canceladas","number"], ["noShows","No Shows","number"],
       ["llamadasEfectivas","Efectivas","number"], ["cierres","Cierres","number"], ["mesesMinimos","Meses Mín.","number"], ["feccu","FECCU","number"], ["feccp","FECCP","number"], ["becc","BECC","number"], ["ingresosTotales","Ing. Totales","number"],
     ];
@@ -7261,7 +7298,7 @@ function ProyeccionSection({ personal, onUpdate }) {
       <div>
         {/* Formulario de nueva entrada */}
         <div style={{ ...cardStyle, marginBottom: 16 }}>
-          <div style={{ color: WHITE, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>Registrar entrada diaria</div>
+          <div style={{ color: WHITE, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>Registrar semana</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", gap: 8, marginBottom: 12 }}>
             {entryFields.map(([k,l,t]) => (
               <div key={k}>
@@ -7271,7 +7308,58 @@ function ProyeccionSection({ personal, onUpdate }) {
               </div>
             ))}
           </div>
-          <button onClick={addEntry} style={{ padding: "8px 20px", background: GOLD, color: "#141414", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}>+ Agregar entrada</button>
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ display: "block", color: GRAY, fontSize: 10, marginBottom: 3 }}>Notas / aprendizajes de la semana</label>
+            <textarea value={entryForm.notas} onChange={e => setEntryField("notas", e.target.value)} rows={2} placeholder="Qué funcionó, qué no, qué vas a probar la próxima semana..."
+              style={{ width: "100%", background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "8px 10px", color: WHITE, fontSize: 12, outline: "none", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
+          </div>
+          <button onClick={addEntry} style={{ padding: "8px 20px", background: GOLD, color: "#141414", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}>+ Agregar semana</button>
+        </div>
+
+        {/* Leads pendientes de seguimiento */}
+        <div style={{ ...cardStyle, marginBottom: 16 }}>
+          <div style={{ color: WHITE, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>📋 Leads pendientes de seguimiento</div>
+          <div style={{ color: GRAY, fontSize: 11, marginBottom: 12 }}>Leads con reunión o seguimiento agendado — quedan acá hasta que los resolvés, así no se te pierden. No están atados a una semana puntual porque el seguimiento puede caer semanas después. Los vencidos (fecha pasada, sin resolver) se marcan en rojo.</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+            <input value={pipelineForm.nombre} onChange={e => setPipelineField("nombre", e.target.value)} placeholder="Nombre / referencia (opcional)"
+              style={{ flex: "1 1 160px", background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: WHITE, fontSize: 12, outline: "none" }} />
+            <input type="date" value={pipelineForm.fecha} onChange={e => setPipelineField("fecha", e.target.value)}
+              style={{ background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: WHITE, fontSize: 12, outline: "none" }} />
+            <select value={pipelineForm.estado} onChange={e => setPipelineField("estado", e.target.value)}
+              style={{ background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: WHITE, fontSize: 12, outline: "none" }}>
+              {ESTADOS_PIPELINE.map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+            <input value={pipelineForm.notas} onChange={e => setPipelineField("notas", e.target.value)} placeholder="Notas (opcional)"
+              style={{ flex: "1 1 160px", background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: WHITE, fontSize: 12, outline: "none" }} />
+          </div>
+          <button onClick={addPipelineItem} style={{ padding: "8px 20px", background: GOLD, color: "#141414", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}>+ Agregar lead</button>
+
+          {pipelineSorted.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              {pipelineSorted.map(p => {
+                const terminal = ESTADOS_TERMINALES.includes(p.estado);
+                const overdue = !terminal && p.fecha && p.fecha < todayStrPipeline;
+                return (
+                  <div key={p.id} style={{ background: "#111113", borderRadius: 8, padding: "10px 12px", marginBottom: 8, border: `1px solid ${overdue ? "#EF4444" : BORDER}` }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <input value={p.nombre||""} onChange={e => updatePipelineItem(p.id, { nombre: e.target.value })} placeholder="Nombre / referencia"
+                        style={{ flex: "1 1 140px", background: "transparent", border: "none", color: terminal ? GRAY : WHITE, fontSize: 13, outline: "none", textDecoration: terminal ? "line-through" : "none" }} />
+                      <input type="date" value={p.fecha||""} onChange={e => updatePipelineItem(p.id, { fecha: e.target.value })}
+                        style={{ background: "#0c0c0e", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "4px 6px", color: overdue ? "#EF4444" : WHITE, fontSize: 11, outline: "none" }} />
+                      <select value={p.estado} onChange={e => updatePipelineItem(p.id, { estado: e.target.value })}
+                        style={{ background: "#0c0c0e", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "4px 6px", color: WHITE, fontSize: 11, outline: "none" }}>
+                        {ESTADOS_PIPELINE.map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+                      </select>
+                      {overdue && <span style={{ color: "#EF4444", fontSize: 10, fontWeight: 700 }}>VENCIDO</span>}
+                      <button onClick={() => removePipelineItem(p.id)} style={{ background: "none", border: "none", color: "#E06C6C", cursor: "pointer", fontSize: 14, padding: 0, marginLeft: "auto" }}>×</button>
+                    </div>
+                    <input value={p.notas||""} onChange={e => updatePipelineItem(p.id, { notas: e.target.value })} placeholder="Notas de seguimiento..."
+                      style={{ width: "100%", background: "transparent", border: "none", borderTop: `1px solid ${BORDER}`, marginTop: 8, paddingTop: 6, color: GRAY, fontSize: 11, outline: "none" }} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Selector de mes */}
@@ -7313,6 +7401,20 @@ function ProyeccionSection({ personal, onUpdate }) {
           )}
         </div>
 
+        {/* Notas de la semana */}
+        {entriesForMes.some(e => e.notas) && (
+          <div style={{ ...cardStyle, marginBottom: 16 }}>
+            <div style={labelStyle}>📝 Notas de la semana — Mes {activeMesN}</div>
+            {entriesForMes.filter(e => e.notas).map(e => (
+              <div key={e.id} style={{ marginTop: 10 }}>
+                <div style={{ color: GRAY, fontSize: 10, marginBottom: 3 }}>{e.date}</div>
+                <textarea value={e.notas} onChange={ev => updateEntry(e.id, { notas: ev.target.value })} rows={2}
+                  style={{ width: "100%", background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 10px", color: WHITE, fontSize: 12, outline: "none", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Resumen + Resumen Adquisición */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
           <div style={cardStyle}>
@@ -7352,6 +7454,32 @@ function ProyeccionSection({ personal, onUpdate }) {
             </div>
           </div>
         </div>
+
+        {/* Tendencia CAC Blended semana a semana — cruza meses, para ver si mejora al escalar */}
+        {cacHistory.length > 1 && (
+          <div style={{ ...cardStyle, marginTop: 12, overflowX: "auto" }}>
+            <div style={labelStyle}>Tendencia CAC Blended — últimas {cacHistoryRecent.length} semanas con cierres</div>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 8 }}>
+              {cacHistoryRecent.map((h, i) => {
+                const fullIdx = cacHistory.length - cacHistoryRecent.length + i;
+                const prev = cacHistory[fullIdx - 1];
+                const delta = prev ? h.cac - prev.cac : null;
+                return (
+                  <div key={h.date+i} style={{ minWidth: 90 }}>
+                    <div style={{ color: GRAY, fontSize: 10 }}>{h.date}</div>
+                    <div style={{ color: WHITE, fontSize: 13, fontWeight: 700 }}>{fmtUSD0(h.cac)}</div>
+                    {delta != null && (
+                      <div style={{ color: delta<=0 ? "#22C55E" : "#EF4444", fontSize: 10, fontWeight: 600 }}>
+                        {delta<=0 ? "↓ " : "↑ "}{fmtUSD0(Math.abs(delta))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ color: GRAY, fontSize: 10, marginTop: 10 }}>CAC Blended de cada semana con cierres cargados (Inversión Ads + Gastos Mkt + Comisiones ÷ Cierres). Verde = bajó (mejor) vs. la última semana con cierres, rojo = subió — así ves si el costo por cliente aguanta a medida que metés más plata.</div>
+          </div>
+        )}
 
         {/* Ingresos recurrentes comprometidos (basado en Meses Mínimos de cada cierre) */}
         <div style={{ ...cardStyle, marginTop: 12 }}>
@@ -7423,7 +7551,7 @@ function ProyeccionSection({ personal, onUpdate }) {
               <li style={{ marginBottom: 6 }}><b style={{ color: WHITE }}>A · Resumen Anual</b> — arrancá acá. Cargá tus 4 tasas reales (Agenda/Calificación/Show Up/Cierre) y tu ticket — con eso el sistema calcula cuántos leads necesitás en el año. Los campos Q1-Q4 son opcionales, para cuando quieras metas por trimestre.</li>
               <li style={{ marginBottom: 6 }}><b style={{ color: WHITE }}>B · Resumen Mensual</b> — elegí Escenario A o B (ya vienen precargados con números reales). Acá ves mes a mes cuánto deberías facturar — es la que más te sirve para saber si vas bien o mal este mes en particular.</li>
               <li style={{ marginBottom: 6 }}><b style={{ color: WHITE }}>C · Optimización de Métricas</b> — cuando alguna tasa esté por debajo del objetivo, entrá acá y anotá qué acciones concretas vas a tomar para mejorarla, con fecha.</li>
-              <li><b style={{ color: WHITE }}>D · Seguimiento Diario</b> — opcional. Solo si querés registrar cada lead/llamada/cierre día por día para calcular tu costo de adquisición (CAC) real. Si no tenés tiempo para esto, no pasa nada — con la Mensual alcanza. En cada cierre cargá también <b style={{ color: WHITE }}>Meses Mín.</b> (el mínimo de meses acordado con ese cliente) — con eso el sistema proyecta solo los ingresos recurrentes comprometidos en "Ingresos Recurrentes Comprometidos", sin que tengas que volver a cargarlos mes a mes.</li>
+              <li><b style={{ color: WHITE }}>D · Seguimiento Semanal</b> — opcional. Cargá al cierre de cada semana tus números (leads/llamadas/cierres) para calcular tu costo de adquisición (CAC) real y ver su tendencia. Si no tenés tiempo para esto, no pasa nada — con la Mensual alcanza. En cada cierre cargá también <b style={{ color: WHITE }}>Meses Mín.</b> (el mínimo de meses acordado con ese cliente) — con eso el sistema proyecta solo los ingresos recurrentes comprometidos en "Ingresos Recurrentes Comprometidos", sin que tengas que volver a cargarlos mes a mes. Arriba de eso tenés el tablero de <b style={{ color: WHITE }}>Leads pendientes de seguimiento</b> — cargá ahí cualquier lead con reunión o seguimiento agendado (con fecha) para que no se te pierda, y un campo de <b style={{ color: WHITE }}>notas</b> por semana para ir dejando aprendizajes.</li>
             </ol>
             <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 10, marginTop: 4 }}>
               <b style={{ color: WHITE }}>Glosario rápido:</b> Tasa de Cierre = % de llamadas que terminan en cliente pagando · Show Up = % que se presenta a la llamada que agendó · FECCU/FECCP/BECC = las 3 partes en que se cobra un cliente (pago inicial ~70% / segundo pago ~20% / saldo final ~10%) · AOV/Ticket = lo que paga un cliente en promedio · MRR = facturación mensual recurrente.
@@ -7433,7 +7561,7 @@ function ProyeccionSection({ personal, onUpdate }) {
       </div>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 20 }}>
-        {[["anual","A · Resumen Anual"],["mensual","B · Resumen Mensual"],["optimizacion","C · Optimización de Métricas"],["diario","D · Seguimiento Diario"]].map(([id,label]) => (
+        {[["anual","A · Resumen Anual"],["mensual","B · Resumen Mensual"],["optimizacion","C · Optimización de Métricas"],["diario","D · Seguimiento Semanal"]].map(([id,label]) => (
           <Pill key={id} active={view === id} onClick={() => setView(id)}>{label}</Pill>
         ))}
       </div>
