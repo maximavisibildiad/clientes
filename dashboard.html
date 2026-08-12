@@ -7259,13 +7259,30 @@ function ProyeccionSection({ personal, onUpdate }) {
     const aovTCMes    = rCierres > 0 ? rIngresos / rCierres : null;
     const feccuCacRatio = cacBlended ? rFeccu / cacBlended : null;
     const aovCacRatio   = cac ? aovTCMes / cac : null;
+    const roas = gastosAdquisicion > 0 ? rIngresos / gastosAdquisicion : null;
+    // Valor comprometido total de cada cierre del mes: Ing. Totales × Meses Mín. si están cargados
+    // (representa la vida completa del contrato, no solo el primer pago) — mismo criterio que ya
+    // usa "Ingresos Recurrentes Comprometidos" abajo.
+    const projectedRevenue = entriesForMes.reduce((s, e) => {
+      const ing = parseFloat(e.ingresosTotales) || 0;
+      const meses = parseFloat(e.mesesMinimos) || 0;
+      return s + (meses > 0 ? ing * meses : ing);
+    }, 0);
+    const roasProyectado = gastosAdquisicion > 0 ? projectedRevenue / gastosAdquisicion : null;
 
     // "recurringByMesN" viene calculado a nivel de componente (se comparte con Vista B).
     const proximosMesesN = Array.from({ length: 6 }, (_, i) => todayMesN + i).filter(n => n > 0);
 
     // Tendencia de CAC Blended semana a semana, cruzando meses — responde "¿mejora o empeora al escalar?"
     const cacHistory = entries
-      .filter(e => (parseFloat(e.cierres)||0) > 0)
+      .filter(e => {
+        const c = parseFloat(e.cierres) || 0;
+        const gasto = (parseFloat(e.inversionAds)||0) + (parseFloat(e.gastosMarketing)||0) + (parseFloat(e.comisionesVenta)||0);
+        // Cierres sin gasto propio esa semana = cierre diferido de una tanda anterior (ver guía D).
+        // Se excluyen de la tendencia porque su costo real ya está contado en la fila original —
+        // incluirlos mostraría un CAC de $0 engañoso.
+        return c > 0 && gasto > 0;
+      })
       .sort((a,b) => a.date.localeCompare(b.date))
       .map(e => {
         const c = parseFloat(e.cierres) || 0;
@@ -7449,9 +7466,17 @@ function ProyeccionSection({ personal, onUpdate }) {
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
               <span style={{ color: GRAY, fontSize: 12 }}>FECCU:CAC</span><span style={{ color: "#22C55E", fontSize: 12, fontWeight: 700 }}>{feccuCacRatio!=null ? feccuCacRatio.toFixed(2) : "—"}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
               <span style={{ color: GRAY, fontSize: 12 }}>AOV TC:CAC</span><span style={{ color: "#22C55E", fontSize: 12, fontWeight: 700 }}>{aovCacRatio!=null ? aovCacRatio.toFixed(2) : "—"}</span>
             </div>
+            <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: 8, paddingTop: 8 }} />
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+              <span style={{ color: GRAY, fontSize: 12 }}>ROAS</span><span style={{ color: "#22C55E", fontSize: 12, fontWeight: 700 }}>{roas!=null ? roas.toFixed(2)+"x" : "—"}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <span style={{ color: GRAY, fontSize: 12 }}>ROAS Proyectado</span><span style={{ color: "#22C55E", fontSize: 12, fontWeight: 700 }}>{roasProyectado!=null ? roasProyectado.toFixed(2)+"x" : "—"}</span>
+            </div>
+            <div style={{ color: GRAY, fontSize: 10, marginTop: 8 }}>ROAS = Ingresos Totales del mes ÷ Gastos en Adquisición. ROAS Proyectado suma, de cada cierre del mes con Meses Mín. cargados, el valor completo del contrato (Ing. Totales × Meses Mín.) en vez de solo el primer pago — referencia del sistema: 5x mínimo.</div>
           </div>
         </div>
 
@@ -7477,7 +7502,7 @@ function ProyeccionSection({ personal, onUpdate }) {
                 );
               })}
             </div>
-            <div style={{ color: GRAY, fontSize: 10, marginTop: 10 }}>CAC Blended de cada semana con cierres cargados (Inversión Ads + Gastos Mkt + Comisiones ÷ Cierres). Verde = bajó (mejor) vs. la última semana con cierres, rojo = subió — así ves si el costo por cliente aguanta a medida que metés más plata.</div>
+            <div style={{ color: GRAY, fontSize: 10, marginTop: 10 }}>CAC Blended de cada semana con cierres Y gasto propio cargados (Inversión Ads + Gastos Mkt + Comisiones ÷ Cierres). Verde = bajó (mejor) vs. la última semana con cierres, rojo = subió — así ves si el costo por cliente aguanta a medida que metés más plata. Las filas de cierre diferido de una tanda anterior (sin gasto propio esa semana) no entran acá — su costo ya está contado en la semana original.</div>
           </div>
         )}
 
@@ -7551,7 +7576,7 @@ function ProyeccionSection({ personal, onUpdate }) {
               <li style={{ marginBottom: 6 }}><b style={{ color: WHITE }}>A · Resumen Anual</b> — arrancá acá. Cargá tus 4 tasas reales (Agenda/Calificación/Show Up/Cierre) y tu ticket — con eso el sistema calcula cuántos leads necesitás en el año. Los campos Q1-Q4 son opcionales, para cuando quieras metas por trimestre.</li>
               <li style={{ marginBottom: 6 }}><b style={{ color: WHITE }}>B · Resumen Mensual</b> — elegí Escenario A o B (ya vienen precargados con números reales). Acá ves mes a mes cuánto deberías facturar — es la que más te sirve para saber si vas bien o mal este mes en particular.</li>
               <li style={{ marginBottom: 6 }}><b style={{ color: WHITE }}>C · Optimización de Métricas</b> — cuando alguna tasa esté por debajo del objetivo, entrá acá y anotá qué acciones concretas vas a tomar para mejorarla, con fecha.</li>
-              <li><b style={{ color: WHITE }}>D · Seguimiento Semanal</b> — opcional. Cargá al cierre de cada semana tus números (leads/llamadas/cierres) para calcular tu costo de adquisición (CAC) real y ver su tendencia. Si no tenés tiempo para esto, no pasa nada — con la Mensual alcanza. En cada cierre cargá también <b style={{ color: WHITE }}>Meses Mín.</b> (el mínimo de meses acordado con ese cliente) — con eso el sistema proyecta solo los ingresos recurrentes comprometidos en "Ingresos Recurrentes Comprometidos", sin que tengas que volver a cargarlos mes a mes. Arriba de eso tenés el tablero de <b style={{ color: WHITE }}>Leads pendientes de seguimiento</b> — cargá ahí cualquier lead con reunión o seguimiento agendado (con fecha) para que no se te pierda, y un campo de <b style={{ color: WHITE }}>notas</b> por semana para ir dejando aprendizajes.</li>
+              <li><b style={{ color: WHITE }}>D · Seguimiento Semanal</b> — opcional. Cargá al cierre de cada semana tus números (leads/llamadas/cierres) para calcular tu costo de adquisición (CAC) real y ver su tendencia. Si no tenés tiempo para esto, no pasa nada — con la Mensual alcanza. En cada cierre cargá también <b style={{ color: WHITE }}>Meses Mín.</b> (el mínimo de meses acordado con ese cliente) — con eso el sistema proyecta solo los ingresos recurrentes comprometidos en "Ingresos Recurrentes Comprometidos", sin que tengas que volver a cargarlos mes a mes. Arriba de eso tenés el tablero de <b style={{ color: WHITE }}>Leads pendientes de seguimiento</b> — cargá ahí cualquier lead con reunión o seguimiento agendado (con fecha) para que no se te pierda, y un campo de <b style={{ color: WHITE }}>notas</b> por semana para ir dejando aprendizajes. <b style={{ color: WHITE }}>Cierre diferido de una tanda vieja:</b> si un lead que venía de una semana anterior cierra recién ahora, nunca edites la fila vieja — cargá una fila nueva fechada el día real del cierre (Leads y Llamadas en 0 está bien, es normal) y anotá en Notas de qué tanda venía. Esas filas no entran a la Tendencia CAC Blended porque no tienen gasto propio esa semana — su costo ya quedó contado en la fila original.</li>
             </ol>
             <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 10, marginTop: 4 }}>
               <b style={{ color: WHITE }}>Glosario rápido:</b> Tasa de Cierre = % de llamadas que terminan en cliente pagando · Show Up = % que se presenta a la llamada que agendó · FECCU/FECCP/BECC = las 3 partes en que se cobra un cliente (pago inicial ~70% / segundo pago ~20% / saldo final ~10%) · AOV/Ticket = lo que paga un cliente en promedio · MRR = facturación mensual recurrente.
