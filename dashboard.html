@@ -7296,7 +7296,14 @@ function ProyeccionSection({ personal, onUpdate }) {
   const renderDiario = () => {
     const entries = diario.entries || [];
     const todayMesN = mesNForDate(new Date().toISOString().slice(0,10));
-    const mesNSet = new Set(entries.map(e => mesNForDate(e.date)));
+    // El selector de mes tiene que incluir TODOS los meses con datos — antes solo miraba las
+    // semanas de "Registrar semana" (diario.entries), así que un cliente cargado en un mes sin
+    // ninguna semana registrada quedaba invisible en la lista (aunque sí contaba en la
+    // proyección de "Ingresos Recurrentes Comprometidos", que sí mira todos los clientes).
+    const mesNSet = new Set([
+      ...entries.map(e => mesNForDate(e.date)),
+      ...todosLosClientes.map(c => mesNForDate(c.fecha)),
+    ]);
     mesNSet.add(todayMesN);
     const mesNList = Array.from(mesNSet).filter(n => n && n > 0).sort((a,b) => a-b);
     const activeMesN = selMesN != null ? selMesN : todayMesN;
