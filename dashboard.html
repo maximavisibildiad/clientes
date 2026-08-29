@@ -6750,12 +6750,12 @@ function ProyeccionSection({ personal, onUpdate }) {
   const [guiaOpen, setGuiaOpen] = us(true);
   const [expandedMetrica, setExpandedMetrica] = us(null);
   const [newAccInputs, setNewAccInputs] = us({});
-  const emptyEntryForm = () => ({ date: new Date().toISOString().slice(0,10), inversionAds: "", gastosMarketing: "", comisionesVenta: "", leads: "", llamadas: "", llamadasCanceladas: "", noShows: "", llamadasEfectivas: "", feccu: "", feccp: "", becc: "", clientes: [], notas: "" });
+  const emptyEntryForm = () => ({ date: new Date().toISOString().slice(0,10), inversionAds: "", gastosMarketing: "", comisionesVenta: "", leads: "", llamadas: "", llamadasCanceladas: "", noShows: "", llamadasEfectivas: "", feccu: "", feccp: "", becc: "", notas: "" });
   const [entryForm, setEntryForm] = us(emptyEntryForm());
   const [selMesN, setSelMesN] = us(null);
   const emptyPipelineForm = () => ({ nombre: "", fecha: new Date().toISOString().slice(0,10), estado: "por_confirmar", notas: "" });
   const [pipelineForm, setPipelineForm] = us(emptyPipelineForm());
-  const emptyClienteForm = () => ({ nombre: "", fuente: "ads", valor: "", mesesMinimos: "" });
+  const emptyClienteForm = () => ({ nombre: "", fecha: new Date().toISOString().slice(0,10), fuente: "ads", valor: "", mesesMinimos: "" });
   const [clienteForm, setClienteForm] = us(emptyClienteForm());
 
   // ── Formatters ──
@@ -6821,41 +6821,42 @@ function ProyeccionSection({ personal, onUpdate }) {
   const updateOptim   = (patch) => updateProy({ optimizacion: { ...optim, ...patch } });
   const updateDiario  = (patch) => updateProy({ diario: { ...diario, ...patch } });
 
-  // ── Clientes por entrada, con respaldo para semanas viejas sin desglose ──
-  // Desde que se agregó Fuente por cliente (Ads/Orgánico), cada entrada nueva trae su propia
-  // lista `clientes`. Las entradas viejas (antes de este cambio) solo tenían Cierres/Meses
-  // Mínimos/Ing. Totales como números sueltos por semana — acá se reconstruyen como "clientes
-  // sin dato" (mismo ticket promedio, misma duración) para que seguir sumando exactamente igual
-  // que antes, sin perder ni un dato viejo ni forzar a completar nombres retroactivos.
-  const entryClientes = (e) => {
-    if (e.clientes && e.clientes.length) return e.clientes;
+  // ── Clientes cerrados — lista propia, independiente de las semanas de "Registrar semana" ──
+  // Cada cliente se agrega con un solo click (misma lógica que "Leads pendientes de seguimiento":
+  // se guarda apenas tocás "+ Agregar cliente", no hace falta después tocar "+ Agregar semana").
+  // Tiene su propia fecha porque un cliente puede cerrar un día sin que ese día tenga una entrada
+  // de gasto/funnel cargada (semana 100% orgánica, por ejemplo).
+  const diarioClientes = diario.clientes || [];
+  // Respaldo para semanas viejas (antes de este cambio): esas entradas solo tenían Cierres/Meses
+  // Mínimos/Ing. Totales como números sueltos por semana, sin nombre ni fuente — acá se
+  // reconstruyen como "clientes sin dato" (mismo ticket promedio, misma duración) para seguir
+  // sumando exactamente igual que antes, sin perder ni un dato viejo.
+  const legacyClientesDeEntrada = (e) => {
     const cCierres = parseFloat(e.cierres) || 0;
     if (cCierres <= 0) return [];
     const cIngresos = parseFloat(e.ingresosTotales) || 0;
     const cMesesMin = parseFloat(e.mesesMinimos) || 0;
     const ticket = cIngresos / cCierres;
-    return Array.from({ length: cCierres }, (_, i) => ({ id: `legacy_${e.id}_${i}`, nombre: "", fuente: "sin_dato", valor: ticket, mesesMinimos: cMesesMin }));
+    return Array.from({ length: cCierres }, (_, i) => ({ id: `legacy_${e.id}_${i}`, nombre: "", fuente: "sin_dato", valor: ticket, mesesMinimos: cMesesMin, fecha: e.date }));
   };
+  const diarioEntries = diario.entries || [];
+  const todosLosClientes = [...diarioClientes, ...diarioEntries.flatMap(legacyClientesDeEntrada)];
+  const clientesForMesN = (n) => todosLosClientes.filter(c => mesNForDate(c.fecha) === n);
 
   // ── Ingresos recurrentes comprometidos (compartido entre Vista B y Vista D) ──
-  // Por cada cliente cargado en Seguimiento Semanal con Valor + Meses Mínimos, ese valor se
-  // repite esa cantidad de meses desde la fecha del cierre — ahora por cliente individual, no
-  // por semana entera, para que dos cierres de la misma semana con plata o duración distinta no
-  // se promedien mal.
-  const diarioEntries = diario.entries || [];
+  // Por cada cliente cargado con Valor + Meses Mínimos, ese valor se repite esa cantidad de meses
+  // desde la fecha del cierre — por cliente individual, no por semana entera, para que dos
+  // cierres del mismo mes con plata o duración distinta no se promedien mal.
   const recurringByMesN = {};
-  diarioEntries.forEach(e => {
-    const startN = mesNForDate(e.date);
-    if (!startN) return;
-    entryClientes(e).forEach(c => {
-      const meses = parseFloat(c.mesesMinimos) || 0;
-      const valor = parseFloat(c.valor) || 0;
-      if (meses <= 0 || valor <= 0) return;
-      for (let i = 0; i < meses; i++) {
-        const n = startN + i;
-        recurringByMesN[n] = (recurringByMesN[n] || 0) + valor;
-      }
-    });
+  todosLosClientes.forEach(c => {
+    const startN = mesNForDate(c.fecha);
+    const meses = parseFloat(c.mesesMinimos) || 0;
+    const valor = parseFloat(c.valor) || 0;
+    if (!startN || meses <= 0 || valor <= 0) return;
+    for (let i = 0; i < meses; i++) {
+      const n = startN + i;
+      recurringByMesN[n] = (recurringByMesN[n] || 0) + valor;
+    }
   });
 
   // ── Combinada / Leads Necesarios (bloque A) ──
@@ -6886,7 +6887,10 @@ function ProyeccionSection({ personal, onUpdate }) {
   const hayMesProyectado = mesesHastaAhora.length > 0;
 
   // ── Estilos compartidos ──
-  const cardStyle = { background: CARD, borderRadius: 12, padding: 16, border: `1px solid ${BORDER}` };
+  // Mismo negro de fondo que el resto del dashboard (no cambia de golpe al entrar a esta
+  // sección), pero los cuadros de acá van un poco más claros y con borde celeste — así se
+  // distinguen del fondo en vez de fundirse en un solo bloque negro.
+  const cardStyle = { background: "#1C1E26", borderRadius: 12, padding: 16, border: `1px solid rgba(96,165,250,0.18)` };
   const labelStyle = { color: GRAY, fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 };
   const numInputStyle = { width: "100%", background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "5px 7px", color: WHITE, fontSize: 12, outline: "none", boxSizing: "border-box", textAlign: "right" };
   const thStyle = { textAlign: "right", padding: "6px 8px", borderBottom: `1px solid ${BORDER}`, color: GRAY, fontWeight: 600, fontSize: 11, whiteSpace: "nowrap" };
@@ -7307,15 +7311,17 @@ function ProyeccionSection({ personal, onUpdate }) {
     const removeEntry = (id) => updateDiario({ entries: entries.filter(e => e.id !== id) });
     const updateEntry = (id, patch) => updateDiario({ entries: entries.map(e => e.id === id ? { ...e, ...patch } : e) });
 
-    // Clientes cerrados de la semana en curso (todavía sin guardar) — se arman acá y quedan
-    // adentro de la entrada cuando se hace click en "+ Agregar semana".
+    // Clientes cerrados — lista propia (diario.clientes), se guarda apenas tocás "+ Agregar
+    // cliente". No depende de "+ Agregar semana" ni de tener una entrada de gasto ese día.
     const setClienteField = (k, v) => setClienteForm(f => ({ ...f, [k]: v }));
-    const addClienteToForm = () => {
-      if (!clienteForm.nombre.trim()) return;
-      setEntryForm(f => ({ ...f, clientes: [...(f.clientes||[]), { id: "cl_"+uid(), ...clienteForm }] }));
-      setClienteForm(emptyClienteForm());
+    const addCliente = () => {
+      if (!clienteForm.nombre.trim() || !clienteForm.fecha) return;
+      const cliente = { id: "cl_"+uid(), ...clienteForm };
+      updateDiario({ clientes: [...diarioClientes, cliente] });
+      setClienteForm({ ...emptyClienteForm(), fecha: clienteForm.fecha });
     };
-    const removeClienteFromForm = (id) => setEntryForm(f => ({ ...f, clientes: (f.clientes||[]).filter(c => c.id !== id) }));
+    const removeCliente = (id) => updateDiario({ clientes: diarioClientes.filter(c => c.id !== id) });
+    const updateCliente = (id, patch) => updateDiario({ clientes: diarioClientes.map(c => c.id === id ? { ...c, ...patch } : c) });
 
     const entriesForMes = entries.filter(e => mesNForDate(e.date) === activeMesN).sort((a,b) => a.date.localeCompare(b.date));
     const sum = (key) => entriesForMes.reduce((s,e) => s + (parseFloat(e[key])||0), 0);
@@ -7325,9 +7331,9 @@ function ProyeccionSection({ personal, onUpdate }) {
     const rEfectivas = sum("llamadasEfectivas");
     const rFeccu = sum("feccu"), rFeccp = sum("feccp"), rBecc = sum("becc");
 
-    // Clientes cerrados del mes (con respaldo automático para semanas viejas, ver entryClientes) —
-    // Cierres e Ing. Totales ya no se tipean a mano, salen de sumar esta lista.
-    const clientesMes = entriesForMes.flatMap(e => entryClientes(e));
+    // Clientes cerrados del mes (con respaldo automático para semanas viejas, ver
+    // legacyClientesDeEntrada) — Cierres e Ing. Totales ya no se tipean a mano, salen de sumar esta lista.
+    const clientesMes = clientesForMesN(activeMesN).sort((a,b) => (a.fecha||"").localeCompare(b.fecha||""));
     const rCierres = clientesMes.length;
     const rIngresos = clientesMes.reduce((s,c) => s + (parseFloat(c.valor)||0), 0);
     const clientesAds = clientesMes.filter(c => c.fuente === "ads");
@@ -7359,9 +7365,11 @@ function ProyeccionSection({ personal, onUpdate }) {
     const proximosMesesN = Array.from({ length: 6 }, (_, i) => todayMesN + i).filter(n => n > 0);
 
     // Tendencia de CAC Blended semana a semana, cruzando meses — responde "¿mejora o empeora al escalar?"
+    // Cruza cada semana con los clientes cargados en esa MISMA fecha (por eso conviene usar la
+    // misma fecha en "Registrar semana" y en "Clientes cerrados" cuando coinciden).
     const cacHistory = entries
       .filter(e => {
-        const c = entryClientes(e).length;
+        const c = todosLosClientes.filter(cl => cl.fecha === e.date).length;
         const gasto = (parseFloat(e.inversionAds)||0) + (parseFloat(e.gastosMarketing)||0) + (parseFloat(e.comisionesVenta)||0);
         // Cierres sin gasto propio esa semana = cierre diferido de una tanda anterior (ver guía D).
         // Se excluyen de la tendencia porque su costo real ya está contado en la fila original —
@@ -7370,7 +7378,7 @@ function ProyeccionSection({ personal, onUpdate }) {
       })
       .sort((a,b) => a.date.localeCompare(b.date))
       .map(e => {
-        const c = entryClientes(e).length;
+        const c = todosLosClientes.filter(cl => cl.fecha === e.date).length;
         const gasto = (parseFloat(e.inversionAds)||0) + (parseFloat(e.gastosMarketing)||0) + (parseFloat(e.comisionesVenta)||0);
         return { date: e.date, cac: gasto / c };
       });
@@ -7413,43 +7421,57 @@ function ProyeccionSection({ personal, onUpdate }) {
             ))}
           </div>
 
-          {/* Clientes cerrados esta semana — nombre + de dónde vino + cuánto pagó + por cuántos meses */}
-          <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: 4, paddingTop: 12, marginBottom: 12 }}>
-            <label style={{ display: "block", color: GRAY, fontSize: 10, marginBottom: 6 }}>Clientes cerrados esta semana</label>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-              <input value={clienteForm.nombre} onChange={e => setClienteField("nombre", e.target.value)} placeholder="Nombre del cliente"
-                style={{ flex: "1 1 140px", background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: WHITE, fontSize: 12, outline: "none" }} />
-              <select value={clienteForm.fuente} onChange={e => setClienteField("fuente", e.target.value)}
-                style={{ background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: WHITE, fontSize: 12, outline: "none" }}>
-                <option value="ads">Pauta (Ads)</option>
-                <option value="organico">Orgánico</option>
-              </select>
-              <input type="number" value={clienteForm.valor} onChange={e => setClienteField("valor", e.target.value)} placeholder="Cuánto pagó"
-                style={{ width: 110, background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: WHITE, fontSize: 12, outline: "none" }} />
-              <input type="number" value={clienteForm.mesesMinimos} onChange={e => setClienteField("mesesMinimos", e.target.value)} placeholder="Meses mín."
-                style={{ width: 90, background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: WHITE, fontSize: 12, outline: "none" }} />
-              <button onClick={addClienteToForm} style={{ padding: "6px 14px", background: GOLD, color: "#141414", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>+ Agregar cliente</button>
-            </div>
-            {(entryForm.clientes||[]).length > 0 && (
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {entryForm.clientes.map(c => (
-                  <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 6, background: "#111113", border: `1px solid ${FUENTE_COLOR[c.fuente]||BORDER}`, borderRadius: 20, padding: "4px 10px" }}>
-                    <span style={{ color: WHITE, fontSize: 11, fontWeight: 600 }}>{c.nombre}</span>
-                    <span style={{ color: FUENTE_COLOR[c.fuente]||GRAY, fontSize: 10, fontWeight: 700 }}>{FUENTE_LABEL[c.fuente]}</span>
-                    {c.valor && <span style={{ color: GRAY, fontSize: 10 }}>${Number(c.valor).toLocaleString("en-US")}</span>}
-                    <button onClick={() => removeClienteFromForm(c.id)} style={{ background: "none", border: "none", color: "#E06C6C", cursor: "pointer", fontSize: 12, padding: 0 }}>×</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
           <div style={{ marginBottom: 12 }}>
             <label style={{ display: "block", color: GRAY, fontSize: 10, marginBottom: 3 }}>Notas / aprendizajes de la semana</label>
             <textarea value={entryForm.notas} onChange={e => setEntryField("notas", e.target.value)} rows={2} placeholder="Qué funcionó, qué no, qué vas a probar la próxima semana..."
               style={{ width: "100%", background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "8px 10px", color: WHITE, fontSize: 12, outline: "none", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
           </div>
           <button onClick={addEntry} style={{ padding: "8px 20px", background: GOLD, color: "#141414", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}>+ Agregar semana</button>
+        </div>
+
+        {/* Clientes cerrados — lista propia, se guarda con un solo click (no depende de "+ Agregar semana") */}
+        <div style={{ ...cardStyle, marginBottom: 16 }}>
+          <div style={{ color: WHITE, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>🧾 Clientes cerrados</div>
+          <div style={{ color: GRAY, fontSize: 11, marginBottom: 12 }}>Cada cliente que cerrás se guarda apenas tocás "+ Agregar cliente" — no hace falta tocar "+ Agregar semana" para que cuente. Si coincide con la misma fecha de una semana que registraste arriba, el sistema los cruza solo.</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+            <input value={clienteForm.nombre} onChange={e => setClienteField("nombre", e.target.value)} placeholder="Nombre del cliente"
+              style={{ flex: "1 1 140px", background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: WHITE, fontSize: 12, outline: "none" }} />
+            <input type="date" value={clienteForm.fecha} onChange={e => setClienteField("fecha", e.target.value)}
+              style={{ background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: WHITE, fontSize: 12, outline: "none" }} />
+            <select value={clienteForm.fuente} onChange={e => setClienteField("fuente", e.target.value)}
+              style={{ background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: WHITE, fontSize: 12, outline: "none" }}>
+              <option value="ads">Pauta (Ads)</option>
+              <option value="organico">Orgánico</option>
+            </select>
+            <input type="number" value={clienteForm.valor} onChange={e => setClienteField("valor", e.target.value)} placeholder="Cuánto pagó"
+              style={{ width: 110, background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: WHITE, fontSize: 12, outline: "none" }} />
+            <input type="number" value={clienteForm.mesesMinimos} onChange={e => setClienteField("mesesMinimos", e.target.value)} placeholder="Meses mín."
+              style={{ width: 90, background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: WHITE, fontSize: 12, outline: "none" }} />
+            <button onClick={addCliente} style={{ padding: "6px 14px", background: GOLD, color: "#141414", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>+ Agregar cliente</button>
+          </div>
+          {clientesMes.length === 0 ? (
+            <div style={{ color: GRAY, fontSize: 12 }}>Sin clientes cargados en Mes {activeMesN}.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {clientesMes.map(c => (
+                <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", background: "#111113", border: `1px solid ${FUENTE_COLOR[c.fuente]||BORDER}`, borderRadius: 8, padding: "8px 10px" }}>
+                  <span style={{ color: GRAY, fontSize: 11, minWidth: 80 }}>{c.fecha}</span>
+                  {c.id.startsWith("legacy_") ? (
+                    <span style={{ color: GRAY, fontSize: 12, fontStyle: "italic" }}>cliente de una semana vieja, sin nombre registrado</span>
+                  ) : (
+                    <input value={c.nombre} onChange={e => updateCliente(c.id, { nombre: e.target.value })}
+                      style={{ flex: "1 1 120px", background: "transparent", border: "none", color: WHITE, fontSize: 12, fontWeight: 600, outline: "none" }} />
+                  )}
+                  <span style={{ color: FUENTE_COLOR[c.fuente]||GRAY, fontSize: 10, fontWeight: 700 }}>{FUENTE_LABEL[c.fuente]||"sin dato"}</span>
+                  <span style={{ color: WHITE, fontSize: 12 }}>{c.valor ? fmtUSD0(parseFloat(c.valor)) : "—"}</span>
+                  <span style={{ color: GRAY, fontSize: 11 }}>{c.mesesMinimos ? `${c.mesesMinimos} meses mín.` : "sin meses mín."}</span>
+                  {!c.id.startsWith("legacy_") && (
+                    <button onClick={() => removeCliente(c.id)} style={{ background: "none", border: "none", color: "#E06C6C", cursor: "pointer", fontSize: 13, marginLeft: "auto", padding: 0 }}>×</button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* De dónde vinieron los clientes del mes seleccionado, y cuánto costó cada canal */}
@@ -7555,7 +7577,7 @@ function ProyeccionSection({ personal, onUpdate }) {
               </thead>
               <tbody>
                 {entriesForMes.map(e => {
-                  const eClientes = entryClientes(e);
+                  const eClientes = todosLosClientes.filter(c => c.fecha === e.date);
                   const eCierres = eClientes.length;
                   const eIngresos = eClientes.reduce((s,c) => s + (parseFloat(c.valor)||0), 0);
                   return (
@@ -7694,6 +7716,7 @@ function ProyeccionSection({ personal, onUpdate }) {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <div>
+          <div style={{ color: "#60A5FA", fontSize: 10, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", marginBottom: 4 }}>Proyección personal</div>
           <div style={{ color: WHITE, fontWeight: 800, fontSize: 16, letterSpacing: -0.2 }}>Proyección 2026</div>
           <div style={{ color: GRAY, fontSize: 12 }}>De {fmtUSD0(metas.mrrActual)}/mes ({metas.startDate}) a {fmtUSD0(metas.metaFinal)}/mes — hito {fmtUSD0(metas.hitoIntermedio)}/mes</div>
         </div>
@@ -7742,7 +7765,12 @@ function ProyeccionSection({ personal, onUpdate }) {
               <li style={{ marginBottom: 6 }}><b style={{ color: WHITE }}>A · Resumen Anual</b> — arrancá acá. Cargá tus 4 tasas reales (Agenda/Calificación/Show Up/Cierre) y tu ticket — con eso el sistema calcula cuántos leads necesitás en el año. Los campos Q1-Q4 son opcionales, para cuando quieras metas por trimestre.</li>
               <li style={{ marginBottom: 6 }}><b style={{ color: WHITE }}>B · Resumen Mensual</b> — elegí Escenario A o B (ya vienen precargados con números reales). Acá ves mes a mes cuánto deberías facturar — es la que más te sirve para saber si vas bien o mal este mes en particular.</li>
               <li style={{ marginBottom: 6 }}><b style={{ color: WHITE }}>C · Optimización de Métricas</b> — cuando alguna tasa esté por debajo del objetivo, entrá acá y anotá qué acciones concretas vas a tomar para mejorarla, con fecha.</li>
-              <li><b style={{ color: WHITE }}>D · Seguimiento Semanal</b> — opcional. Cargá al cierre de cada semana tus números (leads/llamadas/gastos) para calcular tu costo de adquisición (CAC) real y ver su tendencia. Si no tenés tiempo para esto, no pasa nada — con la Mensual alcanza. Por cada cliente que cerraste esa semana, agregalo en <b style={{ color: WHITE }}>Clientes cerrados esta semana</b> con su nombre, si vino de <b style={{ color: WHITE }}>Pauta (Ads)</b> u <b style={{ color: WHITE }}>Orgánico</b>, cuánto pagó y por cuántos meses mínimos se comprometió — "Cierres" e "Ing. Totales" ya no se tipean aparte, se calculan solos a partir de esta lista. Con el origen cargado, la tarjeta <b style={{ color: WHITE }}>¿De dónde vinieron tus clientes?</b> te muestra cuántos vinieron de cada canal y cuánto costó realmente cada uno de Ads. Con Meses Mín. cargado por cliente, el sistema proyecta los ingresos recurrentes comprometidos en "Ingresos Recurrentes Comprometidos", sin que tengas que volver a cargarlos mes a mes. Arriba de eso tenés el tablero de <b style={{ color: WHITE }}>Leads pendientes de seguimiento</b> — cargá ahí cualquier lead con reunión o seguimiento agendado (con fecha) para que no se te pierda, y un campo de <b style={{ color: WHITE }}>notas</b> por semana para ir dejando aprendizajes. <b style={{ color: WHITE }}>Cierre diferido de una tanda vieja:</b> si un lead que venía de una semana anterior cierra recién ahora, nunca edites la fila vieja — cargá una fila nueva fechada el día real del cierre (Leads y Llamadas en 0 está bien, es normal, y podés seguir agregando el cliente cerrado ahí) y anotá en Notas de qué tanda venía. Esas filas no entran a la Tendencia CAC Blended porque no tienen gasto propio esa semana — su costo ya quedó contado en la fila original.</li>
+              <li><b style={{ color: WHITE }}>D · Seguimiento Semanal</b> — opcional. Acá hay dos formularios que van por separado, cada uno se guarda solo con su propio botón:
+                <ol style={{ margin: "6px 0", paddingLeft: 18 }}>
+                  <li style={{ marginBottom: 4 }}><b style={{ color: WHITE }}>Registrar semana</b> — tus números de gasto/funnel (leads, llamadas, inversión en pauta). Se guarda al tocar <b style={{ color: WHITE }}>"+ Agregar semana"</b>. Si no tenés tiempo para esto, no pasa nada — con la Mensual alcanza.</li>
+                  <li><b style={{ color: WHITE }}>Clientes cerrados</b> — cada cliente que cerrás, con nombre, fecha, si vino de <b style={{ color: WHITE }}>Pauta (Ads)</b> u <b style={{ color: WHITE }}>Orgánico</b>, cuánto pagó y meses mínimos. Se guarda de una al tocar <b style={{ color: WHITE }}>"+ Agregar cliente"</b> — no depende de "Registrar semana" ni hace falta llenar el otro formulario para que un cliente cuente.</li>
+                </ol>
+                "Cierres" e "Ing. Totales" ya no se tipean a mano, salen de sumar los clientes cargados. Con el origen cargado, la tarjeta <b style={{ color: WHITE }}>¿De dónde vinieron tus clientes?</b> te muestra cuántos vinieron de cada canal y cuánto costó realmente cada uno de Ads (cruzando contra la Inversión Ads del mes). Con Meses Mín. cargado por cliente, el sistema proyecta los ingresos recurrentes comprometidos en "Ingresos Recurrentes Comprometidos", sin que tengas que volver a cargarlos mes a mes. Si un cliente cierra el mismo día que una semana que ya registraste, usá esa misma fecha — así el sistema los cruza solo en la tabla y en la Tendencia CAC. Arriba tenés el tablero de <b style={{ color: WHITE }}>Leads pendientes de seguimiento</b> — cargá ahí cualquier lead con reunión o seguimiento agendado (con fecha) para que no se te pierda, y un campo de <b style={{ color: WHITE }}>notas</b> por semana para ir dejando aprendizajes. <b style={{ color: WHITE }}>Cierre diferido de una tanda vieja:</b> si un lead que venía de una semana anterior cierra recién ahora, no hace falta editar nada viejo — agregalo directo en "Clientes cerrados" con la fecha real del cierre.</li>
             </ol>
             <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: 10, marginTop: 4 }}>
               <b style={{ color: WHITE }}>Glosario rápido:</b> Tasa de Cierre = % de llamadas que terminan en cliente pagando · Show Up = % que se presenta a la llamada que agendó · FECCU/FECCP/BECC = las 3 partes en que se cobra un cliente (pago inicial ~70% / segundo pago ~20% / saldo final ~10%) · AOV/Ticket = lo que paga un cliente en promedio · MRR = facturación mensual recurrente.
