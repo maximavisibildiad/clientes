@@ -563,6 +563,7 @@ const LAUNCH_PHASES = [
   // Semana 2
   { id:"ads",         group:"sem2", type:"ext", name:"Grabación Ads",                          offset:7,   defaultOwner:"Setter",   color:"#F59E0B", note:"Requiere brief de creativos aprobado — mínimo 3 piezas · Mínimo para marcar done: 3 creativos aprobados y guardados en Drive, cumpliendo los parámetros de calidad del Anexo 1" },
   { id:"metodologia", group:"sem2", type:"int", name:"Creación Metodología Base",              offset:10,  defaultOwner:"Director", color:"#F59E0B", note:"Completar la pestaña Metodología con los guiones ya definidos en Semana 1 — Etapa 5 'Método Comercial' de Anexo 1 (1.5h): flujo comercial WhatsApp, KPIs, modelo operativo · Mínimo para marcar done: las 13 secciones de la pestaña Metodología completas, sin placeholders" },
+  { id:"isl",         group:"sem2", type:"int", name:"Creación ISL/VSL",                       offset:11,  defaultOwner:"Traffic",  color:"#F59E0B", note:"Producir el ISL/VSL de cada línea con el system prompt del Director de Arte (data/system_prompt_director_arte_isl.md) y cargarlo en su destino real — anuncios y/o proceso interno del bot (TAREA S1-07B) · Mínimo para marcar done: al menos 1 pieza por línea/categoría producida, con cada destino que aplique (ads y/o bot) cargado y probado" },
   { id:"crm",         group:"sem2", type:"int", name:"Automatizar CRM",                        offset:12,  defaultOwner:"Director", color:"#F59E0B", note:"Pipeline + tags + tasks + workflows en GHL, según el Flujo CRM ya definido · Mínimo para marcar done: canales conectados (test de mensaje en IG y WhatsApp) + pipeline con las etapas correctas + tags configurados" },
   // Semana 3 — Lanzamiento
   { id:"closers",     group:"sem3", type:"ext", name:"Entrenamiento Closers",                  offset:14,  defaultOwner:"Director", color:"#22C55E", note:"1-3 días de inducción con paso a paso — Etapa 6 'Ejecución del Método Comercial por WhatsApp' de Anexo 1: 2 sesiones de 1h en la semana (guiones, objeciones, protocolos, tiempos de respuesta, gestión de leads, seguimiento y cierre) · Mínimo para marcar done: scripts en Drive + las 2 sesiones realizadas + cliente confirma que entendió el proceso" },
@@ -570,11 +571,36 @@ const LAUNCH_PHASES = [
   { id:"maquinaria",  group:"sem3", type:"ext", name:"Lanzamiento Maquinaria",                 offset:21,  defaultOwner:"Director", color:"#22C55E", note:"Confirmar que el loop completo corrió sin errores antes de escalar presupuesto · Mínimo para marcar done: 2 corridas de prueba consecutivas sin errores" },
   // Post-lanzamiento
   { id:"reporte_dia", group:"post", type:"int", name:"Reporte Diario Comercial — proceso activo", offset:22, defaultOwner:"Setter", color:"#A78BFA", note:"Mensajes recibidos · Llamadas realizadas · Preguntas frecuentes del día · Mínimo para marcar done: registro diario sin días sin registrar" },
+  { id:"estrategia_pub", group:"post", type:"int", name:"Estrategia Publicitaria — cuenta madura", offset:25, defaultOwner:"Traffic", color:"#A78BFA", note:"Cuando la campaña de validación pasa a verde: cuadro de 5 pestañas (Campañas/Públicos/Copys/Proyección/Cómo llenarlo, gen_cuadro_estrategia_publicitaria.py) + documento narrativo de 10 secciones (plantilla_estrategia_publicitaria.md), paleta real del cliente · Mínimo para marcar done: las 10 secciones del documento completas + el cuadro con fórmulas de proyección ROAS cargado" },
   { id:"reunion_kpi", group:"post", type:"ext", name:"Reunión Semanal Revisión KPIs",          offset:28,  defaultOwner:"Director", color:"#A78BFA", note:"Recurrente cada semana · CPL · Contactabilidad · Cierre · ROAS · Mínimo para marcar done: reunión ejecutada + los 4 KPIs revisados" },
   { id:"resumen1",    group:"post", type:"int", name:"Resumen Operativo — 1 semana",           offset:28,  defaultOwner:"Legal",    color:"#A78BFA", note:"Va con reunión interna antes · Mínimo para marcar done: resumen entregado al cliente con reunión interna previa" },
   { id:"resumen3",    group:"post", type:"int", name:"Resumen Operativo — 3 semanas",          offset:42,  defaultOwner:"Legal",    color:"#A78BFA", note:"Va con reunión interna antes · Mínimo para marcar done: resumen de 3 semanas entregado + ajustes documentados" },
   { id:"informe1m",   group:"post", type:"int", name:"Informe 1 mes + Proyección Trimestre",   offset:60,  defaultOwner:"Director", color:"#A78BFA", note:"Va con reunión interna antes · Mínimo para marcar done: informe de 1 mes + proyección de trimestre entregados al cliente" },
 ];
+// ─── PHASE_TASKS (agregado 2026-08-27) ─────────────────────────────────────────
+// Mapeo explícito fase → n de GEMA_TASKS, verificado título por título contra las 202 tareas
+// reales — NUNCA por coincidencia de área o semana (eso genera falsos positivos, ver
+// data/changelog.md 2026-08-27 (s)). Solo entran acá las fases donde el título de la tarea es
+// literalmente la misma actividad que la fase describe. Las fases que no aparecen en este objeto
+// (claridad, revision, acuerdo, arranque, estrategia, reuniones_ok, metodologia, isl,
+// resumen1, resumen3, estrategia_pub) se quedan 100% manuales a propósito — no había una tarea
+// puntual que correspondiera con precisión, mejor dejarlas sin auto-marcar que inventar una
+// relación dudosa. Se usa en toggleDone: al marcar una fase de esta lista como lista, las tareas
+// listadas se marcan automáticamente — nunca al revés (desmarcar la fase no desmarca tareas).
+const PHASE_TASKS = {
+  diagnostico:  [8, 265, 15],
+  proyeccion:   [17, 18, 19],
+  firma:        [1, 3, 6],
+  oferta:       [83, 84, 91, 92, 93, 100],
+  ads:          [89, 90, 94, 95, 96],
+  crm:          [104, 107, 108, 109, 271, 272, 60],
+  closers:      [149, 150, 169, 171, 172, 173, 174, 177, 179, 180, 183, 185, 186, 189, 190],
+  maquinaria:   [139, 140, 141],
+  campanas:     [208, 209, 210],
+  reporte_dia:  [262, 263],
+  reunion_kpi:  [223, 224, 264],
+  informe1m:    [242, 243],
+};
 const LAUNCH_GROUPS = [
   { id:"pre",  label:"Pre-Lanzamiento",        color:"#60A5FA", tag:"Antes del inicio" },
   { id:"sem1", label:"Semana 1",               color:"#D4AF37", tag:"Días 0 – 7" },
@@ -2631,7 +2657,23 @@ function LaunchTab({ client, onChange, globalLaunchPhases, globalMvpSteps, globa
   const toggleDone = (id) => {
     const cur = getP(id);
     const today = new Date().toISOString().slice(0, 10);
-    setP(id, { done: !cur.done, date: !cur.done ? (cur.date || today) : cur.date });
+    if (!cur.done) {
+      const phase = phases.find(p => p.id === id);
+      if (phase?.note) {
+        const ok = window.confirm(`Antes de marcar "${phase.name}" como lista — ¿esto ya se cumplió?\n\n${phase.note}`);
+        if (!ok) return;
+      }
+    }
+    const newDone = !cur.done;
+    const newLp = { ...lp, [id]: { ...cur, done: newDone, date: newDone ? (cur.date || today) : cur.date } };
+    // Al marcar (nunca al desmarcar) una fase con mapeo en PHASE_TASKS, marca también esas
+    // tareas puntuales — evita re-marcar a mano lo que la fase ya confirma. Nunca desmarca
+    // tareas que ya estaban hechas, y nunca toca tareas al desmarcar la fase (nada se pierde).
+    const linkedNs = PHASE_TASKS[id];
+    const newTasks = (newDone && linkedNs?.length)
+      ? client.tasks.map(t => (linkedNs.includes(t.n) && !t.done) ? { ...t, done: true, doneAt: Date.now() } : t)
+      : client.tasks;
+    onChange({ ...client, launchPhases: newLp, tasks: newTasks });
   };
   const addOffset = (offset) => {
     if (!startDate) return null;
