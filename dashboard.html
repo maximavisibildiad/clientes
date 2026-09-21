@@ -179,6 +179,12 @@ const GOLD = "#D4AF37";
 const GOLD_DIM = "#8A7420";
 const WHITE = "#F5F5F3";
 const GRAY = "#9B9B9F";
+// Paleta de marca GP (navy/azul/blanco/gris) — mismo estándar navy/blue ya documentado para
+// docx de clientes (gen_docx_marca_cliente.js: 1B2A4A/2E75B6). Usada 2026-09-04 solo dentro del
+// Área Personal (MetricasSection en adelante) — el resto del dashboard sigue con GOLD, no tocado.
+const NAVY = "#1B2A4A";
+const BLUE_GP = "#2E75B6";
+const BLUE_DIM = "#6FA3D8";
 const GREEN = "#4CAF7D";
 const RED = "#E06C6C";
 const CANVAS_BG = "#FFFFFF";
@@ -625,65 +631,7 @@ function makeClient(name, channel, globalTasks) {
   };
 }
 
-// ─── PLAN DE ENTRENAMIENTO PPL ────────────────────────────────────────────────
-const DEFAULT_TRAINING_PLAN = [
-  { id:"lun", day:"Lunes",    type:"Push A", focus:"Pecho · Hombros · Tríceps",   color:"#EF4444", emoji:"🔴",
-    exercises:[
-      { id:"pa1", name:"Press de Banca con Barra",           sets:4, reps:"8-10",       muscles:"Pecho", rest:90 },
-      { id:"pa2", name:"Press Inclinado con Mancuernas",     sets:3, reps:"10-12",      muscles:"Pecho Superior", rest:75 },
-      { id:"pa3", name:"Press Militar con Barra",            sets:3, reps:"10-12",      muscles:"Hombros", rest:90 },
-      { id:"pa4", name:"Elevaciones Laterales",              sets:4, reps:"15-20",      muscles:"Hombro Lateral", rest:60 },
-      { id:"pa5", name:"Fondos en Paralelas",                sets:3, reps:"10-12",      muscles:"Tríceps / Pecho", rest:60 },
-      { id:"pa6", name:"Extensiones de Tríceps en Polea",   sets:3, reps:"12-15",      muscles:"Tríceps", rest:60 },
-    ]},
-  { id:"mar", day:"Martes",   type:"Pull A", focus:"Espalda Ancha · Bíceps",       color:"#3B82F6", emoji:"🔵",
-    exercises:[
-      { id:"pla1", name:"Peso Muerto",                       sets:4, reps:"5-6",        muscles:"Cadena Posterior", rest:120 },
-      { id:"pla2", name:"Dominadas (o Jalón al Pecho)",      sets:4, reps:"8-10",       muscles:"Espalda Ancha", rest:90 },
-      { id:"pla3", name:"Remo con Barra",                    sets:3, reps:"10-12",      muscles:"Espalda Media", rest:90 },
-      { id:"pla4", name:"Remo en Polea Baja",                sets:3, reps:"12-15",      muscles:"Espalda Media", rest:60 },
-      { id:"pla5", name:"Curl de Bíceps con Barra",          sets:4, reps:"10-12",      muscles:"Bíceps", rest:60 },
-      { id:"pla6", name:"Face Pulls",                        sets:3, reps:"15-20",      muscles:"Hombro Posterior", rest:45 },
-    ]},
-  { id:"mie", day:"Miércoles",type:"Legs A", focus:"Cuádriceps · Femoral · Gemelos", color:"#22C55E", emoji:"🟢",
-    exercises:[
-      { id:"la1", name:"Sentadilla con Barra",               sets:4, reps:"8-10",       muscles:"Cuádriceps / Glúteos", rest:120 },
-      { id:"la2", name:"Prensa de Piernas",                  sets:3, reps:"12-15",      muscles:"Cuádriceps", rest:90 },
-      { id:"la3", name:"Extensión de Piernas",               sets:3, reps:"15",         muscles:"Cuádriceps", rest:60 },
-      { id:"la4", name:"Curl Femoral Acostado",              sets:4, reps:"12-15",      muscles:"Femoral", rest:60 },
-      { id:"la5", name:"Peso Muerto Rumano",                 sets:3, reps:"10-12",      muscles:"Femoral / Glúteos", rest:75 },
-      { id:"la6", name:"Elevaciones de Talones de Pie",      sets:4, reps:"15-20",      muscles:"Gemelos", rest:45 },
-    ]},
-  { id:"jue", day:"Jueves",   type:"Push B", focus:"Hombros · Pecho · Tríceps",    color:"#F59E0B", emoji:"🟡",
-    exercises:[
-      { id:"pb1", name:"Press Militar con Mancuernas",       sets:4, reps:"10-12",      muscles:"Hombros", rest:90 },
-      { id:"pb2", name:"Press en Banca Inclinado",           sets:3, reps:"10-12",      muscles:"Pecho Superior", rest:75 },
-      { id:"pb3", name:"Press Arnold",                       sets:3, reps:"12",         muscles:"Hombros", rest:75 },
-      { id:"pb4", name:"Elevaciones Laterales",              sets:4, reps:"15-20",      muscles:"Hombro Lateral", rest:60 },
-      { id:"pb5", name:"Press Francés (Skullcrusher)",       sets:3, reps:"10-12",      muscles:"Tríceps", rest:60 },
-      { id:"pb6", name:"Extensión de Tríceps sobre Cabeza", sets:3, reps:"12-15",      muscles:"Tríceps", rest:45 },
-    ]},
-  { id:"vie", day:"Viernes",  type:"Pull B", focus:"Espalda Gruesa · Bíceps",      color:"#8B5CF6", emoji:"🟣",
-    exercises:[
-      { id:"plb1", name:"Peso Muerto Rumano",                sets:4, reps:"8-10",       muscles:"Femoral / Espalda Baja", rest:90 },
-      { id:"plb2", name:"Remo con Mancuerna",                sets:3, reps:"10-12 c/lado", muscles:"Espalda", rest:60 },
-      { id:"plb3", name:"Jalón al Pecho Agarre Cerrado",     sets:3, reps:"10-12",      muscles:"Espalda", rest:75 },
-      { id:"plb4", name:"Remo en Máquina",                   sets:3, reps:"12-15",      muscles:"Espalda Media", rest:60 },
-      { id:"plb5", name:"Curl Martillo con Mancuernas",      sets:4, reps:"12-15",      muscles:"Bíceps / Braquial", rest:60 },
-      { id:"plb6", name:"Curl Concentrado",                  sets:3, reps:"12-15 c/lado", muscles:"Bíceps", rest:45 },
-    ]},
-  { id:"sab", day:"Sábado",   type:"Legs B", focus:"Glúteos · Femoral · Aductores", color:"#EC4899", emoji:"🩷",
-    exercises:[
-      { id:"lb1", name:"Hip Thrust con Barra",               sets:4, reps:"10-12",      muscles:"Glúteos", rest:90 },
-      { id:"lb2", name:"Sentadilla Búlgara",                 sets:3, reps:"10-12 c/lado", muscles:"Glúteos / Cuádriceps", rest:90 },
-      { id:"lb3", name:"Peso Muerto Convencional",           sets:3, reps:"8",          muscles:"Posterior / Espalda", rest:120 },
-      { id:"lb4", name:"Curl Femoral de Pie",                sets:3, reps:"12-15 c/lado", muscles:"Femoral", rest:60 },
-      { id:"lb5", name:"Aductores en Máquina",               sets:3, reps:"15-20",      muscles:"Aductores", rest:45 },
-      { id:"lb6", name:"Elevaciones de Talones Sentado",     sets:4, reps:"20",         muscles:"Sóleo", rest:45 },
-    ]},
-];
-
-const FINANCE_CATEGORIES = ["Arriendo","Alimentación","Transporte","Entretenimiento","Servicios","Salud","Ropa","Educación","Inversión","Deuda","Otro"];
+const FINANCE_CATEGORIES =["Arriendo","Alimentación","Transporte","Entretenimiento","Servicios","Salud","Ropa","Educación","Inversión","Deuda","Otro"];
 
 function getInitialData(savedOverride) {
   const defaults = {
@@ -706,8 +654,8 @@ function getInitialData(savedOverride) {
       ],
       metricsLogs: {}, goals: ["Viaje Europa con hija","Go to 10K","Construir patrimonio $100K"],
       trainingLogs: {}, bodyLogs: {}, measurements: [],
-      nutritionTargets: { calories:2250, protein:225, carbs:170, fat:75 },
-      weightGoal: { target:87, startDate:"2026-07-10", totalDays:60 },
+      nutritionTargets: NUTRITION_DEFAULTS,
+      weightGoal: { target:80, startDate:"2026-09-21", totalDays:300 },
       weeklyReflections: {},
       warMap: {},
       warMapCategories: [
@@ -4020,90 +3968,94 @@ function TeamTab({ data, onChange }) {
 }
 
 // ─── PERSONAL TAB — RUTINA PPL ───────────────────────────────────────────────
+// Plan de Competencia Bodybuilding Natural — 100kg→80kg, calistenia en parque (reemplaza el PPL de
+// gimnasio desde 2026-09-21). Fuente completa: data/plan_competencia_bodybuilding_jp.md
 const PPL_PLAN = [
-  { id:"lun", day:"Lunes",      session:"Push 1", color:"#EF4444", emoji:"🔴",
+  { id:"lun", day:"Lunes",      session:"Fuerza — Parque (Fase 1)", color:"#EF4444", emoji:"🔴",
     exercises:[
-      { id:"p1e1", name:"Press banca barra",         muscle:"Pecho",      sets:4, repsMin:6,  repsMax:8,  rir:"1-2", doubleF:false },
-      { id:"p1e2", name:"Press militar mancuerna",   muscle:"Hombro",     sets:3, repsMin:8,  repsMax:10, rir:"1-2", doubleF:false },
-      { id:"p1e3", name:"Press inclinado mancuerna", muscle:"Pecho",      sets:3, repsMin:10, repsMax:12, rir:"1-2", doubleF:false },
-      { id:"p1e4", name:"Elevaciones laterales",     muscle:"Hombro",     sets:3, repsMin:12, repsMax:15, rir:"0-1", doubleF:false },
-      { id:"p1e5", name:"Ext. tríceps polea",        muscle:"Tríceps",    sets:3, repsMin:10, repsMax:12, rir:"0",   doubleF:true  },
+      { id:"barras",   name:"Barras (Dominadas)",              muscle:"Espalda", sets:4, repsMin:6,  repsMax:10, rir:"Fallo", doubleF:false },
+      { id:"fondos",   name:"Fondos en Paralelas",              muscle:"Tríceps", sets:4, repsMin:8,  repsMax:12, rir:"Fallo", doubleF:false },
+      { id:"flexinc",  name:"Flexiones Inclinadas",             muscle:"Pecho",   sets:3, repsMin:12, repsMax:15, rir:"1-2",   doubleF:false },
+      { id:"bicepiso", name:"Curl Isométrico en Barra",         muscle:"Bíceps",  sets:3, repsMin:20, repsMax:30, rir:"—",     doubleF:false },
+      { id:"flexmj",   name:"Flexiones Manos Juntas",           muscle:"Pecho",   sets:3, repsMin:8,  repsMax:12, rir:"1-2",   doubleF:false },
+      { id:"cardiosuave", name:"Cardio Suave (cierre)",         muscle:"Cardio",  sets:1, repsMin:15, repsMax:20, rir:"—",     doubleF:false },
     ]},
-  { id:"mar", day:"Martes",    session:"Pull 1", color:"#3B82F6", emoji:"🔵",
+  { id:"mar", day:"Martes",    session:"Cardio + Movilidad", color:"#3B82F6", emoji:"🔵",
     exercises:[
-      { id:"l1e1", name:"Dominadas",                 muscle:"Espalda",    sets:4, repsMin:6,  repsMax:8,  rir:"1-2", doubleF:false },
-      { id:"l1e2", name:"Remo con barra",            muscle:"Espalda",    sets:3, repsMin:8,  repsMax:10, rir:"1-2", doubleF:false },
-      { id:"l1e3", name:"Remo mancuerna un brazo",   muscle:"Espalda",    sets:3, repsMin:10, repsMax:12, rir:"1-2", doubleF:false },
-      { id:"l1e4", name:"Face pull",                 muscle:"Hombro",     sets:3, repsMin:15, repsMax:15, rir:"0-1", doubleF:false },
-      { id:"l1e5", name:"Curl bíceps barra",         muscle:"Bíceps",     sets:3, repsMin:10, repsMax:12, rir:"0",   doubleF:true  },
+      { id:"cardiomar", name:"Caminata Rápida (o Nado)",        muscle:"Cardio",     sets:1, repsMin:30, repsMax:40, rir:"—", doubleF:false },
+      { id:"movilidad",  name:"Estiramientos",                  muscle:"Movilidad",  sets:1, repsMin:10, repsMax:10, rir:"—", doubleF:false },
     ]},
-  { id:"mie", day:"Miércoles", session:"Legs 1", color:"#22C55E", emoji:"🟢",
+  { id:"mie", day:"Miércoles", session:"Fuerza — Parque (Fase 1)", color:"#22C55E", emoji:"🟢",
     exercises:[
-      { id:"g1e1", name:"Sentadilla",                muscle:"Cuádriceps", sets:4, repsMin:6,  repsMax:8,  rir:"1-2", doubleF:false },
-      { id:"g1e2", name:"Peso muerto rumano",        muscle:"Femoral",    sets:3, repsMin:8,  repsMax:10, rir:"1-2", doubleF:false },
-      { id:"g1e3", name:"Prensa",                    muscle:"Cuádriceps", sets:3, repsMin:10, repsMax:12, rir:"1-2", doubleF:false },
-      { id:"g1e4", name:"Curl femoral",              muscle:"Femoral",    sets:3, repsMin:12, repsMax:15, rir:"0-1", doubleF:false },
-      { id:"g1e5", name:"Gemelos",                   muscle:"Gemelos",    sets:4, repsMin:12, repsMax:15, rir:"0",   doubleF:true  },
+      { id:"barras",   name:"Barras (Dominadas)",              muscle:"Espalda", sets:4, repsMin:6,  repsMax:10, rir:"Fallo", doubleF:false },
+      { id:"fondos",   name:"Fondos en Paralelas",              muscle:"Tríceps", sets:4, repsMin:8,  repsMax:12, rir:"Fallo", doubleF:false },
+      { id:"flexinc",  name:"Flexiones Inclinadas",             muscle:"Pecho",   sets:3, repsMin:12, repsMax:15, rir:"1-2",   doubleF:false },
+      { id:"bicepiso", name:"Curl Isométrico en Barra",         muscle:"Bíceps",  sets:3, repsMin:20, repsMax:30, rir:"—",     doubleF:false },
+      { id:"flexmj",   name:"Flexiones Manos Juntas",           muscle:"Pecho",   sets:3, repsMin:8,  repsMax:12, rir:"1-2",   doubleF:false },
+      { id:"cardiosuave", name:"Cardio Suave (cierre)",         muscle:"Cardio",  sets:1, repsMin:15, repsMax:20, rir:"—",     doubleF:false },
     ]},
-  { id:"jue", day:"Jueves",    session:"Push 2", color:"#F59E0B", emoji:"🟡",
+  { id:"jue", day:"Jueves",    session:"Cardio + Movilidad", color:"#F59E0B", emoji:"🟡",
     exercises:[
-      { id:"p2e1", name:"Press inclinado barra",     muscle:"Pecho",      sets:4, repsMin:6,  repsMax:8,  rir:"1-2", doubleF:false },
-      { id:"p2e2", name:"Press militar mancuerna",   muscle:"Hombro",     sets:3, repsMin:8,  repsMax:10, rir:"1-2", doubleF:false },
-      { id:"p2e3", name:"Fondos",                    muscle:"Tríceps",    sets:3, repsMin:10, repsMax:12, rir:"1-2", doubleF:false },
-      { id:"p2e4", name:"Elevaciones laterales",     muscle:"Hombro",     sets:3, repsMin:12, repsMax:15, rir:"0-1", doubleF:false },
-      { id:"p2e5", name:"Ext. tríceps overhead",     muscle:"Tríceps",    sets:3, repsMin:10, repsMax:12, rir:"0",   doubleF:true  },
+      { id:"cardiomar", name:"Caminata Rápida (o Nado)",        muscle:"Cardio",     sets:1, repsMin:30, repsMax:40, rir:"—", doubleF:false },
+      { id:"movilidad",  name:"Estiramientos",                  muscle:"Movilidad",  sets:1, repsMin:10, repsMax:10, rir:"—", doubleF:false },
     ]},
-  { id:"vie", day:"Viernes",   session:"Pull 2", color:"#8B5CF6", emoji:"🟣",
+  { id:"vie", day:"Viernes",   session:"Fuerza — Parque (Fase 1)", color:"#8B5CF6", emoji:"🟣",
     exercises:[
-      { id:"l2e1", name:"Peso muerto convencional",  muscle:"Espalda",    sets:4, repsMin:5,  repsMax:6,  rir:"1-2", doubleF:false },
-      { id:"l2e2", name:"Jalón agarre cerrado",      muscle:"Espalda",    sets:3, repsMin:8,  repsMax:10, rir:"1-2", doubleF:false },
-      { id:"l2e3", name:"Remo máquina",              muscle:"Espalda",    sets:3, repsMin:10, repsMax:12, rir:"1-2", doubleF:false },
-      { id:"l2e4", name:"Curl martillo",             muscle:"Bíceps",     sets:3, repsMin:10, repsMax:12, rir:"1-2", doubleF:false },
-      { id:"l2e5", name:"Face pull",                 muscle:"Hombro",     sets:3, repsMin:15, repsMax:15, rir:"0",   doubleF:true  },
+      { id:"barras",   name:"Barras (Dominadas)",              muscle:"Espalda", sets:4, repsMin:6,  repsMax:10, rir:"Fallo", doubleF:false },
+      { id:"fondos",   name:"Fondos en Paralelas",              muscle:"Tríceps", sets:4, repsMin:8,  repsMax:12, rir:"Fallo", doubleF:false },
+      { id:"flexinc",  name:"Flexiones Inclinadas",             muscle:"Pecho",   sets:3, repsMin:12, repsMax:15, rir:"1-2",   doubleF:false },
+      { id:"bicepiso", name:"Curl Isométrico en Barra",         muscle:"Bíceps",  sets:3, repsMin:20, repsMax:30, rir:"—",     doubleF:false },
+      { id:"flexmj",   name:"Flexiones Manos Juntas",           muscle:"Pecho",   sets:3, repsMin:8,  repsMax:12, rir:"1-2",   doubleF:false },
+      { id:"cardiosuave", name:"Cardio Suave (cierre)",         muscle:"Cardio",  sets:1, repsMin:15, repsMax:20, rir:"—",     doubleF:false },
     ]},
-  { id:"sab", day:"Sábado",    session:"Legs 2", color:"#EC4899", emoji:"🩷",
+  { id:"sab", day:"Sábado",    session:"Opcional — Caminata larga", color:"#EC4899", emoji:"🩷",
     exercises:[
-      { id:"g2e1", name:"Sentadilla frontal",        muscle:"Cuádriceps", sets:4, repsMin:8,  repsMax:10, rir:"1-2", doubleF:false },
-      { id:"g2e2", name:"Zancadas",                  muscle:"Cuádriceps", sets:3, repsMin:10, repsMax:12, rir:"1-2", doubleF:false },
-      { id:"g2e3", name:"Hip thrust",                muscle:"Glúteos",    sets:3, repsMin:10, repsMax:12, rir:"1-2", doubleF:false },
-      { id:"g2e4", name:"Extensión cuádriceps",      muscle:"Cuádriceps", sets:3, repsMin:12, repsMax:15, rir:"0-1", doubleF:false },
-      { id:"g2e5", name:"Gemelos sentado",           muscle:"Gemelos",    sets:3, repsMin:15, repsMax:15, rir:"0",   doubleF:true  },
+      { id:"caminatalarga", name:"Caminata Larga (o descanso)", muscle:"Cardio", sets:1, repsMin:45, repsMax:60, rir:"—", doubleF:false },
     ]},
 ];
 
-const MUSCLE_TARGETS = { Pecho:[8,16,20], Espalda:[10,18,22], Hombro:[8,16,20], Tríceps:[6,14,18], Bíceps:[6,14,18], Cuádriceps:[8,16,20], Femoral:[6,14,18], Glúteos:[6,14,18], Gemelos:[8,16,20] };
+// Targets semanales de series efectivas — calibrados para volumen de parque (3 sesiones/semana),
+// no para un split de gimnasio. Cardio/Movilidad no llevan target de "series".
+const MUSCLE_TARGETS = { Espalda:[8,12,15], Pecho:[6,10,14], Tríceps:[4,8,12], Bíceps:[3,6,9] };
+
+// Macros por tipo de día — ver data/plan_competencia_bodybuilding_jp.md para el detalle comida a comida
+const NUTRITION_DEFAULTS = {
+  entreno:  { calories:2100, protein:135, carbs:280, fat:65 },   // Lunes / Miércoles / Viernes
+  descanso: { calories:1950, protein:135, carbs:200, fat:65 },   // Martes / Jueves / Sábado / Domingo
+  futbol:   { calories:2450, protein:145, carbs:335, fat:65 },   // Día que juega fútbol — toggle manual
+};
 
 const DAY_MINDSET = {
-  lun:{ emoji:"🔴", label:"PUSH 1", muscles:"Pecho · Hombros · Tríceps",
-    headline:"HOY EMPUJÁS CONTRA TODO",
-    body:"El press de banca no es un ejercicio. Es una declaración. Cuánto querés, cuánto podés, cuánto estás dispuesto a sufrir para conseguirlo.\n\nEl Lunes es el día que la mayoría arranca fuerte y termina sin convicción. Vos no sos la mayoría.",
-    challenge:"Cada rep del press: empujá como si el techo fuera lo que te limita en la vida.",
-    key:"Si el último set no costó, el peso era liviano." },
-  mar:{ emoji:"🔵", label:"PULL 1", muscles:"Espalda · Bíceps",
-    headline:"LA ESPALDA SE CONSTRUYE EN SILENCIO",
-    body:"Nadie ve la espalda en el espejo directamente. Por eso la mayoría la trabaja a medias. Los que construyen una espalda real saben que es el músculo que sostiene todo — la postura, la fuerza, la presencia.\n\nLas dominadas no mienten. Tu cuerpo vs la gravedad. Sin excusas.",
-    challenge:"Cada dominada: jalás hacia arriba todo lo que querés construir.",
-    key:"Extensión completa abajo. Si no bajás del todo, hacés la mitad del trabajo." },
-  mie:{ emoji:"🟢", label:"LEGS 1", muscles:"Cuádriceps · Femorales · Gemelos",
-    headline:"LAS PIERNAS SON EL CARÁCTER",
-    body:"La mayoría skipea piernas. Exactamente por eso el día de piernas es el más importante.\n\nLa sentadilla pesada desarrolla algo más que músculos: la capacidad de aguantar incomodidad bajo presión. Eso se traduce a todo.",
-    challenge:"En la última serie de sentadilla, cuando quieras parar: una rep más. Siempre una más.",
-    key:"Si nunca te tiemblan las piernas al terminar, no trabajaste suficiente." },
-  jue:{ emoji:"🟡", label:"PUSH 2", muscles:"Pecho Superior · Hombros · Tríceps",
-    headline:"SEGUNDA VEZ ES LA QUE DEFINE",
-    body:"Ya hiciste Push el lunes. Hoy llegás con fatiga acumulada. Hoy es más fácil recortar, bajar el peso, hacer menos series.\n\nHoy es exactamente cuando no podés aflojar. El jueves es el día que separa a los que progresan de los que se mantienen.",
-    challenge:"Press inclinado: el pecho superior es lo que separa un físico bueno de uno extraordinario.",
-    key:"El que aparece el jueves con la misma intensidad que el lunes es el que progresa." },
-  vie:{ emoji:"🟣", label:"PULL 2", muscles:"Peso Muerto · Espalda · Bíceps",
-    headline:"EL VIERNES ES DEL PESO MUERTO",
-    body:"El peso muerto convencional es el ejercicio más honesto que existe. No hay máquina que ayude. No hay trampa. Sos vos, el peso, y lo que realmente tenés adentro.\n\nViernes. Cansado de la semana. Y aun así levantás.",
-    challenge:"Peso muerto: no es un ejercicio de espalda. Es una prueba de voluntad.",
-    key:"Si la espalda baja redondea, el ego maneja el peso. Bajalo y hacelo bien." },
-  sab:{ emoji:"🩷", label:"LEGS 2", muscles:"Glúteos · Cuádriceps · Gemelos",
-    headline:"SÁBADO: EL ÚLTIMO TEST DE LA SEMANA",
-    body:"Llegaste al sábado. Cinco días de entrenamiento en el cuerpo. Hoy no es el día de aflojar — es el día de cerrar la semana con la misma energía con la que arrancaste.\n\nUna semana de 6 días es el estándar. No 5, no 4. 6.",
-    challenge:"Cerrá la semana como la empezaste: con intención, sin excusas.",
-    key:"Hip thrust: no te dé vergüenza hacerlo con todo el peso que podés. Es el mejor ejercicio para glúteos." },
+  lun:{ emoji:"🔴", label:"FUERZA — PARQUE", muscles:"Espalda · Pecho · Tríceps · Bíceps",
+    headline:"HOY EMPIEZA LA CUENTA REGRESIVA A 80KG",
+    body:"No hay barra cargada, no hay máquina, no hay excusa de \"no tengo equipo\". Solo vos, la barra de dominadas y las paralelas. Cada rep en el parque cuenta doble porque nadie te está mirando ni obligando.\n\nHoy también es pesada: 6 AM, sin ropa, post baño. El número de hoy es el punto de partida de 80kg, no un juicio.",
+    challenge:"En dominadas y fondos: la última rep antes del fallo es la que construye el físico de competencia.",
+    key:"Registrá el peso ANTES de la primera barra. Sin báscula no hay plan." },
+  mar:{ emoji:"🔵", label:"CARDIO + MOVILIDAD", muscles:"Sistema cardiovascular · Recuperación activa",
+    headline:"EL DÍA QUE NADIE VE ES EL QUE MARCA LA DIFERENCIA",
+    body:"Hoy no hay aplausos. No hay PR que registrar. Es caminar rápido 30-40 minutos y estirar. Exactamente por eso es el día que la mayoría se salta — y exactamente por eso vos no.\n\nEl déficit no se hace solo en la comida. El cardio de hoy es parte del mismo objetivo: bajar grasa sin perder el músculo que ya tenés.",
+    challenge:"Caminá a un ritmo donde podés hablar, pero con esfuerzo real — no un paseo.",
+    key:"Estirá espalda, pecho y caderas al final. El cuerpo que se mueve bien hoy, rinde mejor el miércoles." },
+  mie:{ emoji:"🟢", label:"FUERZA — PARQUE", muscles:"Espalda · Pecho · Tríceps · Bíceps",
+    headline:"MITAD DE SEMANA: AQUÍ SE NOTA QUIÉN VIENE EN SERIO",
+    body:"Ya entrenaste el lunes, ya caminaste el martes. Hoy llegás con algo de fatiga acumulada — y es exactamente cuando es más fácil recortar una serie o bajar el número de reps.\n\nNo hoy. El miércoles es el segundo test de la semana, no un relleno.",
+    challenge:"En fondos: bajá controlado, subí con fuerza. El pecho inferior y el tríceps se construyen en el rango completo, no en repeticiones a medias.",
+    key:"Si terminaste la sesión sin transpirar, no fue una sesión — fue un calentamiento." },
+  jue:{ emoji:"🟡", label:"CARDIO + MOVILIDAD", muscles:"Sistema cardiovascular · Recuperación activa",
+    headline:"PENÚLTIMO DÍA ANTES DEL CIERRE DE SEMANA",
+    body:"Si mañana jugás fútbol, hoy es el día de comer normal (2,200 kcal) e hidratarte al máximo — el cuerpo necesita glucógeno de sobra para aguantar 90 minutos.\n\nSi no jugás, es un martes más: caminata + movilidad. El plan no cambia porque el día se sienta repetitivo.",
+    challenge:"Aprovechá para revisar: ¿cómo va la proteína esta semana? ¿Los 4-5 litros de agua diarios?",
+    key:"La consistencia del 80% se pierde en los días \"sin importancia\" como este, no en los días de entreno." },
+  vie:{ emoji:"🟣", label:"FUERZA — PARQUE", muscles:"Espalda · Pecho · Tríceps · Bíceps",
+    headline:"CIERRA LA SEMANA DE FUERZA COMO LA EMPEZASTE",
+    body:"Tercera y última sesión de parque de la semana. Si jugás fútbol hoy en vez de entrenar, el plan cambia: desayuno aumentado, comer antes y después del partido, proteína a 140-150g — no es un día \"libre\", es un día distinto con sus propias reglas.\n\nSi entrenás: cerrá fuerte. El lunes que viene arrancás con memoria de esto.",
+    challenge:"Barras y fondos al fallo real, no al fallo cómodo. La diferencia entre los dos es la que te lleva a 80kg en 10 meses y no en 14.",
+    key:"Foto de progreso solo si es semana 4, 8, 12... — misma luz, misma hora, mismo ángulo." },
+  sab:{ emoji:"🩷", label:"OPCIONAL — CAMINATA LARGA", muscles:"Recuperación · Descanso activo",
+    headline:"SÁBADO ES TUYO — PERO NO ES UN DÍA SIN REGLAS",
+    body:"Caminata larga de 45-60 min, o descanso total si venís cansado. Los dos son válidos — lo que no es válido es saltarte el registro de peso corporal o comerte el dulce de hoy sin restarlo del plan.\n\n2 dulces por semana caben en el plan (sábado y domingo). Eso es lo que lo hace sostenible 12 meses y no 3.",
+    challenge:"Si elegís chocolate o helado hoy: pesalo, contalo, y restá esas calorías de otro lado del día — no lo sumes gratis.",
+    key:"80% perfecto + 20% flexible > 100% perfecto durante 3 semanas y después abandonás." },
 };
 
 const WEEKLY_THEMES = [
@@ -4118,36 +4070,15 @@ const WEEKLY_THEMES = [
 ];
 
 const EXERCISE_CUES = {
-  p1e1:  { equipment:"Barra + banco plano / Máquina Smith", focus:"Escápulas abajo y adentro. El pecho empuja — no los brazos.", why:"Ejercicio compuesto principal. Va primero porque cargás más cuando el SNC está fresco." },
-  p1e2:  { equipment:"Mancuernas / Barra / Máquina hombros", focus:"Core apretado. Sin arquear la lumbar. El hombro mueve, nada más.", why:"Mancuerna permite corregir desbalances y mayor rango de movimiento que barra." },
-  p1e3:  { equipment:"Mancuernas / Barra en banco inclinado 30°", focus:"Banco a 30°. Si no sentís el pecho superior trabajar, bajá el peso.", why:"El press plano no desarrolla la cabeza clavicular. Sin inclinado, el pecho superior queda vacío." },
-  p1e4:  { equipment:"Mancuernas / Poleas bajas cruzadas", focus:"Peso liviano. Cero impulso. Pulgar levemente hacia abajo al final.", why:"El único ejercicio que activa el deltoides lateral directamente. Da la anchura de hombros." },
-  p1e5:  { equipment:"Polea alta con cuerda o barra V / Máquina tríceps", focus:"Codos fijos al costado. Solo el antebrazo. Apretá el tríceps 1 segundo arriba.", why:"Polea mantiene tensión constante todo el recorrido. Aislamiento seguro para doble fallo." },
-  l1e1:  { equipment:"Barra de dominadas / Máquina pulldown (asistida)", focus:"Empezá deprimiendo las escápulas. El pecho al frente — no la barbilla.", why:"El mejor ejercicio para ancho de espalda. Extensión completa abajo en cada rep." },
-  l1e2:  { equipment:"Barra + plataforma / Máquina T-bar row", focus:"Espalda paralela al suelo. Tira hacia el ombligo, no el pecho. Apretá la escápula.", why:"Las dominadas dan ancho. El remo da grosor. Necesitás los dos." },
-  l1e3:  { equipment:"Mancuerna + banco / Polea baja", focus:"Dejá que el hombro baje al bajar la mancuerna. Codo al techo al subir.", why:"Unilateral. Corrige desbalances. Mayor ROM que el remo con barra." },
-  l1e4:  { equipment:"Polea alta con cuerda / Banda elástica", focus:"Codos arriba. Manos a los lados de la cara. Apretá fuerte 1 segundo.", why:"El ejercicio más importante para salud de hombros. Equilibra todo el empuje de los press." },
-  l1e5:  { equipment:"Barra recta o EZ / Polea baja", focus:"Codos pegados al cuerpo. Supinación completa arriba. Sin impulso de caderas.", why:"La barra permite la carga máxima en bíceps. Seguro para doble fallo." },
-  g1e1:  { equipment:"Barra + rack / Máquina Smith / Goblet con mancuerna", focus:"Rodillas siguen los pies. Espalda neutral. Empujá el suelo hacia abajo.", why:"El ejercicio más completo del cuerpo. Cuádriceps, glúteos, femorales, core, espalda." },
-  g1e2:  { equipment:"Barra / Mancuernas", focus:"Caderas hacia atrás — no doblés la cintura. Barra rozando las piernas.", why:"Femorales en posición estirada bajo carga. El estímulo más efectivo para hipertrofia femoral." },
-  g1e3:  { equipment:"Máquina prensa 45° / Hack squat", focus:"Rodillas no colapsen. No bloquees arriba. Rango completo cada rep.", why:"Volumen de cuádriceps sin carga espinal. Permite rendir más después del peso muerto." },
-  g1e4:  { equipment:"Máquina curl femoral acostado", focus:"3 segundos bajando. El excéntrico es donde más crece el músculo.", why:"Aislamiento de femorales. Los compuestos no los trabajan en todo su rango." },
-  g1e5:  { equipment:"Máquina pantorrillas de pie / Escalón + barra", focus:"Rango completo — talón lo más abajo posible. Pausa 1 segundo arriba. Sin rebote.", why:"Gemelos son resistentes. Necesitan rango completo y volumen alto para crecer." },
-  p2e1:  { equipment:"Barra + banco inclinado / Máquina Smith inclinado", focus:"Banco a 30-45°. La barra toca el pecho superior. Escápulas activas.", why:"Push 2 invierte el orden: inclinado primero. Estimula el pecho superior con barra (mayor carga)." },
-  p2e2:  { equipment:"Mancuernas / Barra / Máquina hombros", focus:"Segundo día de hombros. Peso honesto. Técnica limpia.", why:"Los deltoides necesitan alto volumen semanal. 6 series semanales de press overhead." },
-  p2e3:  { equipment:"Barras paralelas / Máquina dips / Banco + silla", focus:"Torso inclinado adelante = más pecho. Vertical = más tríceps. Elegís el ángulo.", why:"Trabaja pecho inferior que el inclinado no toca. Compuesto para tríceps también." },
-  p2e4:  { equipment:"Mancuernas / Poleas bajas (cables cruzados)", focus:"Vas al doble de series semanales en deltoides lateral. No lo skipees.", why:"El músculo que más define anchura visual. Alta proporción de fibras lentas — necesita volumen." },
-  p2e5:  { equipment:"Mancuerna / Polea alta con cuerda / Barra EZ", focus:"Brazo levantado estira la cabeza larga del tríceps. Sentís el estiramiento?", why:"La cabeza larga es la más grande del tríceps. El overhead activa lo que la polea no llega." },
-  l2e1:  { equipment:"Barra olímpica + plataforma / Trap bar", focus:"Caderas y hombros suben al mismo tiempo. Si la cadera sube primero, la espalda baja redondea.", why:"El ejercicio más demandante del sistema nervioso. 5-6 reps para mantener técnica con carga máxima." },
-  l2e2:  { equipment:"Polea alta con barra cerrada / Máquina pulldown", focus:"Codo hacia la cadera. No hacia atrás. Sentís el dorsal contraerse?", why:"Complementa las dominadas con agarre diferente. Más activación del dorsal en aducción." },
-  l2e3:  { equipment:"Máquina remo sentado / T-bar row", focus:"Espalda media controlada. Ya hiciste peso muerto pesado — esto es volumen adicional.", why:"Máquina permite más series con menos riesgo después del peso muerto convencional." },
-  l2e4:  { equipment:"Mancuernas / Polea baja con cuerda", focus:"Agarre neutro activa el braquial — el músculo debajo del bíceps que lo empuja hacia arriba.", why:"Da más grosor y pico al brazo que el curl normal. Complementa el curl de barra del martes." },
-  l2e5:  { equipment:"Polea alta con cuerda / Banda elástica", focus:"Codos arriba. Manos a los lados de la cara. Rotadores externos trabajando.", why:"Segundo día de salud del manguito rotador. No lo skipees — previene lesiones de hombro." },
-  g2e1:  { equipment:"Barra frontal + rack / Máquina Smith / Goblet squat", focus:"Torso vertical. Codos arriba. Si el torso cae, la movilidad de tobillo/cadera limita.", why:"Más cuádriceps que la sentadilla trasera por el torso vertical. Estímulo diferente." },
-  g2e2:  { equipment:"Mancuernas / Barra / Máquina Smith", focus:"Paso largo. Rodilla trasera al suelo. Empujá el talón delantero al subir.", why:"Unilateral: detecta y corrige desbalances que la sentadilla bilateral esconde." },
-  g2e3:  { equipment:"Barra + banco / Máquina hip thrust", focus:"Pies al ancho de hombros. Apretá glúteos 2 segundos arriba. Caderas horizontales.", why:"El mejor ejercicio para glúteos. En la sentadilla son auxiliares. Aquí son protagonistas." },
-  g2e4:  { equipment:"Máquina extensora de piernas", focus:"Extendé completamente. Los últimos 30° activan el VMO que los compuestos no alcanzan.", why:"El VMO (vasto medial oblicuo) da la forma de lágrima al cuádriceps. Solo se activa en extensión total." },
-  g2e5:  { equipment:"Máquina pantorrillas sentado / Plato en rodillas", focus:"Rodilla flexionada = sóleo trabaja. Diferente al de pie. Rango completo.", why:"El sóleo se relaja cuando la rodilla está doblada. Sin sentado, el sóleo queda sin entrenar." },
+  barras:   { equipment:"Barra de dominadas del parque / Banda elástica si hace falta asistencia", focus:"Empezá deprimiendo las escápulas antes de tirar. Subí hasta que la barbilla pase la barra. Bajá con control hasta extensión completa — no cortes el rango.", why:"El ejercicio base de espalda de todo el plan. Semanas 1-2: máx reps sin ayuda. Semanas 3-4: apuntá a 6-10. Semanas 5-8: 5x8-12. Semanas 9+: 5x10-15. Meta de competencia: 15+ dominadas puras." },
+  fondos:   { equipment:"Paralelas del parque / Banco + silla si no hay paralelas", focus:"Torso ligeramente inclinado adelante = más pecho. Vertical = más tríceps. Bajá hasta 90° de codo, sin hundir los hombros.", why:"Semanas 1-2: máx reps. Semanas 3-4: 4x8-12. Semanas 5-8: 5x12-15. Semanas 9+: 5x15-20. Meta de competencia: 20+ fondos puros." },
+  flexinc:  { equipment:"Banco alto del parque / Baranda / Silla", focus:"Manos en el banco, cuerpo recto de cabeza a talón. Bajá el pecho hasta rozar el punto de apoyo, sin arquear la lumbar.", why:"Semanas 1-4: 3x12-15 (banco alto). Semanas 5-8: banco más bajo, 3x15-20. Semanas 9+: en el piso, pecho completo, mismo rango." },
+  bicepiso: { equipment:"Barra de dominadas, agarre cerrado", focus:"Colgate con los codos flexionados ~90° y sostené la tensión sin balancearte. El reloj corre, no las repeticiones.", why:"3 series x 20-30 segundos de tensión isométrica — en Reps anotá los segundos sostenidos, no repeticiones. Complementa las flexiones manos juntas para pecho inferior/tríceps." },
+  flexmj:   { equipment:"Piso o banco", focus:"Manos juntas debajo del centro del pecho, codos pegados al cuerpo al bajar.", why:"Bloque complementario de pecho inferior — 3x8-12. No reemplaza a las flexiones inclinadas, las complementa." },
+  cardiosuave: { equipment:"Ninguno — caminata o trote muy suave", focus:"Podés hablar con esfuerzo leve. No es un sprint, es recuperación activa después de la sesión de fuerza.", why:"Cierra la sesión de Lunes/Miércoles/Viernes — 15-20 min. Ayuda a despejar el sistema nervioso después del trabajo al fallo." },
+  cardiomar: { equipment:"Ninguno — parque, terreno variado si hay / piscina si hay opción de nadar", focus:"Ritmo 5-5.5 km/h, podés hablar pero con esfuerzo real. Si nadás: 4-5 largos de 25m + descanso, repetir.", why:"Martes/Jueves es cardio puro — 30-40 min. El déficit de grasa se sostiene tanto en la comida como en este bloque, no solo en los días de fuerza." },
+  movilidad: { equipment:"Ninguno — piso o pasto", focus:"10 minutos enfocados en espalda, pecho y caderas — las zonas que más se cargan en barras y fondos.", why:"Previene rigidez y lesiones de hombro/cadera por el volumen de tracción y empuje de la semana." },
+  caminatalarga: { equipment:"Ninguno", focus:"Ritmo cómodo, sin apuro — este día es recuperación, no entreno.", why:"Opcional: 45-60 min de caminata larga, o descanso total si venís cansado de la semana. Los dos son válidos." },
 };
 
 function isoWeek(d) {
@@ -4707,8 +4638,11 @@ function EntrenamientoSection({ personal, onUpdate }) {
         <div>
           {/* Day counter + weight goal */}
           {(()=>{
-            const nt  = personal.nutritionTargets || { calories:2250, protein:225, carbs:170, fat:75 };
-            const wg  = personal.weightGoal || { target:87, startDate:"2026-07-10", totalDays:60 };
+            const isFutbol = !!bodyLogs[todayStr]?.futbolDay;
+            const dayType = isFutbol ? "futbol" : (["lun","mie","vie"].includes(todayId) ? "entreno" : "descanso");
+            const ntAll = personal.nutritionTargets || NUTRITION_DEFAULTS;
+            const nt  = ntAll[dayType] || ntAll.entreno || NUTRITION_DEFAULTS.entreno;
+            const wg  = personal.weightGoal || { target:80, startDate:"2026-09-21", totalDays:300 };
             const start = new Date(wg.startDate);
             const dayN  = Math.max(1, Math.min(wg.totalDays, Math.floor((new Date()-start)/86400000)+1));
             const pct   = Math.round(dayN/wg.totalDays*100);
@@ -4732,7 +4666,7 @@ function EntrenamientoSection({ personal, onUpdate }) {
                     </div>
                     <div style={{ flex:1 }}>
                       <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
-                        <span style={{ color:WHITE, fontSize:12, fontWeight:600 }}>Meta: {wg.target} kg</span>
+                        <span style={{ color:WHITE, fontSize:12, fontWeight:600 }}>Meta: {wg.target} kg · 12-13% grasa</span>
                         {lastW && <span style={{ fontSize:12, color: diff>0?"#EF4444":"#22C55E", fontWeight:700 }}>
                           {lastW} kg {diff>0 ? `(faltan ${diff} kg)` : "¡Meta alcanzada!"}
                         </span>}
@@ -4742,6 +4676,19 @@ function EntrenamientoSection({ personal, onUpdate }) {
                       </div>
                       <div style={{ color:GRAY, fontSize:10, marginTop:4 }}>Inicio: {wg.startDate} · {pct}% completado</div>
                     </div>
+                  </div>
+                  {/* Tipo de día + toggle fútbol */}
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+                    <span style={{ fontSize:10, fontWeight:700, letterSpacing:1, padding:"3px 9px", borderRadius:20,
+                      color: dayType==="entreno"?"#22C55E":dayType==="futbol"?"#F59E0B":GRAY,
+                      background: (dayType==="entreno"?"#22C55E":dayType==="futbol"?"#F59E0B":GRAY)+"18" }}>
+                      {dayType==="entreno"?"DÍA ENTRENO":dayType==="futbol"?"DÍA FÚTBOL":"DÍA DESCANSO"}
+                    </span>
+                    <button onClick={()=>onUpdate({ bodyLogs:{ ...bodyLogs, [todayStr]:{ ...(bodyLogs[todayStr]||{}), futbolDay: !isFutbol } } })}
+                      style={{ marginLeft:"auto", padding:"4px 10px", borderRadius:6, border:`1px solid ${isFutbol?"#F59E0B":BORDER}`,
+                        background: isFutbol?"#F59E0B18":"transparent", color: isFutbol?"#F59E0B":GRAY, cursor:"pointer", fontSize:11, fontWeight:600 }}>
+                      ⚽ {isFutbol ? "Día fútbol ✓" : "Marcar día fútbol"}
+                    </button>
                   </div>
                   {/* Macro targets */}
                   <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8 }}>
@@ -4772,9 +4719,9 @@ function EntrenamientoSection({ personal, onUpdate }) {
           <div style={{ background:CARD, borderRadius:12, padding:18, border:`1px solid ${BORDER}`, marginBottom:20 }}>
             <div style={{ color:WHITE, fontWeight:700, fontSize:13, marginBottom:14 }}>Registro diario — {todayStr}</div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:14 }}>
-              {[["Peso corporal (kg)",bw,setBw,"87"],["Calorías",kcal,setKcal,"2250"],["Proteína (g)",prot,setProt,"225"],
-                ["Carbs (g)",(bodyLogs[todayStr]?.carbs||""),v=>onUpdate({bodyLogs:{...bodyLogs,[todayStr]:{...(bodyLogs[todayStr]||{}),carbs:parseFloat(v)||0}}}),"170"],
-                ["Grasas (g)",(bodyLogs[todayStr]?.fat||""),v=>onUpdate({bodyLogs:{...bodyLogs,[todayStr]:{...(bodyLogs[todayStr]||{}),fat:parseFloat(v)||0}}}),"75"],
+              {[["Peso corporal (kg)",bw,setBw,"100"],["Calorías",kcal,setKcal,"2100"],["Proteína (g)",prot,setProt,"135"],
+                ["Carbs (g)",(bodyLogs[todayStr]?.carbs||""),v=>onUpdate({bodyLogs:{...bodyLogs,[todayStr]:{...(bodyLogs[todayStr]||{}),carbs:parseFloat(v)||0}}}),"280"],
+                ["Grasas (g)",(bodyLogs[todayStr]?.fat||""),v=>onUpdate({bodyLogs:{...bodyLogs,[todayStr]:{...(bodyLogs[todayStr]||{}),fat:parseFloat(v)||0}}}),"65"],
                 ["Sueño (h)",slp,setSlp,"8"],
                 ["Dolor articular (1-5)",pain,setPain,"1-5"],["Fatiga subjetiva (1-5)",fat,setFat,"1-5"]
               ].map(([label,val,setter,ph])=>(
@@ -4834,8 +4781,8 @@ function EntrenamientoSection({ personal, onUpdate }) {
                     <tr key={date} style={{ color:WHITE }}>
                       <td style={{ padding:"4px 8px", color:GRAY }}>{date}</td>
                       <td style={{ padding:"4px 8px", fontWeight:600 }}>{log.weight||"—"}</td>
-                      <td style={{ padding:"4px 8px", color: log.calories>2250?"#EF4444":log.calories>=2100?"#22C55E":GRAY }}>{log.calories||"—"}</td>
-                      <td style={{ padding:"4px 8px", color: log.protein>=200?"#22C55E":log.protein>=150?"#F59E0B":"#EF4444" }}>{log.protein||"—"}</td>
+                      <td style={{ padding:"4px 8px", color: log.calories>2150?"#EF4444":log.calories>=1900?"#22C55E":GRAY }}>{log.calories||"—"}</td>
+                      <td style={{ padding:"4px 8px", color: log.protein>=130?"#22C55E":log.protein>=100?"#F59E0B":"#EF4444" }}>{log.protein||"—"}</td>
                       <td style={{ padding:"4px 8px" }}>{log.carbs||"—"}</td>
                       <td style={{ padding:"4px 8px" }}>{log.fat||"—"}</td>
                       <td style={{ padding:"4px 8px" }}>{log.sleep||"—"}</td>
@@ -4969,7 +4916,7 @@ function MetricasSection({ personal, onUpdate }) {
     if (!selDay) return;
     const cat = warMapCategories.find(c=>c.id===modalCatId);
     if (!modalTitle.trim() && !cat) { closeModal(); return; }
-    const entry = { color: cat?.color||GOLD, title: modalTitle.trim(), catId: modalCatId };
+    const entry = { color: cat?.color||BLUE_GP, title: modalTitle.trim(), catId: modalCatId };
     onUpdate({ warMap: { ...warMap, [selDay]: entry } });
     closeModal();
   };
@@ -5028,12 +4975,12 @@ function MetricasSection({ personal, onUpdate }) {
             borderRadius:3, fontSize:9, position:"relative", userSelect:"none",
             cursor: paintCatId ? "crosshair" : "pointer",
             background: dragDays.includes(ds) && paintCatId
-              ? (warMapCategories.find(c=>c.id===paintCatId)?.color||GOLD)+"bb"
+              ? (warMapCategories.find(c=>c.id===paintCatId)?.color||BLUE_GP)+"bb"
               : col || "transparent",
-            color: col || (dragDays.includes(ds) && paintCatId) ? "#141414" : isToday ? GOLD : GRAY,
-            border: `1px solid ${isToday&&!col ? GOLD+"88" : col ? "transparent" : "#2a2a2e"}`,
+            color: col || (dragDays.includes(ds) && paintCatId) ? "#141414" : isToday ? BLUE_GP : GRAY,
+            border: `1px solid ${isToday&&!col ? BLUE_GP+"88" : col ? "transparent" : "#2a2a2e"}`,
             fontWeight: col||isToday||dragDays.includes(ds) ? 700 : 400,
-            outline: dragDays.includes(ds) ? `2px solid ${warMapCategories.find(c=>c.id===paintCatId)?.color||GOLD}` : "none" }}>
+            outline: dragDays.includes(ds) ? `2px solid ${warMapCategories.find(c=>c.id===paintCatId)?.color||BLUE_GP}` : "none" }}>
           {d}
           {entry?.title && <span style={{ position:"absolute", top:1, right:1, width:4, height:4, borderRadius:"50%", background:"#141414", opacity:0.7 }} />}
         </div>
@@ -5157,7 +5104,7 @@ function MetricasSection({ personal, onUpdate }) {
             <svg width={60} height={60} style={{ transform:"rotate(-90deg)" }}>
               <circle cx={30} cy={30} r={24} fill="none" stroke={BORDER} strokeWidth={5} />
               <circle cx={30} cy={30} r={24} fill="none"
-                stroke={pct===100?"#22C55E":GOLD} strokeWidth={5}
+                stroke={pct===100?"#22C55E":BLUE_GP} strokeWidth={5}
                 strokeDasharray={(2*Math.PI*24).toFixed(2)}
                 strokeDashoffset={(2*Math.PI*24*(1-pct/100)).toFixed(2)}
                 strokeLinecap="round" />
@@ -5191,12 +5138,12 @@ function MetricasSection({ personal, onUpdate }) {
                 return (
                   <div key={d.ds} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:2 }}>
                     <div style={{ width:22, height:22, borderRadius:5,
-                      background:d.pct===0?"#1A1A1D":d.pct<1?GOLD+"55":"#22C55E",
-                      border:`2px solid ${d.isToday?(d.pct===1?"#22C55E":GOLD):"transparent"}`,
+                      background:d.pct===0?"#1A1A1D":d.pct<1?BLUE_GP+"55":"#22C55E",
+                      border:`2px solid ${d.isToday?(d.pct===1?"#22C55E":BLUE_GP):"transparent"}`,
                       display:"flex", alignItems:"center", justifyContent:"center" }}>
                       {d.pct===1&&<span style={{color:"#141414",fontSize:10,fontWeight:800}}>✓</span>}
                     </div>
-                    <span style={{ fontSize:9, color:d.isToday?GOLD:GRAY, fontWeight:d.isToday?700:400 }}>{L}</span>
+                    <span style={{ fontSize:9, color:d.isToday?BLUE_GP:GRAY, fontWeight:d.isToday?700:400 }}>{L}</span>
                   </div>
                 );
               })}
@@ -5224,8 +5171,8 @@ function MetricasSection({ personal, onUpdate }) {
               <div style={{ display:"flex", gap:2 }}>
                 {week7.map(w=>(
                   <div key={w.ds} style={{ width:7, height:7, borderRadius:2,
-                    background:w.done?(w.isToday?"#22C55E":"#22C55E66"):(w.isToday?GOLD+"44":"#1A1A1D"),
-                    border:w.isToday?`1px solid ${w.done?"#22C55E":GOLD}`:"none" }} />
+                    background:w.done?(w.isToday?"#22C55E":"#22C55E66"):(w.isToday?BLUE_GP+"44":"#1A1A1D"),
+                    border:w.isToday?`1px solid ${w.done?"#22C55E":BLUE_GP}`:"none" }} />
                 ))}
               </div>
               {/* Streak badge */}
@@ -5253,7 +5200,7 @@ function MetricasSection({ personal, onUpdate }) {
             style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8,
               padding:"7px 12px", color:WHITE, fontSize:12, outline:"none" }} />
           <button onClick={addItem}
-            style={{ padding:"7px 14px", background:GOLD, color:"#141414", border:"none", borderRadius:8,
+            style={{ padding:"7px 14px", background:BLUE_GP, color:"#141414", border:"none", borderRadius:8,
               cursor:"pointer", fontWeight:700, fontSize:12 }}>+</button>
         </div>
       </div>
@@ -5265,7 +5212,7 @@ function MetricasSection({ personal, onUpdate }) {
             <div style={{ color:WHITE, fontWeight:700, fontSize:14 }}>Metas del año</div>
             <div style={{ color:GRAY, fontSize:11 }}>Cada meta crea un color en el War Map</div>
           </div>
-          <button onClick={()=>setEditGoals(g=>!g)} style={{ background:"none", border:"none", color:GOLD_DIM, cursor:"pointer", fontSize:12 }}>
+          <button onClick={()=>setEditGoals(g=>!g)} style={{ background:"none", border:"none", color:BLUE_DIM, cursor:"pointer", fontSize:12 }}>
             {editGoals?"Listo":"Editar"}
           </button>
         </div>
@@ -5274,7 +5221,7 @@ function MetricasSection({ personal, onUpdate }) {
           return (
             <div key={i} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8, padding:"6px 10px", borderRadius:8,
               background: cat ? cat.color+"11" : "transparent", border:`1px solid ${cat ? cat.color+"33" : BORDER}` }}>
-              <div style={{ width:14, height:14, borderRadius:3, background:cat?.color||GOLD, flexShrink:0,
+              <div style={{ width:14, height:14, borderRadius:3, background:cat?.color||BLUE_GP, flexShrink:0,
                 boxShadow: cat ? `0 0 6px ${cat.color}66` : "none" }} />
               {editGoals ? (
                 <>
@@ -5293,7 +5240,7 @@ function MetricasSection({ personal, onUpdate }) {
           <input value={newGoal} onChange={e=>setNewGoal(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addGoal()} placeholder="+ Nueva meta..."
             style={{ flex:1, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:8, padding:"7px 12px", color:WHITE, fontSize:12, outline:"none" }} />
           <button onClick={addGoal}
-            style={{ padding:"7px 14px", background:GOLD, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:12 }}>+</button>
+            style={{ padding:"7px 14px", background:BLUE_GP, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:12 }}>+</button>
         </div>
       </div>
 
@@ -5304,7 +5251,7 @@ function MetricasSection({ personal, onUpdate }) {
             <div style={{ color:WHITE, fontWeight:700, fontSize:14 }}>War Map {wmYear}</div>
             <div style={{ color:GRAY, fontSize:11 }}>
               {paintCatId
-                ? <span style={{ color: warMapCategories.find(c=>c.id===paintCatId)?.color||GOLD }}>Modo pintura — arrastrá para marcar varios días</span>
+                ? <span style={{ color: warMapCategories.find(c=>c.id===paintCatId)?.color||BLUE_GP }}>Modo pintura — arrastrá para marcar varios días</span>
                 : "Seleccioná una meta para pintar · Click en un día para detalles"}
             </div>
           </div>
@@ -5349,7 +5296,7 @@ function MetricasSection({ personal, onUpdate }) {
           onClick={e=>{ if(e.target===e.currentTarget) closeModal(); }}>
           <div style={{ background:"#1a1a1d", border:`1px solid ${BORDER}`, borderRadius:14, padding:24, width:360, boxShadow:"0 20px 60px rgba(0,0,0,0.8)" }}>
             <div style={{ marginBottom:18 }}>
-              <div style={{ color:GOLD, fontWeight:800, fontSize:13, letterSpacing:1 }}>
+              <div style={{ color:BLUE_GP, fontWeight:800, fontSize:13, letterSpacing:1 }}>
                 {(()=>{
                   const d = new Date(selDay+"T12:00:00");
                   const dias = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
@@ -5384,7 +5331,7 @@ function MetricasSection({ personal, onUpdate }) {
               <div style={{ color:GRAY, fontSize:11, marginBottom:6 }}>Horario Google Calendar</div>
               <div style={{ display:"flex", gap:8, alignItems:"center" }}>
                 <label style={{ display:"flex", alignItems:"center", gap:6, color:GRAY, fontSize:11, cursor:"pointer" }}>
-                  <input type="checkbox" checked={modalAllDay} onChange={e=>setModalAllDay(e.target.checked)} style={{ accentColor:GOLD }} />
+                  <input type="checkbox" checked={modalAllDay} onChange={e=>setModalAllDay(e.target.checked)} style={{ accentColor:BLUE_GP }} />
                   Todo el día
                 </label>
                 {!modalAllDay && (
@@ -5394,7 +5341,7 @@ function MetricasSection({ personal, onUpdate }) {
               </div>
             </div>
             <div style={{ display:"flex", gap:8 }}>
-              <button onClick={saveDay} style={{ flex:1, padding:"9px 14px", background:GOLD, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:13 }}>Guardar</button>
+              <button onClick={saveDay} style={{ flex:1, padding:"9px 14px", background:BLUE_GP, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:13 }}>Guardar</button>
               <button onClick={openGCal} style={{ flex:1, padding:"9px 14px", background:"#1a73e822", color:"#4285F4", border:`1px solid #4285F444`, borderRadius:8, cursor:"pointer", fontWeight:600, fontSize:12 }}>📅 Google Cal</button>
             </div>
             <div style={{ display:"flex", gap:8, marginTop:8 }}>
@@ -5414,12 +5361,12 @@ function MetricasSection({ personal, onUpdate }) {
           {days30.map(d=>(
             <div key={d.ds} title={`${d.ds}: ${Math.round(d.pct*100)}%`}
               style={{ width:18, height:18, borderRadius:3,
-                background: d.pct===0 ? "#222225" : d.pct<0.5 ? "#D4AF3788" : d.pct<1 ? GOLD_DIM : "#22C55E" }} />
+                background: d.pct===0 ? "#222225" : d.pct<0.5 ? "#D4AF3788" : d.pct<1 ? BLUE_DIM : "#22C55E" }} />
           ))}
         </div>
         <div style={{ display:"flex", gap:10, marginTop:8, fontSize:10, color:GRAY }}>
           <span style={{ display:"flex",gap:4,alignItems:"center" }}><span style={{width:10,height:10,background:"#222225",borderRadius:2,display:"inline-block"}} /> 0%</span>
-          <span style={{ display:"flex",gap:4,alignItems:"center" }}><span style={{width:10,height:10,background:GOLD_DIM,borderRadius:2,display:"inline-block"}} /> parcial</span>
+          <span style={{ display:"flex",gap:4,alignItems:"center" }}><span style={{width:10,height:10,background:BLUE_DIM,borderRadius:2,display:"inline-block"}} /> parcial</span>
           <span style={{ display:"flex",gap:4,alignItems:"center" }}><span style={{width:10,height:10,background:"#22C55E",borderRadius:2,display:"inline-block"}} /> 100%</span>
         </div>
       </div>
@@ -5643,23 +5590,23 @@ function FinanzasSection({ personal, onUpdate }) {
             const todayM = new Date().getMonth();
             const curStats = monthStats[todayM];
             return (
-              <div style={{ background:"#0a0a0b", border:`1px solid ${GOLD}33`, borderRadius:12, padding:18, marginBottom:16, borderLeft:`4px solid ${GOLD}` }}>
+              <div style={{ background:"#0a0a0b", border:`1px solid ${BLUE_GP}33`, borderRadius:12, padding:18, marginBottom:16, borderLeft:`4px solid ${BLUE_GP}` }}>
                 {/* Header */}
                 <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:14, gap:12 }}>
                   <div>
-                    <div style={{ color:GOLD_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:4 }}>Escalera de valor</div>
+                    <div style={{ color:BLUE_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:4 }}>Escalera de valor</div>
                     <div style={{ color:WHITE, fontWeight:900, fontSize:17, lineHeight:1, letterSpacing:-0.3 }}>Pipeline de Ventas</div>
                   </div>
                   <div style={{ textAlign:"right", flexShrink:0 }}>
                     <div style={{ color:GRAY, fontSize:9, marginBottom:2 }}>Meta mensual</div>
-                    <div style={{ color:GOLD, fontWeight:900, fontSize:22, lineHeight:1 }}>{fmtCOP(target)}</div>
+                    <div style={{ color:BLUE_GP, fontWeight:900, fontSize:22, lineHeight:1 }}>{fmtCOP(target)}</div>
                   </div>
                 </div>
 
                 {/* Metric chips */}
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8, marginBottom:12 }}>
                   {[
-                    { label:"Fee base",         val:fmtCOP(fee),                          color:GOLD,      sub:"por cliente/mes" },
+                    { label:"Fee base",         val:fmtCOP(fee),                          color:BLUE_GP,      sub:"por cliente/mes" },
                     { label:"+ Comisión canal",  val:fmtCOP(canal),                        color:"#22C55E", sub: cFloor>0 ? `${salesConfig.channelPct||10}% sobre >${fmtCOP(cFloor)}` : `${salesConfig.channelPct||10}% de ventas` },
                     { label:"= Total/cliente",   val:fmtCOP(revPC),                        color:"#60A5FA", sub:"ingreso mensual" },
                     { label:"Upsell / Adicional",val:fmtCOP(salesConfig.upsellPrice||0),   color:"#8B5CF6", sub:"servicio extra por cliente" },
@@ -5690,7 +5637,7 @@ function FinanzasSection({ personal, onUpdate }) {
                       <div style={{ color:GRAY, fontSize:9, marginTop:2 }}>tasa de cierre</div>
                     </div>
                     <div style={{ flex:1, minWidth:120, textAlign:"right" }}>
-                      <div style={{ color:GRAY, fontSize:10 }}>Para llegar a la meta <span style={{ color:GOLD, fontWeight:700 }}>sin upsell</span></div>
+                      <div style={{ color:GRAY, fontSize:10 }}>Para llegar a la meta <span style={{ color:BLUE_GP, fontWeight:700 }}>sin upsell</span></div>
                     </div>
                   </div>
                 )}
@@ -5719,7 +5666,7 @@ function FinanzasSection({ personal, onUpdate }) {
                       <div style={{ fontSize:10, color:GRAY }}>
                         <span style={{ color:WHITE, fontWeight:700, fontSize:14 }}>{cc}</span>
                         <span> / </span>
-                        <span style={{ color:GOLD, fontWeight:700 }}>{cltsN||"?"}</span>
+                        <span style={{ color:BLUE_GP, fontWeight:700 }}>{cltsN||"?"}</span>
                         <span> clientes · {MONTHS_SHORT[todayM]}</span>
                       </div>
                       <div style={{ fontSize:10, color:GRAY }}>
@@ -5729,7 +5676,7 @@ function FinanzasSection({ personal, onUpdate }) {
                       </div>
                     </div>
                     <div style={{ background:"#111113", borderRadius:20, height:5, marginBottom:10 }}>
-                      <div style={{ background:prog>=100?"#22C55E":GOLD, height:5, borderRadius:20, width:`${prog}%`, transition:"width .3s" }}/>
+                      <div style={{ background:prog>=100?"#22C55E":BLUE_GP, height:5, borderRadius:20, width:`${prog}%`, transition:"width .3s" }}/>
                     </div>
 
                     {/* Tabla mensual */}
@@ -5746,9 +5693,9 @@ function FinanzasSection({ personal, onUpdate }) {
                         return (
                           <div key={mi} style={{ display:"grid", gridTemplateColumns:"40px 60px 1fr 1fr 1fr", padding:"5px 10px",
                             background: isCur?"#22C55E08":hasData?"#FFFFFF04":"transparent",
-                            borderLeft: isCur?`2px solid ${GOLD}`:"2px solid transparent",
+                            borderLeft: isCur?`2px solid ${BLUE_GP}`:"2px solid transparent",
                             borderBottom:`1px solid ${BORDER}22` }}>
-                            <div style={{ color:isCur?GOLD:GRAY, fontSize:10, fontWeight:isCur?700:400 }}>{label}</div>
+                            <div style={{ color:isCur?BLUE_GP:GRAY, fontSize:10, fontWeight:isCur?700:400 }}>{label}</div>
                             <div style={{ color:hasData?WHITE:GRAY, fontSize:10, fontWeight:hasData?700:400 }}>{clients>0?clients:"—"}</div>
                             <div style={{ color:rev>0?"#22C55E":GRAY, fontSize:10, fontWeight:rev>0?700:400 }}>{rev>0?fmtCOP(rev):"—"}</div>
                             <div style={{ fontSize:10 }}>
@@ -5799,7 +5746,7 @@ function FinanzasSection({ personal, onUpdate }) {
                       <div style={{ display:"flex", gap:16, padding:"6px 8px", background:"#22C55E0A", borderRadius:6, border:`1px solid #22C55E22`, flexWrap:"wrap" }}>
                         <span style={{ fontSize:11, color:GRAY }}>CAC: <span style={{ color:WHITE, fontWeight:700 }}>${cacUSD} USD = {fmtCOP(cacCOP)}</span></span>
                         <span style={{ fontSize:11, color:GRAY }}>Payback: <span style={{ color:"#22C55E", fontWeight:700 }}>{paybackDays} días</span></span>
-                        <span style={{ fontSize:11, color:GRAY }}>ROI 12m: <span style={{ color:GOLD, fontWeight:700 }}>{roi12}×</span></span>
+                        <span style={{ fontSize:11, color:GRAY }}>ROI 12m: <span style={{ color:BLUE_GP, fontWeight:700 }}>{roi12}×</span></span>
                       </div>
                       )}
                     </div>
@@ -5829,7 +5776,7 @@ function FinanzasSection({ personal, onUpdate }) {
                         <input type="number" value={val||""} step={step}
                           placeholder={key==="avgClientSales"?"Ej: 100000000":""}
                           onChange={e=>updateSC({[key]:parseFloat(e.target.value)||0})}
-                          style={{ width:"100%", background:"#0e0e10", border:`1px solid ${key==="currentClients"?`#22C55E44`:key==="avgClientSales"&&!val?`${GOLD}55`:BORDER}`, borderRadius:6, padding:"5px 8px", color:key==="currentClients"?"#22C55E":GOLD, fontSize:12, outline:"none", fontWeight:700, boxSizing:"border-box" }} />
+                          style={{ width:"100%", background:"#0e0e10", border:`1px solid ${key==="currentClients"?`#22C55E44`:key==="avgClientSales"&&!val?`${BLUE_GP}55`:BORDER}`, borderRadius:6, padding:"5px 8px", color:key==="currentClients"?"#22C55E":BLUE_GP, fontSize:12, outline:"none", fontWeight:700, boxSizing:"border-box" }} />
                       </div>
                     ))}
                   </div>
@@ -5841,7 +5788,7 @@ function FinanzasSection({ personal, onUpdate }) {
           {/* Resumen año */}
           <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:20 }}>
             {[
-              { overline:"Facturación",  label:"Ingresos",   val:fmtCOP(totCC),    color:GOLD },
+              { overline:"Facturación",  label:"Ingresos",   val:fmtCOP(totCC),    color:BLUE_GP },
               { overline:"Costos",       label:"Gastos",     val:fmtCOP(totG),     color:"#EF4444" },
               { overline:"Resultado",    label:"Flujo Neto", val:fmtCOP(totFlujo), color:totFlujo>=0?"#22C55E":"#EF4444" },
               { overline:"Rentabilidad", label:"Margen",     val:totCC>0?(totFlujo/totCC*100).toFixed(0)+"%":"—", color:totFlujo>=0?"#22C55E":"#EF4444" },
@@ -5857,12 +5804,12 @@ function FinanzasSection({ personal, onUpdate }) {
           {/* Editor de categorías */}
           <div style={{ marginBottom:14 }}>
             <button onClick={()=>setShowCatEditor(s=>!s)}
-              style={{ padding:"6px 14px", borderRadius:7, fontSize:11, cursor:"pointer", border:`1px solid ${showCatEditor?GOLD:BORDER}`, background:showCatEditor?"rgba(212,175,55,0.08)":"transparent", color:showCatEditor?GOLD:GRAY, fontWeight:600 }}>
+              style={{ padding:"6px 14px", borderRadius:7, fontSize:11, cursor:"pointer", border:`1px solid ${showCatEditor?BLUE_GP:BORDER}`, background:showCatEditor?"rgba(212,175,55,0.08)":"transparent", color:showCatEditor?BLUE_GP:GRAY, fontWeight:600 }}>
               {showCatEditor ? "✕ Cerrar categorías" : "⚙ Categorías de gasto"}
             </button>
             {showCatEditor && (
-              <div style={{ background:"#0a0a0b", border:`1px solid ${GOLD}22`, borderRadius:10, padding:"14px 16px", marginTop:8 }}>
-                <div style={{ color:GOLD_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:10 }}>Administrar categorías</div>
+              <div style={{ background:"#0a0a0b", border:`1px solid ${BLUE_GP}22`, borderRadius:10, padding:"14px 16px", marginTop:8 }}>
+                <div style={{ color:BLUE_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:10 }}>Administrar categorías</div>
                 {[
                   { key:"personales",     label:"Personales",     color:"#F59E0B" },
                   { key:"profesionales",  label:"Profesionales",  color:"#3B82F6" },
@@ -5974,7 +5921,7 @@ function FinanzasSection({ personal, onUpdate }) {
                               style={{ width:"100%",background:"#0e0e10",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:WHITE,fontSize:11,outline:"none",marginBottom:5,boxSizing:"border-box" }} />
                             <div style={{ display:"flex",gap:6 }}>
                               <select value={ingF(m).currency||"USD"} onChange={e=>setIngF(m,"currency",e.target.value)}
-                                style={{ background:"#0e0e10",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:GOLD,fontSize:12,fontWeight:700,outline:"none",width:70 }}>
+                                style={{ background:"#0e0e10",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:BLUE_GP,fontSize:12,fontWeight:700,outline:"none",width:70 }}>
                                 <option value="USD">USD</option>
                                 <option value="COP">COP</option>
                               </select>
@@ -6056,7 +6003,7 @@ function FinanzasSection({ personal, onUpdate }) {
                       {/* Resumen del mes */}
                       {(cc>0||g>0) && (
                         <div style={{ marginTop:14,padding:"10px 14px",background:"#111113",borderRadius:8,display:"flex",gap:20,flexWrap:"wrap" }}>
-                          <span style={{ fontSize:11,color:GRAY }}>Ingresos: <span style={{ color:GOLD,fontWeight:700 }}>{fmtCOP(cc)}</span></span>
+                          <span style={{ fontSize:11,color:GRAY }}>Ingresos: <span style={{ color:BLUE_GP,fontWeight:700 }}>{fmtCOP(cc)}</span></span>
                           <span style={{ fontSize:11,color:GRAY }}>Gastos: <span style={{ color:"#EF4444",fontWeight:700 }}>{fmtCOP(g)}</span></span>
                           <span style={{ fontSize:11,color:GRAY }}>Flujo Neto: <span style={{ color:flujo>=0?"#22C55E":"#EF4444",fontWeight:700 }}>{fmtCOP(flujo)}</span></span>
                         </div>
@@ -6092,17 +6039,17 @@ function FinanzasSection({ personal, onUpdate }) {
                         const convPct = Math.round(100/(salesConfig.meetingsPerClose||3));
 
                         return (
-                          <div style={{ marginTop:14,background:"#0a0a0b",borderRadius:10,border:`1px solid ${GOLD}22`,padding:"14px 16px" }}>
-                            <div style={{ color:GOLD,fontWeight:700,fontSize:11,letterSpacing:1,marginBottom:12 }}>PROYECCIÓN DE CIERRE</div>
+                          <div style={{ marginTop:14,background:"#0a0a0b",borderRadius:10,border:`1px solid ${BLUE_GP}22`,padding:"14px 16px" }}>
+                            <div style={{ color:BLUE_GP,fontWeight:700,fontSize:11,letterSpacing:1,marginBottom:12 }}>PROYECCIÓN DE CIERRE</div>
 
                             {/* Progress bar */}
                             <div style={{ marginBottom:12 }}>
                               <div style={{ display:"flex",justifyContent:"space-between",marginBottom:5 }}>
                                 <span style={{ color:GRAY,fontSize:11 }}>Meta: <span style={{ color:WHITE,fontWeight:700 }}>{fmtCOP(target)}</span></span>
-                                <span style={{ color:pctDone>=100?"#22C55E":GOLD,fontSize:11,fontWeight:700 }}>{pctDone.toFixed(0)}%</span>
+                                <span style={{ color:pctDone>=100?"#22C55E":BLUE_GP,fontSize:11,fontWeight:700 }}>{pctDone.toFixed(0)}%</span>
                               </div>
                               <div style={{ height:6,background:"#222",borderRadius:3,overflow:"hidden" }}>
-                                <div style={{ height:"100%",width:pctDone+"%",background:`linear-gradient(90deg,${GOLD_DIM},${GOLD})`,borderRadius:3,transition:"width 0.4s" }} />
+                                <div style={{ height:"100%",width:pctDone+"%",background:`linear-gradient(90deg,${BLUE_DIM},${BLUE_GP})`,borderRadius:3,transition:"width 0.4s" }} />
                               </div>
                               {gapToTarget>0
                                 ? <div style={{ color:"#EF4444",fontSize:11,marginTop:5 }}>Falta cerrar: <span style={{ fontWeight:700 }}>{fmtCOP(gapToTarget)}</span></div>
@@ -6118,7 +6065,7 @@ function FinanzasSection({ personal, onUpdate }) {
                                   <span>Por cliente: </span>
                                   <span style={{ color:WHITE }}>{fmtCOP(fee)}</span><span> fee </span>
                                   <span style={{ color:"#22C55E",fontWeight:700 }}>+ {fmtCOP(canal)} canal ({salesConfig.channelPct||10}%{cFloor2>0?` sobre >${fmtCOP(cFloor2)}`:""})</span>
-                                  <span style={{ color:GOLD,fontWeight:700 }}> = {fmtCOP(revPerClient)}/mes</span>
+                                  <span style={{ color:BLUE_GP,fontWeight:700 }}> = {fmtCOP(revPerClient)}/mes</span>
                                 </div>
 
                                 {/* Option A: Pure new clients */}
@@ -6213,7 +6160,7 @@ function FinanzasSection({ personal, onUpdate }) {
                 <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:6, justifyContent:"flex-end" }}>
                   <span style={{ color:GRAY, fontSize:10 }}>TRM</span>
                   <input value={fxRate} onChange={e=>onUpdate({finance:{...finance,fxRate:parseFloat(e.target.value)||4200}})} type="number"
-                    style={{ width:68, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:5, padding:"3px 7px", color:GOLD, fontSize:11, outline:"none", textAlign:"right" }} />
+                    style={{ width:68, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:5, padding:"3px 7px", color:BLUE_GP, fontSize:11, outline:"none", textAlign:"right" }} />
                   <span style={{ color:GRAY, fontSize:10 }}>COP/USD</span>
                 </div>
               </div>
@@ -6364,19 +6311,19 @@ function FinanzasSection({ personal, onUpdate }) {
                           </div>
                           <div style={{ background:"#111113",borderRadius:6,padding:"7px 9px" }}>
                             <div style={{ color:GRAY,fontSize:9,marginBottom:3 }}>Crédito accesible est.</div>
-                            <div style={{ color:simExtra>0?"#9B9B9F":GOLD,fontSize:12,fontWeight:700,textDecoration:simExtra>0?"line-through":"none" }}>{fmtCOP(creditCap)}</div>
+                            <div style={{ color:simExtra>0?"#9B9B9F":BLUE_GP,fontSize:12,fontWeight:700,textDecoration:simExtra>0?"line-through":"none" }}>{fmtCOP(creditCap)}</div>
                             <div style={{ color:GRAY,fontSize:10,marginTop:2 }}>en {baseCreditDate}</div>
                           </div>
                         </div>
 
                         {/* ── Simulador ── */}
                         <div style={{ background:"#111113",borderRadius:7,padding:"9px 10px",marginBottom:8 }}>
-                          <div style={{ color:GOLD,fontSize:9,fontWeight:700,letterSpacing:1.5,marginBottom:7 }}>SIMULAR PAGO EXTRA</div>
+                          <div style={{ color:BLUE_GP,fontSize:9,fontWeight:700,letterSpacing:1.5,marginBottom:7 }}>SIMULAR PAGO EXTRA</div>
                           <div style={{ display:"flex",gap:6,alignItems:"center",marginBottom: simExtra>0?8:0 }}>
                             <span style={{ color:GRAY,fontSize:11,whiteSpace:"nowrap" }}>+ Extra/mes:</span>
                             <input type="number" value={simExtras[d.id]||""} placeholder="0"
                               onChange={e=>setSimExtras(p=>({...p,[d.id]:e.target.value}))}
-                              style={{ flex:1,background:"#0e0e10",border:`1px solid ${GOLD}55`,borderRadius:5,padding:"4px 8px",color:GOLD,fontSize:12,fontWeight:700,outline:"none" }} />
+                              style={{ flex:1,background:"#0e0e10",border:`1px solid ${BLUE_GP}55`,borderRadius:5,padding:"4px 8px",color:BLUE_GP,fontSize:12,fontWeight:700,outline:"none" }} />
                             {simExtra>0&&<button onClick={()=>setSimExtras(p=>({...p,[d.id]:""}))}
                               style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:12,opacity:0.5 }}>×</button>}
                           </div>
@@ -6385,9 +6332,9 @@ function FinanzasSection({ personal, onUpdate }) {
                           {simExtra>0 && simStr && (
                             <div>
                               <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:6 }}>
-                                <div style={{ background:"#0a0a0b",borderRadius:5,padding:"6px 8px",border:`1px solid ${GOLD}33` }}>
+                                <div style={{ background:"#0a0a0b",borderRadius:5,padding:"6px 8px",border:`1px solid ${BLUE_GP}33` }}>
                                   <div style={{ color:GRAY,fontSize:9,marginBottom:2 }}>Nueva liquidación</div>
-                                  <div style={{ color:GOLD,fontSize:12,fontWeight:800 }}>{simStr}</div>
+                                  <div style={{ color:BLUE_GP,fontSize:12,fontWeight:800 }}>{simStr}</div>
                                   <div style={{ color:"#22C55E",fontSize:10,marginTop:1 }}>-{msSaved} meses antes</div>
                                 </div>
                                 <div style={{ background:"#0a0a0b",borderRadius:5,padding:"6px 8px",border:`1px solid #22C55E33` }}>
@@ -6395,9 +6342,9 @@ function FinanzasSection({ personal, onUpdate }) {
                                   <div style={{ color:"#22C55E",fontSize:12,fontWeight:800 }}>{fmtCOP(Math.round(intSaved))}</div>
                                   <div style={{ color:GRAY,fontSize:10,marginTop:1 }}>{sim.months} cuotas</div>
                                 </div>
-                                <div style={{ background:"#0a0a0b",borderRadius:5,padding:"6px 8px",border:`1px solid ${GOLD}33` }}>
+                                <div style={{ background:"#0a0a0b",borderRadius:5,padding:"6px 8px",border:`1px solid ${BLUE_GP}33` }}>
                                   <div style={{ color:GRAY,fontSize:9,marginBottom:2 }}>Crédito accesible</div>
-                                  <div style={{ color:GOLD,fontSize:12,fontWeight:800 }}>{fmtCOP(Math.round(simCredit))}</div>
+                                  <div style={{ color:BLUE_GP,fontSize:12,fontWeight:800 }}>{fmtCOP(Math.round(simCredit))}</div>
                                   <div style={{ color:GRAY,fontSize:10,marginTop:1 }}>en {simCreditDate}</div>
                                 </div>
                               </div>
@@ -6500,7 +6447,7 @@ function FinanzasSection({ personal, onUpdate }) {
               <input value={liabVal} onChange={e=>setLiabVal(e.target.value)} placeholder="$ COP" type="number"
                 style={{ width:90,background:"#111113",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 8px",color:WHITE,fontSize:11,outline:"none" }} />
               <button onClick={()=>{ if(!liabName.trim()||!liabVal)return; onUpdate({finance:{...finance,liabilities:[...liabilities,{id:"l_"+Date.now(),name:liabName.trim(),value:parseFloat(liabVal)}]}}); setLiabName("");setLiabVal(""); }}
-                style={{ padding:"5px 10px",background:GOLD,color:"#141414",border:"none",borderRadius:6,cursor:"pointer",fontWeight:700,fontSize:12 }}>+</button>
+                style={{ padding:"5px 10px",background:BLUE_GP,color:"#141414",border:"none",borderRadius:6,cursor:"pointer",fontWeight:700,fontSize:12 }}>+</button>
             </div>
           </div>
         </div>
@@ -6511,22 +6458,22 @@ function FinanzasSection({ personal, onUpdate }) {
         <div>
           <div style={{ display:"flex",gap:12,alignItems:"center",marginBottom:20,padding:"10px 14px",background:CARD,borderRadius:10,border:`1px solid ${BORDER}`,flexWrap:"wrap" }}>
             <span style={{ color:GRAY,fontSize:11 }}>Meta:</span>
-            <span style={{ color:GOLD,fontWeight:700 }}>$</span>
+            <span style={{ color:BLUE_GP,fontWeight:700 }}>$</span>
             <input value={visionUSD} onChange={e=>onUpdate({finance:{...finance,visionUSD:parseFloat(e.target.value)||250000}})} type="number"
-              style={{ width:100,background:"#111113",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 8px",color:GOLD,fontSize:13,fontWeight:700,outline:"none" }} />
-            <span style={{ color:GOLD,fontWeight:700 }}>USD</span>
+              style={{ width:100,background:"#111113",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 8px",color:BLUE_GP,fontSize:13,fontWeight:700,outline:"none" }} />
+            <span style={{ color:BLUE_GP,fontWeight:700 }}>USD</span>
             <span style={{ color:GRAY,fontSize:11,marginLeft:8 }}>TRM:</span>
             <input value={fxRate} onChange={e=>onUpdate({finance:{...finance,fxRate:parseFloat(e.target.value)||4200}})} type="number"
               style={{ width:76,background:"#111113",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 8px",color:WHITE,fontSize:12,outline:"none" }} />
             <span style={{ color:GRAY,fontSize:11 }}>COP/USD</span>
           </div>
 
-          <div style={{ background:"#0a0a0b", borderRadius:14, padding:"22px 24px", border:`1px solid ${GOLD}33`, borderLeft:`4px solid ${GOLD}`, marginBottom:20 }}>
+          <div style={{ background:"#0a0a0b", borderRadius:14, padding:"22px 24px", border:`1px solid ${BLUE_GP}33`, borderLeft:`4px solid ${BLUE_GP}`, marginBottom:20 }}>
             <div style={{ display:"flex", alignItems:"flex-start", gap:24, marginBottom:20, flexWrap:"wrap" }}>
               <div>
-                <div style={{ color:GOLD_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:6 }}>Posición actual</div>
+                <div style={{ color:BLUE_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:6 }}>Posición actual</div>
                 <div style={{ color:WHITE, fontWeight:900, fontSize:36, lineHeight:1, letterSpacing:-1 }}>{fmtUSD(netWorthUSD)}</div>
-                <div style={{ color:GRAY, fontSize:12, marginTop:5 }}>de <span style={{ color:GOLD, fontWeight:700 }}>{fmtUSD(visionUSD)} USD</span> objetivo</div>
+                <div style={{ color:GRAY, fontSize:12, marginTop:5 }}>de <span style={{ color:BLUE_GP, fontWeight:700 }}>{fmtUSD(visionUSD)} USD</span> objetivo</div>
               </div>
               {avgNetUSD>0 && monthsToGoal && (
                 <div style={{ background:"rgba(34,197,94,0.08)", borderRadius:10, padding:"12px 16px", border:`1px solid #22C55E33`, flex:1, minWidth:220 }}>
@@ -6542,11 +6489,11 @@ function FinanzasSection({ personal, onUpdate }) {
               )}
             </div>
             <div style={{ background:"rgba(255,255,255,0.04)", borderRadius:8, height:10, overflow:"hidden", marginBottom:6 }}>
-              <div style={{ height:"100%", borderRadius:8, background:`linear-gradient(90deg,${GOLD_DIM},${GOLD},#22C55E)`, width:`${pctProgress}%`, transition:"width 0.6s ease" }} />
+              <div style={{ height:"100%", borderRadius:8, background:`linear-gradient(90deg,${BLUE_DIM},${BLUE_GP},#22C55E)`, width:`${pctProgress}%`, transition:"width 0.6s ease" }} />
             </div>
             <div style={{ display:"flex", justifyContent:"space-between", color:GRAY, fontSize:10 }}>
               <span>$0</span>
-              <span style={{ color:GOLD, fontWeight:700 }}>{pctProgress.toFixed(1)}% completado</span>
+              <span style={{ color:BLUE_GP, fontWeight:700 }}>{pctProgress.toFixed(1)}% completado</span>
               <span>{fmtUSD(visionUSD)}</span>
             </div>
             {!avgNetUSD && (
@@ -6569,7 +6516,7 @@ function FinanzasSection({ personal, onUpdate }) {
               { overline:"Brecha restante", sub: gap>0 ? `≈ ${fmtCOP(gap*fxRate)}` : "Objetivo superado",
                 val: gap>0 ? fmtUSD(gap)+" USD" : "¡Ya llegaste!",
                 detail: null,
-                color: gap<=0?"#22C55E":GOLD },
+                color: gap<=0?"#22C55E":BLUE_GP },
             ].map(({overline,sub,val,detail,color})=>(
               <div key={overline} style={{ background:"#0a0a0b", borderRadius:12, padding:"16px", border:`1px solid ${BORDER}`, borderTop:`2px solid ${color}55` }}>
                 <div style={{ color:color+"88", fontSize:9, fontWeight:700, letterSpacing:2, textTransform:"uppercase", marginBottom:6 }}>{overline}</div>
@@ -6598,7 +6545,7 @@ function FinanzasSection({ personal, onUpdate }) {
                   <div key={i} title={`${label}: ${fmtUSD(proj)} (${pct.toFixed(0)}%)`}
                     style={{ display:"flex",flexDirection:"column",alignItems:"center",minWidth:26 }}>
                     <div style={{ height:90,width:18,background:"#222225",borderRadius:4,overflow:"hidden",position:"relative" }}>
-                      <div style={{ position:"absolute",bottom:0,width:"100%",borderRadius:4,background:hit?"#22C55E":i<11?GOLD_DIM:GOLD,height:`${pct}%` }} />
+                      <div style={{ position:"absolute",bottom:0,width:"100%",borderRadius:4,background:hit?"#22C55E":i<11?BLUE_DIM:BLUE_GP,height:`${pct}%` }} />
                     </div>
                     <span style={{ color:GRAY,fontSize:8,marginTop:3,textAlign:"center",lineHeight:1.2 }}>{label}</span>
                   </div>
@@ -6606,8 +6553,8 @@ function FinanzasSection({ personal, onUpdate }) {
               })}
             </div>
             <div style={{ display:"flex",gap:14,marginTop:10,fontSize:10,color:GRAY }}>
-              <span style={{display:"flex",gap:4,alignItems:"center"}}><span style={{width:10,height:10,background:GOLD_DIM,borderRadius:2,display:"inline-block"}}/>Año 1</span>
-              <span style={{display:"flex",gap:4,alignItems:"center"}}><span style={{width:10,height:10,background:GOLD,borderRadius:2,display:"inline-block"}}/>Año 2</span>
+              <span style={{display:"flex",gap:4,alignItems:"center"}}><span style={{width:10,height:10,background:BLUE_DIM,borderRadius:2,display:"inline-block"}}/>Año 1</span>
+              <span style={{display:"flex",gap:4,alignItems:"center"}}><span style={{width:10,height:10,background:BLUE_GP,borderRadius:2,display:"inline-block"}}/>Año 2</span>
               <span style={{display:"flex",gap:4,alignItems:"center"}}><span style={{width:10,height:10,background:"#22C55E",borderRadius:2,display:"inline-block"}}/>Meta</span>
             </div>
           </div>
@@ -6658,7 +6605,7 @@ function FinanzasSection({ personal, onUpdate }) {
             </div>
 
             <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:18, marginBottom:20 }}>
-              <div style={{ color:GOLD, fontWeight:700, fontSize:13, marginBottom:14 }}>Calculadora de Ingeniería Inversa</div>
+              <div style={{ color:BLUE_GP, fontWeight:700, fontSize:13, marginBottom:14 }}>Calculadora de Ingeniería Inversa</div>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
                 <Input  label="Meta ($ a facturar)" value={calc.metaMonto} onChange={v=>updateCalc({metaMonto:v})} type="number" placeholder="ej. 100000" />
                 <Select label="Período de la meta" value={calc.metaPeriodo||"año"} onChange={v=>updateCalc({metaPeriodo:v})}
@@ -6686,9 +6633,9 @@ function FinanzasSection({ personal, onUpdate }) {
                   { label:"Mensajes/día",                          val: fmt0(mensajesPorDia), highlight:true },
                   { label:"Horas/día en prospección",              val: fmt1(horasPorDia)+"h", highlight:true },
                 ].map(({label,val,highlight,dim})=>(
-                  <div key={label} style={{ background:"#0a0a0b", border:`1px solid ${highlight?GOLD_DIM:BORDER}`, borderRadius:10, padding:"12px 14px" }}>
+                  <div key={label} style={{ background:"#0a0a0b", border:`1px solid ${highlight?BLUE_DIM:BORDER}`, borderRadius:10, padding:"12px 14px" }}>
                     <div style={{ color:GRAY, fontSize:9, fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:5 }}>{label}</div>
-                    <div style={{ color: highlight?GOLD:(dim?GRAY:WHITE), fontWeight:800, fontSize:18 }}>{val}</div>
+                    <div style={{ color: highlight?BLUE_GP:(dim?GRAY:WHITE), fontWeight:800, fontSize:18 }}>{val}</div>
                   </div>
                 ))}
               </div>
@@ -6704,12 +6651,12 @@ function FinanzasSection({ personal, onUpdate }) {
                   <b style={{ color:WHITE }}>Clientes requeridos</b> = Meta ÷ Valor de cliente.{" "}
                   <b style={{ color:WHITE }}>Llamadas efectivas requeridas</b> = clientes que necesitás dividido tu Tasa de Cierre — son las llamadas que sí se presentan y con las que cerrás.{" "}
                   <b style={{ color:WHITE }}>Llamadas Agendadas necesarias</b> = esas llamadas efectivas divididas tu Show Up Rate — es la cantidad que tenés que lograr que la gente agende (mismo campo "Llamadas Agendadas" que ves en Proyección → Resumen Anual/Mensual), sabiendo que no todas se van a presentar.{" "}
-                  <b style={{ color:WHITE }}>Mensajes en el período</b> = esas llamadas agendadas divididas tu Tasa de Agenda — cuántas conversaciones/mensajes necesitás mandar para que esa cantidad agende. Repartido en los días hábiles del año te da <b style={{ color:GOLD }}>Mensajes/día</b>, y con "mensajes por tanda" y "minutos por tanda" eso se traduce a <b style={{ color:GOLD }}>Horas/día</b> reales de trabajo.
+                  <b style={{ color:WHITE }}>Mensajes en el período</b> = esas llamadas agendadas divididas tu Tasa de Agenda — cuántas conversaciones/mensajes necesitás mandar para que esa cantidad agende. Repartido en los días hábiles del año te da <b style={{ color:BLUE_GP }}>Mensajes/día</b>, y con "mensajes por tanda" y "minutos por tanda" eso se traduce a <b style={{ color:BLUE_GP }}>Horas/día</b> reales de trabajo.
                 </div>
               </div>
             </div>
 
-            <div style={{ color:GOLD, fontWeight:700, fontSize:13, marginBottom:4 }}>Las 6 Ocultas — framework para sostener la meta</div>
+            <div style={{ color:BLUE_GP, fontWeight:700, fontSize:13, marginBottom:4 }}>Las 6 Ocultas — framework para sostener la meta</div>
             <div style={{ color:GRAY, fontSize:11, marginBottom:14 }}>Definir una meta no alcanza por sí solo — responder estas 6 preguntas ayuda a entender su verdadera naturaleza.</div>
             <div style={{ display:"grid", gap:10 }}>
               {OCULTAS.map(({key,label,sub}) => {
@@ -6940,10 +6887,10 @@ function ProyeccionSection({ personal, onUpdate }) {
         <div style={{ ...cardStyle, marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
             <div style={{ color: WHITE, fontWeight: 700, fontSize: 14 }}>Facturación acumulada {currentYear}</div>
-            <div style={{ color: GOLD, fontWeight: 900, fontSize: 18 }}>{fmtUSD0(facturacionAcumulada)} <span style={{ color: GRAY, fontWeight: 500, fontSize: 12 }}>/ {fmtUSD0(anual.objetivoCashCollected)} meta</span></div>
+            <div style={{ color: BLUE_GP, fontWeight: 900, fontSize: 18 }}>{fmtUSD0(facturacionAcumulada)} <span style={{ color: GRAY, fontWeight: 500, fontSize: 12 }}>/ {fmtUSD0(anual.objetivoCashCollected)} meta</span></div>
           </div>
           <div style={{ position: "relative", background: "rgba(255,255,255,0.04)", borderRadius: 8, height: 12, overflow: "visible" }}>
-            <div style={{ height: "100%", borderRadius: 8, background: `linear-gradient(90deg,${GOLD_DIM},${GOLD})`, width: `${facturacionPct}%`, transition: "width 0.5s ease" }} />
+            <div style={{ height: "100%", borderRadius: 8, background: `linear-gradient(90deg,${BLUE_DIM},${BLUE_GP})`, width: `${facturacionPct}%`, transition: "width 0.5s ease" }} />
             {hitoPct > 0 && hitoPct < 100 && (
               <div title={`Hito $${(metas.hitoIntermedio||0).toLocaleString("en-US")}`} style={{ position: "absolute", top: -3, bottom: -3, left: `${hitoPct}%`, width: 2, background: "#22C55E", boxShadow: "0 0 6px rgba(34,197,94,0.7)" }} />
             )}
@@ -6970,7 +6917,7 @@ function ProyeccionSection({ personal, onUpdate }) {
             ))}
             <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: 8, paddingTop: 8, display: "flex", justifyContent: "space-between" }}>
               <span style={{ color: GRAY, fontSize: 11 }}>Ratio de Conversión combinado</span>
-              <span style={{ color: GOLD, fontWeight: 700, fontSize: 12 }}>{(combinedRate*100).toFixed(4)}%</span>
+              <span style={{ color: BLUE_GP, fontWeight: 700, fontSize: 12 }}>{(combinedRate*100).toFixed(4)}%</span>
             </div>
           </div>
 
@@ -7010,7 +6957,7 @@ function ProyeccionSection({ personal, onUpdate }) {
 
           <div style={cardStyle}>
             <div style={labelStyle}>Leads Necesarios</div>
-            <div style={{ color: GOLD, fontWeight: 900, fontSize: 22 }}>{fmtN(leadsNecesarios)}</div>
+            <div style={{ color: BLUE_GP, fontWeight: 900, fontSize: 22 }}>{fmtN(leadsNecesarios)}</div>
             <div style={{ color: GRAY, fontSize: 10, marginTop: 4 }}>conversaciones para cerrar {fmtN(clientesNecesarios)} clientes nuevos</div>
             <div style={{ color: GRAY, fontSize: 10, marginTop: 8 }}>MRR nuevo necesario: <span style={{ color: WHITE }}>{fmtUSD0(mrrNuevoNecesario)}</span></div>
           </div>
@@ -7041,9 +6988,9 @@ function ProyeccionSection({ personal, onUpdate }) {
               ))}
               <tr>
                 <td style={{ ...tdLabelStyle, fontWeight: 700 }}>Ingresos Totales</td>
-                <td style={{ padding: "6px 8px", textAlign: "right", color: GOLD, fontWeight: 700, fontSize: 12 }}>{fmtUSD0(facturacionAcumulada)}</td>
+                <td style={{ padding: "6px 8px", textAlign: "right", color: BLUE_GP, fontWeight: 700, fontSize: 12 }}>{fmtUSD0(facturacionAcumulada)}</td>
                 {["q1","q2","q3","q4"].map(qk => (
-                  <td key={qk} style={{ padding: "6px 8px", textAlign: "right", color: GOLD, fontWeight: 700, fontSize: 12 }}>{fmtUSD0(quarterIngresosTotales(qk))}</td>
+                  <td key={qk} style={{ padding: "6px 8px", textAlign: "right", color: BLUE_GP, fontWeight: 700, fontSize: 12 }}>{fmtUSD0(quarterIngresosTotales(qk))}</td>
                 ))}
               </tr>
             </tbody>
@@ -7174,14 +7121,14 @@ function ProyeccionSection({ personal, onUpdate }) {
               <tr>
                 <td style={{ ...tdLabelStyle, fontWeight: 700 }}>Ingresos Totales</td>
                 {meses.map(m => (
-                  <td key={m.id} style={{ padding: "6px 8px", textAlign: "right", color: GOLD, fontWeight: 700, fontSize: 12 }}>{fmtUSD0(mesIngresosTotales(m))}</td>
+                  <td key={m.id} style={{ padding: "6px 8px", textAlign: "right", color: BLUE_GP, fontWeight: 700, fontSize: 12 }}>{fmtUSD0(mesIngresosTotales(m))}</td>
                 ))}
               </tr>
             </tbody>
           </table>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
             <div style={{ color: GRAY, fontSize: 10 }}>Ingresos Totales = FECCU+FECCP+BECC (Plan, editable). "Real" bajo cada mes = facturación cargada en Finanzas para ese mes calendario, convertida a USD. "Comprometido" = se calcula solo desde Seguimiento Semanal: cierres con Meses Mínimos cargados cuyo contrato todavía cubre ese mes.</div>
-            <button onClick={addMes} style={{ padding: "7px 16px", background: GOLD, color: "#141414", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>+ Agregar mes</button>
+            <button onClick={addMes} style={{ padding: "7px 16px", background: BLUE_GP, color: "#141414", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>+ Agregar mes</button>
           </div>
         </div>
       </div>
@@ -7224,7 +7171,7 @@ function ProyeccionSection({ personal, onUpdate }) {
                   <span style={{ color: WHITE, fontWeight: 700, fontSize: 13 }}>{m.nombre}</span>
                   {accionables.length > 0 && <span style={{ color: GRAY, fontSize: 11 }}>{doneCount}/{accionables.length} accionables</span>}
                 </div>
-                <span style={{ color: GOLD, fontSize: 12 }}>{expanded ? "▲" : "▼"}</span>
+                <span style={{ color: BLUE_GP, fontSize: 12 }}>{expanded ? "▲" : "▼"}</span>
               </div>
 
               {expanded && (
@@ -7270,7 +7217,7 @@ function ProyeccionSection({ personal, onUpdate }) {
                       onKeyDown={e => { if (e.key === "Enter") addAccionable(m.id); }}
                       placeholder="Nuevo accionable..."
                       style={{ flex: 1, background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 8, padding: "8px 10px", color: WHITE, fontSize: 13, outline: "none" }} />
-                    <button onClick={() => addAccionable(m.id)} style={{ padding: "8px 16px", background: GOLD, color: "#141414", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}>+ Agregar</button>
+                    <button onClick={() => addAccionable(m.id)} style={{ padding: "8px 16px", background: BLUE_GP, color: "#141414", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}>+ Agregar</button>
                   </div>
                 </div>
               )}
@@ -7433,7 +7380,7 @@ function ProyeccionSection({ personal, onUpdate }) {
             <textarea value={entryForm.notas} onChange={e => setEntryField("notas", e.target.value)} rows={2} placeholder="Qué funcionó, qué no, qué vas a probar la próxima semana..."
               style={{ width: "100%", background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "8px 10px", color: WHITE, fontSize: 12, outline: "none", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }} />
           </div>
-          <button onClick={addEntry} style={{ padding: "8px 20px", background: GOLD, color: "#141414", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}>+ Agregar semana</button>
+          <button onClick={addEntry} style={{ padding: "8px 20px", background: BLUE_GP, color: "#141414", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}>+ Agregar semana</button>
         </div>
 
         {/* Clientes cerrados — lista propia, se guarda con un solo click (no depende de "+ Agregar semana") */}
@@ -7454,7 +7401,7 @@ function ProyeccionSection({ personal, onUpdate }) {
               style={{ width: 110, background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: WHITE, fontSize: 12, outline: "none" }} />
             <input type="number" value={clienteForm.mesesMinimos} onChange={e => setClienteField("mesesMinimos", e.target.value)} placeholder="Meses mín."
               style={{ width: 90, background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: WHITE, fontSize: 12, outline: "none" }} />
-            <button onClick={addCliente} style={{ padding: "6px 14px", background: GOLD, color: "#141414", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>+ Agregar cliente</button>
+            <button onClick={addCliente} style={{ padding: "6px 14px", background: BLUE_GP, color: "#141414", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>+ Agregar cliente</button>
           </div>
           {clientesMes.length === 0 ? (
             <div style={{ color: GRAY, fontSize: 12 }}>Sin clientes cargados en Mes {activeMesN}.</div>
@@ -7527,7 +7474,7 @@ function ProyeccionSection({ personal, onUpdate }) {
             <input value={pipelineForm.notas} onChange={e => setPipelineField("notas", e.target.value)} placeholder="Notas (opcional)"
               style={{ flex: "1 1 160px", background: "#111113", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: WHITE, fontSize: 12, outline: "none" }} />
           </div>
-          <button onClick={addPipelineItem} style={{ padding: "8px 20px", background: GOLD, color: "#141414", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}>+ Agregar lead</button>
+          <button onClick={addPipelineItem} style={{ padding: "8px 20px", background: BLUE_GP, color: "#141414", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12 }}>+ Agregar lead</button>
 
           {pipelineSorted.length > 0 && (
             <div style={{ marginTop: 16 }}>
@@ -7639,7 +7586,7 @@ function ProyeccionSection({ personal, onUpdate }) {
             <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: 8, paddingTop: 8 }} />
             {[["FECCU",rFeccu],["FECCP",rFeccp],["BECC",rBecc],["Ingresos Totales",rIngresos]].map(([l,v]) => (
               <div key={l} style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-                <span style={{ color: GRAY, fontSize: 12 }}>{l}</span><span style={{ color: GOLD, fontSize: 12, fontWeight: 700 }}>{fmtUSD0(v)}</span>
+                <span style={{ color: GRAY, fontSize: 12 }}>{l}</span><span style={{ color: BLUE_GP, fontSize: 12, fontWeight: 700 }}>{fmtUSD0(v)}</span>
               </div>
             ))}
           </div>
@@ -7708,7 +7655,7 @@ function ProyeccionSection({ personal, onUpdate }) {
             {proximosMesesN.map(n => (
               <div key={n} style={{ minWidth: 90 }}>
                 <div style={{ color: GRAY, fontSize: 10 }}>Mes {n}{n===todayMesN ? " (actual)" : ""}</div>
-                <div style={{ color: GOLD, fontSize: 14, fontWeight: 700 }}>{fmtUSD0(recurringByMesN[n]||0)}</div>
+                <div style={{ color: BLUE_GP, fontSize: 14, fontWeight: 700 }}>{fmtUSD0(recurringByMesN[n]||0)}</div>
               </div>
             ))}
           </div>
@@ -7731,7 +7678,7 @@ function ProyeccionSection({ personal, onUpdate }) {
 
       {/* ── QUÉ HACER AHORA ── */}
       <div style={{ background: hayDatosReales ? (gapVsPlan>=0 ? "rgba(34,197,94,0.06)" : "rgba(239,68,68,0.06)") : CARD, border: `1px solid ${hayDatosReales ? (gapVsPlan>=0 ? "#22C55E55" : "#EF444455") : BORDER}`, borderRadius: 12, padding: 16, marginBottom: 16 }}>
-        <div style={{ color: GOLD, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>🎯 Qué hacer ahora</div>
+        <div style={{ color: BLUE_GP, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>🎯 Qué hacer ahora</div>
         {!hayDatosReales ? (
           <div style={{ color: GRAY, fontSize: 12, lineHeight: 1.6 }}>
             Todavía no cargaste facturación real en <b style={{ color: WHITE }}>Finanzas → Mensual</b>. En cuanto la cargues, acá te va a decir si vas arriba o abajo del plan y qué hacer al respecto.
@@ -7762,7 +7709,7 @@ function ProyeccionSection({ personal, onUpdate }) {
       {/* ── CÓMO USAR ESTO ── */}
       <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 16, marginBottom: 20 }}>
         <div onClick={() => setGuiaOpen(o => !o)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}>
-          <div style={{ color: GOLD, fontWeight: 700, fontSize: 13 }}>📘 Cómo usar esto</div>
+          <div style={{ color: BLUE_GP, fontWeight: 700, fontSize: 13 }}>📘 Cómo usar esto</div>
           <span style={{ color: GRAY, fontSize: 11 }}>{guiaOpen ? "ocultar ▲" : "ver ▼"}</span>
         </div>
         {guiaOpen && (
@@ -7907,7 +7854,7 @@ function JesusSection() {
 
   const imagenPersonal = [
     ["Negocio", "Consultor serio en quien un médico con trayectoria confía el crecimiento de su práctica — no humo, resultado."],
-    ["Salud", "Estoy en control real de mi cuerpo — de 104 a 87 kg con evidencia, no con filtro."],
+    ["Salud", "Estoy en control real de mi cuerpo — de 100 a 80 kg, compitiendo en bodybuilding natural, con evidencia, no con filtro."],
     ["Estilo", "Sobrio y cuidado, sin ostentar — coherente con la excelencia que exijo en mi trabajo."],
     ["Fe", "Visible pero no performática — oro y leo la Biblia porque lo vivo, no porque lo publico."],
     ["Familia", "Presente, no solo proveedor — el que está ahí, no solo el que paga."],
@@ -7917,7 +7864,7 @@ function JesusSection() {
     ["Fe", "Nada de cruces genéricas de stock. Mejor: una foto mía real orando o leyendo, o un lugar concreto que me conecte con Dios."],
     ["Negocio", "Yo presentando o cerrando con autoridad — la misma energía del hombre de traje hablando con convicción frente a otros, no una sala de juntas de stock. Capturas reales de mi dashboard y mi oficina también suman."],
     ["Mentores", "\"[Nombre] + contexto específico\" (ej. \"en su oficina\", \"en una charla puntual\") en vez de un retrato genérico — así la imagen representa la cualidad que anoté, no solo la cara."],
-    ["Salud", "Screenshots tipo bio-hacker — sueño, entrenamiento, progreso real — no un ideal genérico de stock. Mi propia foto de avance hacia los 87 kg / 10% pesa más que cualquier imagen ajena."],
+    ["Salud", "Screenshots tipo bio-hacker — sueño, entrenamiento, progreso real — no un ideal genérico de stock. Mi propia foto de avance hacia los 80 kg / 12-13% pesa más que cualquier imagen ajena."],
     ["Estilo de vida", "Lexus 600, Mercedes de mi esposa y mis hijos, cuentas llenas — las mismas imágenes de mi visualización del priming, no genéricas."],
   ];
 
@@ -7942,7 +7889,7 @@ function JesusSection() {
     {
       titulo: "Salud y estado físico",
       verse: ['"¿O ignoráis que vuestro cuerpo es templo del Espíritu Santo, el cual está en vosotros?"', "1 Corintios 6:19-20"],
-      items: ["Hoy: 104 kg, 18% de grasa. Fútbol 2 veces por semana, sumando pesas.", "Meta: 87 kg, 10% de grasa."],
+      items: ["Hoy: 100 kg. Fútbol + entrenamiento de fuerza en parque (barras, fondos), camino a competir.", "Meta: 80 kg, 12-13% de grasa — competencia de bodybuilding natural."],
       afirmacion: "Soy el hombre que admiro — hijo de Dios, cuidando el cuerpo que Él me confió.",
     },
     {
@@ -8161,13 +8108,217 @@ function JesusSection() {
   );
 }
 
+// ─── RUTA (proceso interno JP — Compendio → Hábitos → Creatividad) ─────────────
+// Agregado 2026-09-04, JP: espejo visual del proceso real, para que nada se pierda a medida que
+// avanza. Mismo espíritu que data/runbook_onboarding_servicios.html para clientes, pero acá.
+// Datos reales, no inventados — fuente de cada dato citada en cada tarjeta. Se actualiza a mano
+// cuando JP avanza en la plataforma o carga contenido nuevo (no hay conexión automática a los
+// archivos .md del sistema — este HTML no puede leer el filesystem de agentes/).
+const RUTA_ETAPAS = [
+  {
+    id: "compendio",
+    num: "1",
+    nombre: "Compendio",
+    curso: "Génesis Fundacional",
+    pct: 100,
+    resumen: "Estrategia de negocio de GP — nicho, oferta, adquisición. Completo y documentado.",
+    listo: [
+      "Nicho, Oferta, Motor Cardinal — data/estrategia_interna_gp.md Capa 1",
+      "La Tríada Adquisitiva (Outbound/Inbound/Anuncios + Bonus Track) — Capa 4",
+    ],
+    pendiente: [],
+    fuente: "data/estrategia_interna_gp.md",
+  },
+  {
+    id: "habitos",
+    num: "2",
+    nombre: "Hábitos",
+    curso: "Nirvana",
+    pct: 83,
+    resumen: "JP como persona — dieta, metas, rutina, mentalidad. En curso, 10 de 12 lecciones vistas.",
+    listo: [
+      "Dieta (lección Diseño de Vida) — data/nirvana_diseno_vida_jp.md",
+      "Naturaleza de las Metas → \"Las 6 Ocultas\" — acá mismo, tab Finanzas → Métricas Personales",
+      "Deep Work (sub-tema de Diseño de Vida) — acá mismo, tab Métricas",
+    ],
+    pendiente: [
+      "Lección \"Rutina\" (25:18) — probable módulo de hábitos real, sin cargar todavía",
+      "Introducción al Nirvana, Decodificación Mental, Muro de Fuego — vistas ✅ pero sin documentar",
+    ],
+    fuente: "data/nirvana_diseno_vida_jp.md",
+  },
+  {
+    id: "creatividad",
+    num: "3",
+    nombre: "Creatividad",
+    curso: "Creación de Contenido",
+    pct: 10,
+    resumen: "Cómo presentar lo que ya se sabe que hay que decir. Recién arrancando, 2 de 21 lecciones.",
+    listo: [
+      "Ideación de Contenido (Cuenta Fantasma + SortFeed) — data/estrategia_interna_gp.md Capa 3, Clase 3",
+      "La Era de la Marca Personal — vista ✅ pero sin documentar en detalle",
+    ],
+    pendiente: [
+      "¿Cómo Guionar?, Hook, Formatos de Contenido — siguientes lecciones del capítulo Introducción",
+      "Capítulos 2, 3 y 4 completos del curso (19 lecciones restantes)",
+    ],
+    fuente: "prompts/proceso_ejecucion_contenido_jp.md",
+  },
+  {
+    id: "adquisicion-organica",
+    num: "4",
+    nombre: "Adquisición Orgánica",
+    curso: "Sistemas de Adquisición Orgánica",
+    pct: 19,
+    resumen: "Nicho, ángulos y plataforma para atraer con contenido orgánico. En curso, 2 de 16 lecciones documentadas (capítulo Introducción). Curso separado de Creación de Contenido — descubierto 2026-09-08.",
+    listo: [
+      "Contenido de Nicho vs Contenido Viral (caso Jero Castro, \"Likes ain't cash\") — data/estrategia_interna_gp.md Capa 3, \"MARCO SYK\"",
+      "Estrategia de Marca Personal de Nicho (objetivos, plataforma, calendario, categorías) — data/estrategia_interna_gp.md Capa 3, Clase 2",
+      "Captar atención a través del Contenido (Hook/Problema/Solución/Prueba Social/CTA de Nicho) — estructura Nicho completa, Viral en pausa por JP — data/estrategia_interna_gp.md Capa 3",
+      "¿Cómo usar las Historias? (rol, % alcance por tamaño de cuenta, checklist, errores, los 3 tipos de secuencia, timing, 2 ejemplos reales con stats) — casi completa, min 0:51-39:34 de 42:40 — data/estrategia_interna_gp.md Capa 3",
+    ],
+    pendiente: [
+      "Bases de Instagram, Estrategia de Marca Personal Viral — vistas ✅ pero sin documentar",
+      "Tramo final de \"Captar atención...\" (min 14-34) y de \"¿Cómo usar las Historias?\" (min 39-42) + las otras 3 lecciones de Adquisición con Contenido",
+      "Capítulos Ángulos de Comunicación (2), Potenciando el Embudo Orgánico (2), Bonus (2), Accionable (1+) — sin ver/documentar",
+    ],
+    fuente: "prompts/proceso_ejecucion_contenido_jp.md",
+  },
+  {
+    id: "shadow-operator",
+    num: "5",
+    nombre: "Shadow Operator",
+    curso: "Shadow Operator",
+    pct: 7,
+    resumen: "Operar negocios digitales desde adentro, sin exponerse ni crear marca propia. Curso recién descubierto 2026-09-08, sin contenido documentado todavía.",
+    listo: [],
+    pendiente: ["3 capítulos / 14 lecciones — ninguna documentada todavía"],
+    fuente: "prompts/agente_mejora_continua.md (MODO PROCESO INTERNO JP)",
+  },
+  {
+    id: "adquisicion-outbound",
+    num: "6",
+    nombre: "Adquisición Outbound",
+    curso: "Sistemas de Adquisición Outbound",
+    pct: 0,
+    resumen: "Conseguí agendas con sistemas de outbound. Curso recién descubierto 2026-09-08, sin empezar.",
+    listo: [],
+    pendiente: ["1 capítulo / 4 lecciones — ninguna documentada todavía"],
+    fuente: "prompts/agente_mejora_continua.md (MODO PROCESO INTERNO JP)",
+  },
+  {
+    id: "adquisicion-pagos",
+    num: "7",
+    nombre: "Adquisición de Pagos",
+    curso: "Sistemas de Adquisición de Pagos",
+    pct: 0,
+    resumen: "Conseguí agendas y ventas con sistemas pagos. Curso recién descubierto 2026-09-08, sin empezar.",
+    listo: [],
+    pendiente: ["4 capítulos / 15 lecciones — ninguna documentada todavía"],
+    fuente: "prompts/agente_mejora_continua.md (MODO PROCESO INTERNO JP)",
+  },
+  {
+    id: "arquitectura-ventas",
+    num: "8",
+    nombre: "Arquitectura de Ventas",
+    curso: "Arquitectura de Ventas",
+    pct: 0,
+    resumen: "Construí un sistema de conversión predecible. Curso recién descubierto 2026-09-08, sin empezar.",
+    listo: [],
+    pendiente: ["3 capítulos / 21 lecciones — ninguna documentada todavía"],
+    fuente: "prompts/agente_mejora_continua.md (MODO PROCESO INTERNO JP)",
+  },
+  {
+    id: "manychat",
+    num: "9",
+    nombre: "Manychat",
+    curso: "Manychat",
+    pct: 0,
+    resumen: "Herramientas y flujos para optimizar el canal de Manychat. Curso recién descubierto 2026-09-08, sin empezar.",
+    listo: [],
+    pendiente: ["4 capítulos / 17 lecciones — ninguna documentada todavía"],
+    fuente: "prompts/agente_mejora_continua.md (MODO PROCESO INTERNO JP)",
+  },
+  {
+    id: "entrega-servicio",
+    num: "10",
+    nombre: "Entrega de Servicio y Operaciones",
+    curso: "Entrega de Servicio y Operaciones",
+    pct: 0,
+    resumen: "Curso recién descubierto 2026-09-08. Tarjeta nunca vista completa — capítulos/lecciones/duración sin confirmar.",
+    listo: [],
+    pendiente: ["Capítulos y lecciones sin confirmar — [PENDIENTE] que JP muestre la tarjeta completa"],
+    fuente: "prompts/agente_mejora_continua.md (MODO PROCESO INTERNO JP)",
+  },
+];
+
+function RutaSection() {
+  return (
+    <div>
+      <div style={{ color: BLUE_DIM, fontSize: 10, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", marginBottom: 6 }}>
+        Proceso interno — no a la deriva
+      </div>
+      <div style={{ color: WHITE, fontWeight: 800, fontSize: 18, marginBottom: 4 }}>Compendio → Hábitos → Creatividad</div>
+      <div style={{ color: GRAY, fontSize: 12, marginBottom: 22, maxWidth: 640 }}>
+        Los 3 módulos del Programa de Consultoría de SYK, en orden real. Cada tarjeta muestra qué ya
+        está documentado (y en qué archivo) y qué falta — nunca se inventa contenido de una lección
+        que JP no cargó todavía.
+      </div>
+
+      {RUTA_ETAPAS.map((et, i) => (
+        <div key={et.id} style={{ display: "flex", gap: 16, marginBottom: 18 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 28 }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: "50%", background: et.pct === 100 ? BLUE_GP : NAVY,
+              border: `2px solid ${BLUE_GP}`, color: WHITE, fontSize: 13, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}>{et.num}</div>
+            {i < RUTA_ETAPAS.length - 1 && <div style={{ width: 2, flex: 1, background: BORDER, marginTop: 4 }} />}
+          </div>
+
+          <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 12, padding: 18, flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4, flexWrap: "wrap", gap: 8 }}>
+              <div>
+                <div style={{ color: WHITE, fontWeight: 700, fontSize: 15 }}>{et.nombre}</div>
+                <div style={{ color: BLUE_DIM, fontSize: 11 }}>{et.curso}</div>
+              </div>
+              <div style={{
+                padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,
+                background: et.pct === 100 ? "#22C55E22" : "rgba(46,117,182,0.15)",
+                color: et.pct === 100 ? "#22C55E" : BLUE_GP,
+              }}>{et.pct}%</div>
+            </div>
+            <div style={{ color: GRAY, fontSize: 12, marginBottom: 12 }}>{et.resumen}</div>
+
+            {et.listo.length > 0 && (
+              <div style={{ marginBottom: et.pendiente.length ? 10 : 0 }}>
+                <div style={{ color: "#22C55E", fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>✓ Documentado</div>
+                {et.listo.map((l, j) => <div key={j} style={{ color: WHITE, fontSize: 12, marginBottom: 3, paddingLeft: 4 }}>· {l}</div>)}
+              </div>
+            )}
+            {et.pendiente.length > 0 && (
+              <div>
+                <div style={{ color: "#F59E0B", fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>⚠ Pendiente</div>
+                {et.pendiente.map((l, j) => <div key={j} style={{ color: GRAY, fontSize: 12, marginBottom: 3, paddingLeft: 4 }}>· {l}</div>)}
+              </div>
+            )}
+            <div style={{ color: "#5A5A5E", fontSize: 10, marginTop: 12, borderTop: `1px solid ${BORDER}`, paddingTop: 8 }}>
+              Fuente completa: <span style={{ color: BLUE_DIM }}>{et.fuente}</span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── PERSONAL TAB ─────────────────────────────────────────────────────────────
 function PersonalTab({ data, onChange }) {
   const { useState: us } = React;
   const [unlocked,  setUnlocked]  = us(false);
   const [pinInput,  setPinInput]  = us("");
   const [pinError,  setPinError]  = us(false);
-  const [subTab,    setSubTab]    = us("entrenamiento");
+  const [subTab,    setSubTab]    = us("ruta"); // default sigue en "Ruta" (proceso interno) — Entrenamiento reactivado 2026-09-21 con el plan de competencia bodybuilding, ver data/plan_competencia_bodybuilding_jp.md
 
   const personal = data.personal || {};
   const pin      = data.settings?.personalPin || "";
@@ -8185,7 +8336,7 @@ function PersonalTab({ data, onChange }) {
           style={{ background:"#111113", border:`2px solid ${pinError?"#EF4444":BORDER}`, borderRadius:10, padding:"12px 20px", color:WHITE, fontSize:18, textAlign:"center", outline:"none", width:180, letterSpacing:8 }} />
         {pinError && <div style={{ color:"#EF4444", fontSize:12 }}>PIN incorrecto</div>}
         <button onClick={()=>{ if(pinInput===pin){setUnlocked(true);setPinInput("");}else{setPinError(true);setPinInput("");} }}
-          style={{ padding:"10px 32px", background:GOLD, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:14 }}>
+          style={{ padding:"10px 32px", background:BLUE_GP, color:"#141414", border:"none", borderRadius:8, cursor:"pointer", fontWeight:700, fontSize:14 }}>
           Acceder
         </button>
       </div>
@@ -8198,7 +8349,7 @@ function PersonalTab({ data, onChange }) {
     <div>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
         <div>
-          <div style={{ color:GOLD_DIM, fontSize:10, fontWeight:700, letterSpacing:3, textTransform:"uppercase", marginBottom:5 }}>Privado</div>
+          <div style={{ color:BLUE_DIM, fontSize:10, fontWeight:700, letterSpacing:3, textTransform:"uppercase", marginBottom:5 }}>Privado</div>
           <div style={{ color:WHITE, fontWeight:800, fontSize:20, letterSpacing:-0.3 }}>Área Personal</div>
           <div style={{ color:GRAY, fontSize:12 }}>Solo visible para vos</div>
         </div>
@@ -8209,7 +8360,7 @@ function PersonalTab({ data, onChange }) {
       </div>
 
       <div style={{ display:"flex", gap:0, marginBottom:24, borderBottom:`1px solid ${BORDER}` }}>
-        {[["entrenamiento","Entrenamiento"],["metricas","Métricas"],["finanzas","Finanzas"],["proyeccion","Proyección"],["jesus","Jesús"]].map(([id,label])=>(
+        {[["ruta","Ruta"],["entrenamiento","Entrenamiento"],["metricas","Métricas"],["finanzas","Finanzas"],["proyeccion","Proyección"],["jesus","Jesús"]].map(([id,label])=>(
           <button key={id} onClick={()=>setSubTab(id)}
             className={`gp-nav-tab${subTab===id?" active":""}`}>
             {label}
@@ -8217,6 +8368,10 @@ function PersonalTab({ data, onChange }) {
         ))}
       </div>
 
+      {/* Entrenamiento reactivado 2026-09-21 — plan de competencia bodybuilding (100kg→80kg,
+          calistenia en parque), reemplaza el PPL de gimnasio que estaba deshabilitado desde
+          2026-09-04. Fuente completa: data/plan_competencia_bodybuilding_jp.md */}
+      {subTab==="ruta"          && <RutaSection />}
       {subTab==="entrenamiento" && <EntrenamientoSection personal={personal} onUpdate={updatePersonal} />}
       {subTab==="metricas"      && <MetricasSection      personal={personal} onUpdate={updatePersonal} />}
       {subTab==="finanzas"      && <FinanzasSection      personal={personal} onUpdate={updatePersonal} />}
