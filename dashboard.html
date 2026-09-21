@@ -5384,7 +5384,7 @@ function FinanzasSection({ personal, onUpdate }) {
   const liabilities = finance.liabilities || [];
   const debts       = finance.debts       || [];
   const visionUSD   = finance.visionUSD   !== undefined ? finance.visionUSD : 250000;
-  const fxRate      = finance.fxRate      !== undefined ? finance.fxRate    : 4200;
+  const fxRate      = finance.fxRate      !== undefined ? finance.fxRate    : 3200;
   const salesConfig = finance.salesConfig || {
     monthlyTarget:    15000000,
     avgFee:           4500000,
@@ -5396,7 +5396,7 @@ function FinanzasSection({ personal, onUpdate }) {
     currentClients:   0,
     cacUSD:           100,
     adsPct:           50,
-    usdRate:          4200,
+    usdRate:          3200,
   };
   const updateSC = (patch) => onUpdate({ finance:{ ...finance, salesConfig:{ ...salesConfig, ...patch } } });
 
@@ -5441,7 +5441,7 @@ function FinanzasSection({ personal, onUpdate }) {
     onUpdate({ finance:{ ...finance, monthlyData:{ ...monthlyData, [key]:upd } } });
   };
 
-  const trm = salesConfig.usdRate || 4200;
+  const trm = salesConfig.usdRate || 3200;
   const toCOP = (i) => {
     const amt = parseFloat(i.amount)||0;
     return i.currency==="USD" ? amt * trm : amt;
@@ -5646,7 +5646,7 @@ function FinanzasSection({ personal, onUpdate }) {
                 {(()=>{
                   const cacUSD= salesConfig.cacUSD  || 100;
                   const adsPct= salesConfig.adsPct  || 50;
-                  const usdR  = salesConfig.usdRate || 4200;
+                  const usdR  = salesConfig.usdRate || 3200;
                   const cacCOP= cacUSD * usdR;
                   const cc    = curStats.clients;
                   const curRev= curStats.rev;
@@ -5769,7 +5769,7 @@ function FinanzasSection({ personal, onUpdate }) {
                       ["Reuniones para 1 cierre",          "meetingsPerClose", salesConfig.meetingsPerClose,  0.1],
                       ["CAC (USD / cliente)",              "cacUSD",           salesConfig.cacUSD||100,       1],
                       ["% clientes por ads",               "adsPct",           salesConfig.adsPct||50,        1],
-                      ["TRM (COP / USD)",                  "usdRate",          salesConfig.usdRate||4200,     1],
+                      ["TRM (COP / USD)",                  "usdRate",          salesConfig.usdRate||3200,     1],
                     ].map(([label,key,val,step])=>(
                       <div key={key}>
                         <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>{label}</div>
@@ -6159,7 +6159,7 @@ function FinanzasSection({ personal, onUpdate }) {
                 <div style={{ color:WHITE, fontWeight:700, fontSize:18 }}>{fmtUSD(netWorthUSD)}</div>
                 <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:6, justifyContent:"flex-end" }}>
                   <span style={{ color:GRAY, fontSize:10 }}>TRM</span>
-                  <input value={fxRate} onChange={e=>onUpdate({finance:{...finance,fxRate:parseFloat(e.target.value)||4200}})} type="number"
+                  <input value={fxRate} onChange={e=>onUpdate({finance:{...finance,fxRate:parseFloat(e.target.value)||3200}})} type="number"
                     style={{ width:68, background:"#111113", border:`1px solid ${BORDER}`, borderRadius:5, padding:"3px 7px", color:BLUE_GP, fontSize:11, outline:"none", textAlign:"right" }} />
                   <span style={{ color:GRAY, fontSize:10 }}>COP/USD</span>
                 </div>
@@ -6463,7 +6463,7 @@ function FinanzasSection({ personal, onUpdate }) {
               style={{ width:100,background:"#111113",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 8px",color:BLUE_GP,fontSize:13,fontWeight:700,outline:"none" }} />
             <span style={{ color:BLUE_GP,fontWeight:700 }}>USD</span>
             <span style={{ color:GRAY,fontSize:11,marginLeft:8 }}>TRM:</span>
-            <input value={fxRate} onChange={e=>onUpdate({finance:{...finance,fxRate:parseFloat(e.target.value)||4200}})} type="number"
+            <input value={fxRate} onChange={e=>onUpdate({finance:{...finance,fxRate:parseFloat(e.target.value)||3200}})} type="number"
               style={{ width:76,background:"#111113",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 8px",color:WHITE,fontSize:12,outline:"none" }} />
             <span style={{ color:GRAY,fontSize:11 }}>COP/USD</span>
           </div>
@@ -6690,7 +6690,7 @@ function ProyeccionSection({ personal, onUpdate }) {
   const diario  = proy.diario  || {};
   const finance = personal.finance || {};
   const monthlyData = finance.monthlyData || {};
-  const trm = (finance.salesConfig && finance.salesConfig.usdRate) || 4200;
+  const trm = (finance.salesConfig && finance.salesConfig.usdRate) || 3200;
 
   // ── Estado (todos los hooks declarados arriba, sin condicionales) ──
   const [view, setView] = us("anual");
