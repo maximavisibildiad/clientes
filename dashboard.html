@@ -5545,9 +5545,9 @@ function FinanzasSection({ personal, onUpdate }) {
   // Per-month form state (avoids cross-month interference)
   const [ingForms, setIngForms] = us({});
   const [egForms,  setEgForms]  = us({});
-  const ingF = (m) => ingForms[m] || {client:"",concept:"",amount:"",currency:"USD",months:"1"};
+  const ingF = (m) => ingForms[m] || {client:"",tipo:"",concept:"",amount:"",currency:"USD",months:"1"};
   const egF  = (m) => egForms[m]  || {cat:"",desc:"",amount:""};
-  const setIngF = (m,k,v) => setIngForms(p=>{ const c=p[m]||{client:"",concept:"",amount:"",currency:"USD",months:"1"}; return {...p,[m]:{...c,[k]:v}}; });
+  const setIngF = (m,k,v) => setIngForms(p=>{ const c=p[m]||{client:"",tipo:"",concept:"",amount:"",currency:"USD",months:"1"}; return {...p,[m]:{...c,[k]:v}}; });
   const setEgF  = (m,k,v) => setEgForms(p=>{ const c=p[m]||{cat:"",desc:"",amount:""}; return {...p,[m]:{...c,[k]:v}}; });
   const [assetName, setAssetName] = us(""); const [assetVal,  setAssetVal]  = us("");
   const [liabName,  setLiabName]  = us(""); const [liabVal,   setLiabVal]   = us("");
@@ -5617,12 +5617,30 @@ function FinanzasSection({ personal, onUpdate }) {
     for (let k = 0; k < total; k++) {
       const key = monthKeyFrom(m, k);
       const md  = nextMD[key] || {};
-      const ing = { id:"ing_"+Date.now()+"_"+k, client:f.client.trim(), concept:f.concept.trim(), amount:parseFloat(f.amount)||0, currency:f.currency||"USD",
+      const ing = { id:"ing_"+Date.now()+"_"+k, client:f.client.trim(), tipo:(f.tipo||"").trim(), concept:f.concept.trim(), amount:parseFloat(f.amount)||0, currency:f.currency||"USD",
         ...(serieId ? { serieId, serieN:k+1, serieTotal:total } : {}) };
       nextMD[key] = { ...md, ingresos:[...(md.ingresos||[]), ing] };
     }
     onUpdate({ finance:{ ...finance, monthlyData: nextMD } });
-    setIngForms(p=>({...p,[m]:{client:"",concept:"",amount:"",currency:"USD",months:"1"}}));
+    setIngForms(p=>({...p,[m]:{client:"",tipo:"",concept:"",amount:"",currency:"USD",months:"1"}}));
+  };
+  // Tipo / especialidad del ingreso (2026-09-30, JP): texto libre — "Odontólogo", "Cirujano", "Aliado"…
+  // Sugiere los que ya se usaron. Editar el tipo de un ingreso recurrente lo cambia en toda la serie.
+  const TIPOS_BASE = ["Odontólogo","Cirujano","Aliado"];
+  const tiposUsados = [...new Set([...TIPOS_BASE, ...Object.values(monthlyData).flatMap(md=>(md.ingresos||[]).map(i=>(i.tipo||"").trim())).filter(Boolean)])];
+  const editTipo = (m, ing) => {
+    const v = window.prompt(`Tipo / especialidad de "${ing.client||"ingreso"}" (ej: ${tiposUsados.slice(0,4).join(", ")}). Dejalo vacío para quitarlo.`, ing.tipo||"");
+    if (v === null) return;
+    const tipo = v.trim();
+    if (ing.serieId) {
+      const nextMD = {};
+      Object.entries(monthlyData).forEach(([key, md]) => {
+        nextMD[key] = md.ingresos ? { ...md, ingresos: md.ingresos.map(x => x.serieId===ing.serieId ? { ...x, tipo } : x) } : md;
+      });
+      onUpdate({ finance:{ ...finance, monthlyData: nextMD } });
+    } else {
+      setMD(m, md=>({...md, ingresos:(md.ingresos||[]).map(x=>x.id===ing.id?{...x,tipo}:x)}));
+    }
   };
   const removeIngreso = (m, ing) => {
     if (ing.serieId && ing.serieTotal > 1 &&
@@ -6116,7 +6134,15 @@ function FinanzasSection({ personal, onUpdate }) {
                             return (
                             <div key={ing.id} style={{ display:"flex",gap:8,marginBottom:6,padding:"8px 10px",background:"#146C3A08",borderRadius:7,border:`1px solid #146C3A22`,alignItems:"flex-start" }}>
                               <div style={{ flex:1 }}>
-                                <div style={{ color:INK,fontSize:13,fontWeight:600 }}>{ing.client||"Sin nombre"}</div>
+                                <div style={{ display:"flex",alignItems:"center",gap:6,flexWrap:"wrap" }}>
+                                  <span style={{ color:INK,fontSize:13,fontWeight:600 }}>{ing.client||"Sin nombre"}</span>
+                                  <button onClick={()=>editTipo(m,ing)} title="Cambiar tipo / especialidad"
+                                    style={ing.tipo
+                                      ? { background:"#EDE7F6",color:"#5B21B6",border:"1px solid #5B21B633",borderRadius:4,padding:"1px 7px",fontSize:11,fontWeight:700,cursor:"pointer" }
+                                      : { background:"transparent",color:GRAY,border:`1px dashed ${BORDER}`,borderRadius:4,padding:"1px 7px",fontSize:11,cursor:"pointer" }}>
+                                    {ing.tipo || "+ tipo"}
+                                  </button>
+                                </div>
                                 {ing.concept && <div style={{ color:GRAY,fontSize:12,marginTop:2 }}>{ing.concept}</div>}
                                 {ing.serieId && (
                                   <div style={{ display:"inline-block",marginTop:4,background:"#E7EDF6",color:BLUE_GP,borderRadius:4,padding:"1px 7px",fontSize:12,fontWeight:700 }}>
@@ -6143,6 +6169,10 @@ function FinanzasSection({ personal, onUpdate }) {
                             <input value={ingF(m).client} onChange={e=>setIngF(m,"client",e.target.value)}
                               placeholder="Cliente / Fuente  (Ej: Zenova, Stefa, AYM...)"
                               style={{ width:"100%",background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:INK,fontSize:12,outline:"none",marginBottom:5,boxSizing:"border-box" }} />
+                            <input value={ingF(m).tipo||""} onChange={e=>setIngF(m,"tipo",e.target.value)} list="gp-tipos-ingreso"
+                              placeholder="Tipo / especialidad  (Ej: Odontólogo, Cirujano, Aliado…)"
+                              style={{ width:"100%",background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:INK,fontSize:12,outline:"none",marginBottom:5,boxSizing:"border-box" }} />
+                            <datalist id="gp-tipos-ingreso">{tiposUsados.map(t=>(<option key={t} value={t} />))}</datalist>
                             <input value={ingF(m).concept} onChange={e=>setIngF(m,"concept",e.target.value)}
                               placeholder="Concepto  (Ej: Fee julio, Comisión cerrada, Bono)"
                               onKeyDown={e=>e.key==="Enter"&&ingF(m).amount&&addIngreso(m)}
@@ -6979,8 +7009,9 @@ function ProyeccionSection({ personal, onUpdate }) {
   const [selMesN, setSelMesN] = us(null);
   const emptyPipelineForm = () => ({ nombre: "", fecha: new Date().toISOString().slice(0,10), estado: "por_confirmar", notas: "" });
   const [pipelineForm, setPipelineForm] = us(emptyPipelineForm());
-  const emptyClienteForm = () => ({ nombre: "", fecha: new Date().toISOString().slice(0,10), fuente: "ads", valor: "", mesesMinimos: "" });
+  const emptyClienteForm = () => ({ nombre: "", fecha: new Date().toISOString().slice(0,10), fuente: "ads", valor: "", moneda: "USD", mesesMinimos: "" });
   const [clienteForm, setClienteForm] = us(emptyClienteForm());
+  const [clienteAFinanzas, setClienteAFinanzas] = us(true);
 
   // ── Formatters ──
   const fmtUSD0 = (v) => (v || v===0) ? "$"+Math.round(v).toLocaleString("en-US") : "—";
@@ -7016,8 +7047,11 @@ function ProyeccionSection({ personal, onUpdate }) {
   const monthKey = (year, monthIdx0) => `${year}-${String(monthIdx0 + 1).padStart(2, "0")}`;
 
   const currentYear = new Date().getFullYear();
-  const facturacionAcumulada = Array.from({ length: 12 }, (_, m) => cashCollectedUSD(monthKey(currentYear, m))).reduce((a, b) => a + b, 0);
-  const egresosAcumulados    = Array.from({ length: 12 }, (_, m) => totalGastosUSD(monthKey(currentYear, m))).reduce((a, b) => a + b, 0);
+  // Solo hasta el mes actual: los meses futuros pueden tener ingresos recurrentes PROGRAMADOS en Finanzas
+  // (2026-09-30) que todavía no se cobraron — sumarlos inflaba la "facturación real acumulada".
+  const mesActualKey = new Date().toISOString().slice(0, 7);
+  const facturacionAcumulada = Array.from({ length: 12 }, (_, m) => monthKey(currentYear, m)).filter(k => k <= mesActualKey).reduce((a, k) => a + cashCollectedUSD(k), 0);
+  const egresosAcumulados    = Array.from({ length: 12 }, (_, m) => monthKey(currentYear, m)).filter(k => k <= mesActualKey).reduce((a, k) => a + totalGastosUSD(k), 0);
 
   // ── Fechas relativas (Mes 1 = mes de metas.startDate) ──
   const startDateStr = metas.startDate || "2026-07-21";
@@ -7082,6 +7116,27 @@ function ProyeccionSection({ personal, onUpdate }) {
       recurringByMesN[n] = (recurringByMesN[n] || 0) + valor;
     }
   });
+
+  // ── Conexión Finanzas → Proyección (2026-09-30, JP: "que esté conectado con proyección… que sepa los
+  // clientes y nosotros cargar los leads"). Reglas: los CLIENTES y la PLATA salen de Finanzas (donde ya
+  // se carga cada ingreso); los LEADS y LLAMADAS salen de Seguimiento (Registrar semana). Nada se tipea 2 veces.
+  const normName = (x) => (x || "").trim().toLowerCase();
+  const finKeys = Object.keys(monthlyData).sort();
+  const primerMesCliente = {};   // nombre normalizado → primer mes (YYYY-MM) en que aparece en Finanzas
+  finKeys.forEach(k => (monthlyData[k].ingresos || []).forEach(i => {
+    const n = normName(i.client); if (n && !primerMesCliente[n]) primerMesCliente[n] = k;
+  }));
+  const finStats = (key) => {
+    const nombres = [...new Set(((monthlyData[key] || {}).ingresos || []).map(i => normName(i.client)).filter(Boolean))];
+    return { clientes: nombres.length, nuevos: nombres.filter(n => primerMesCliente[n] === key).length };
+  };
+  const hoyKey = new Date().toISOString().slice(0, 7);
+  const metaFinanzasUSD = ((finance.salesConfig && finance.salesConfig.monthlyTarget) || 15000000) / trm;
+  const funnelMesN = (n) => {
+    const es = (diario.entries || []).filter(e => mesNForDate(e.date) === n);
+    const sm = (k) => es.reduce((s, e) => s + (parseFloat(e[k]) || 0), 0);
+    return { semanas: es.length, leads: sm("leads"), agendadas: sm("llamadas"), efectivas: sm("llamadasEfectivas") };
+  };
 
   // ── Combinada / Leads Necesarios (bloque A) ──
   const combinedRate = ((kpis.tasaAgenda||0)/100) * ((kpis.tasaCalificacion||0)/100) * ((kpis.showUpRate||0)/100) * ((kpis.tasaCierre||0)/100);
@@ -7375,8 +7430,10 @@ function ProyeccionSection({ personal, onUpdate }) {
                           style={{ display: "block", width: "100%", background: "transparent", border: "none", color: GRAY, fontSize: 9, textAlign: "right", outline: "none", boxSizing: "border-box" }} />
                         <input value={m.convDia||""} onChange={e => updateMes(m.id, { convDia: e.target.value })} placeholder="conv/día"
                           style={{ display: "block", width: "100%", background: "transparent", border: "none", color: GRAY, fontSize: 9, textAlign: "right", outline: "none", boxSizing: "border-box" }} />
-                        {realUSD > 0 && <div style={{ color: "#146C3A", fontSize: 9, fontWeight: 700 }}>Real: {fmtUSD0(realUSD)}</div>}
-                        {comprometidoUSD > 0 && <div style={{ color: "#2966A5", fontSize: 9, fontWeight: 700 }}>Comprometido: {fmtUSD0(comprometidoUSD)}</div>}
+                        {realUSD > 0 && (key <= hoyKey
+                          ? <div style={{ color: "#146C3A", fontSize: 11, fontWeight: 700 }}>Real: {fmtUSD0(realUSD)}</div>
+                          : <div style={{ color: "#2966A5", fontSize: 11, fontWeight: 700 }}>Programado en Finanzas: {fmtUSD0(realUSD)}</div>)}
+                        {comprometidoUSD > 0 && <div style={{ color: "#2966A5", fontSize: 11, fontWeight: 700 }}>Comprometido: {fmtUSD0(comprometidoUSD)}</div>}
                         <button onClick={() => removeMes(m.id)} title="Eliminar mes" style={{ display: "block", marginLeft: "auto", background: "none", border: "none", color: "#C62828", fontSize: 10, cursor: "pointer", padding: 0 }}>eliminar</button>
                       </div>
                     </th>
@@ -7401,10 +7458,42 @@ function ProyeccionSection({ personal, onUpdate }) {
                   <td key={m.id} style={{ padding: "6px 8px", textAlign: "right", color: BLUE_GP, fontWeight: 700, fontSize: 12 }}>{fmtUSD0(mesIngresosTotales(m))}</td>
                 ))}
               </tr>
+              {/* ── REAL: se llena solo (Finanzas + Seguimiento) — 2026-09-30 ── */}
+              <tr>
+                <td colSpan={meses.length + 1} style={{ padding: "14px 8px 6px", color: "#146C3A", fontSize: 11, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", borderTop: `2px solid #146C3A33` }}>
+                  Real — se llena solo · clientes y plata desde Finanzas · leads y llamadas desde Seguimiento
+                </td>
+              </tr>
+              {[
+                { label: "Leads",                    fn: (n, k) => funnelMesN(n).semanas ? funnelMesN(n).leads : null },
+                { label: "Llamadas agendadas",       fn: (n, k) => funnelMesN(n).semanas ? funnelMesN(n).agendadas : null, plan: "llamadasAgendadas" },
+                { label: "Llamadas efectivas",       fn: (n, k) => funnelMesN(n).semanas ? funnelMesN(n).efectivas : null, plan: "llamadasEfectivas" },
+                { label: "Clientes nuevos (Finanzas)", fn: (n, k) => k <= hoyKey ? finStats(k).nuevos : null, plan: "cierres" },
+                { label: "Clientes que pagaron",     fn: (n, k) => k <= hoyKey ? finStats(k).clientes : null },
+                { label: "Facturación real (USD)",   fn: (n, k) => k <= hoyKey ? cashCollectedUSD(k) : null, money: true, planTotal: true },
+                { label: "Meta de Finanzas (USD)",   fn: () => metaFinanzasUSD, money: true, meta: true },
+              ].map(r => (
+                <tr key={r.label} style={{ background: "#146C3A08" }}>
+                  <td style={{ ...tdLabelStyle, color: "#146C3A", fontWeight: 600 }}>{r.label}</td>
+                  {meses.map(m => {
+                    const mesN = parseInt(m.label.replace(/\D/g,""),10) || 1;
+                    const key = mesNKey(mesN);
+                    const v = r.fn(mesN, key);
+                    const plan = r.planTotal ? mesIngresosTotales(m) : r.plan ? parseFloat(m[r.plan]) || 0 : null;
+                    const color = v === null ? GRAY : r.meta ? INK : plan ? (v >= plan ? "#146C3A" : "#C62828") : INK;
+                    return (
+                      <td key={m.id} style={{ padding: "6px 8px", textAlign: "right", color, fontWeight: 700, fontSize: 12 }}>
+                        {v === null ? "—" : r.money ? fmtUSD0(v) : fmtN(v)}
+                        {v !== null && plan > 0 && !r.meta && <div style={{ color: GRAY, fontSize: 10, fontWeight: 500 }}>{Math.round(v / plan * 100)}% del plan</div>}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
             </tbody>
           </table>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-            <div style={{ color: GRAY, fontSize: 10 }}>Ingresos Totales = FECCU+FECCP+BECC (Plan, editable). "Real" bajo cada mes = facturación cargada en Finanzas para ese mes calendario, convertida a USD. "Comprometido" = se calcula solo desde Seguimiento Semanal: cierres con Meses Mínimos cargados cuyo contrato todavía cubre ese mes.</div>
+            <div style={{ color: GRAY, fontSize: 11 }}>Arriba = PLAN (editable). Abajo = REAL, no se tipea: clientes y facturación salen de Finanzas → Mensual (cliente nuevo = primera vez que su nombre aparece en Finanzas); leads y llamadas salen de Seguimiento → "Registrar semana". Verde = llegaste al plan, rojo = por debajo. Ingresos Totales = FECCU+FECCP+BECC (Plan, editable). "Real" bajo cada mes = facturación cargada en Finanzas para ese mes calendario, convertida a USD. "Comprometido" = se calcula solo desde Seguimiento Semanal: cierres con Meses Mínimos cargados cuyo contrato todavía cubre ese mes.</div>
             <button onClick={addMes} style={{ padding: "7px 16px", background: BLUE_GP, color: "#FFFFFF", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>+ Agregar mes</button>
           </div>
         </div>
@@ -7547,9 +7636,35 @@ function ProyeccionSection({ personal, onUpdate }) {
     const setClienteField = (k, v) => setClienteForm(f => ({ ...f, [k]: v }));
     const addCliente = () => {
       if (!clienteForm.nombre.trim() || !clienteForm.fecha) return;
-      const cliente = { id: "cl_"+uid(), ...clienteForm };
-      updateDiario({ clientes: [...diarioClientes, cliente] });
-      setClienteForm({ ...emptyClienteForm(), fecha: clienteForm.fecha });
+      const monto = parseFloat(clienteForm.valor) || 0;
+      // Proyección trabaja en USD: si pagó en COP se guarda convertido acá, y el monto original va a Finanzas.
+      const valorUSD = clienteForm.moneda === "COP" ? (monto ? Math.round(monto / trm) : "") : clienteForm.valor;
+      const cliente = { id: "cl_"+uid(), ...clienteForm, valor: valorUSD };
+      const patch = { proyeccion: { ...proy, diario: { ...diario, clientes: [...diarioClientes, cliente] } } };
+      // 2026-09-30: un cierre se carga UNA vez — también queda como ingreso en Finanzas (con su recurrencia),
+      // salvo que ese cliente ya tenga un ingreso cargado en Finanzas ese mismo mes.
+      if (clienteAFinanzas && monto > 0) {
+        const y = parseInt(clienteForm.fecha.slice(0, 4), 10), m0 = parseInt(clienteForm.fecha.slice(5, 7), 10) - 1;
+        const kAt = (off) => { const d = new Date(y, m0 + off, 1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; };
+        const nombre = clienteForm.nombre.trim();
+        const yaEsta = ((monthlyData[kAt(0)] || {}).ingresos || []).some(i => normName(i.client) === normName(nombre));
+        if (yaEsta) {
+          window.alert(`"${nombre}" ya tiene un ingreso en Finanzas ese mes — no se duplicó. Quedó cargado solo en Seguimiento.`);
+        } else {
+          const total = Math.max(1, Math.min(36, parseInt(clienteForm.mesesMinimos, 10) || 1));
+          const serieId = total > 1 ? "serie_" + Date.now() : null;
+          const nextMD = { ...monthlyData };
+          for (let k = 0; k < total; k++) {
+            const key = kAt(k); const md = nextMD[key] || {};
+            nextMD[key] = { ...md, ingresos: [...(md.ingresos || []), { id: "ing_" + Date.now() + "_" + k, client: nombre, tipo: "",
+              concept: `Cierre · ${clienteForm.fuente === "ads" ? "Pauta (Ads)" : "Orgánico"}`, amount: monto, currency: clienteForm.moneda || "USD",
+              ...(serieId ? { serieId, serieN: k + 1, serieTotal: total } : {}) }] };
+          }
+          patch.finance = { ...finance, monthlyData: nextMD };
+        }
+      }
+      onUpdate(patch);
+      setClienteForm({ ...emptyClienteForm(), fecha: clienteForm.fecha, moneda: clienteForm.moneda });
     };
     const removeCliente = (id) => updateDiario({ clientes: diarioClientes.filter(c => c.id !== id) });
     const updateCliente = (id, patch) => updateDiario({ clientes: diarioClientes.map(c => c.id === id ? { ...c, ...patch } : c) });
@@ -7674,12 +7789,21 @@ function ProyeccionSection({ personal, onUpdate }) {
               <option value="ads">Pauta (Ads)</option>
               <option value="organico">Orgánico</option>
             </select>
-            <input type="number" value={clienteForm.valor} onChange={e => setClienteField("valor", e.target.value)} placeholder="Cuánto pagó"
-              style={{ width: 110, background: "#F3F6FB", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: INK, fontSize: 12, outline: "none" }} />
+            <select value={clienteForm.moneda || "USD"} onChange={e => setClienteField("moneda", e.target.value)}
+              style={{ background: "#F3F6FB", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: BLUE_GP, fontWeight: 700, fontSize: 12, outline: "none" }}>
+              <option value="USD">USD</option>
+              <option value="COP">COP</option>
+            </select>
+            <input type="number" value={clienteForm.valor} onChange={e => setClienteField("valor", e.target.value)} placeholder={`Cuánto pagó (${clienteForm.moneda || "USD"})`}
+              style={{ width: 130, background: "#F3F6FB", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: INK, fontSize: 12, outline: "none" }} />
             <input type="number" value={clienteForm.mesesMinimos} onChange={e => setClienteField("mesesMinimos", e.target.value)} placeholder="Meses mín."
               style={{ width: 90, background: "#F3F6FB", border: `1px solid ${BORDER}`, borderRadius: 6, padding: "6px 7px", color: INK, fontSize: 12, outline: "none" }} />
             <button onClick={addCliente} style={{ padding: "6px 14px", background: BLUE_GP, color: "#FFFFFF", border: "none", borderRadius: 6, cursor: "pointer", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>+ Agregar cliente</button>
           </div>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: -4, marginBottom: 12, color: INK, fontSize: 12, cursor: "pointer" }}>
+            <input type="checkbox" checked={clienteAFinanzas} onChange={e => setClienteAFinanzas(e.target.checked)} />
+            Cargarlo también como ingreso en Finanzas (repite el pago los "Meses mín." — no se duplica si ya está ese mes)
+          </label>
           {clientesMes.length === 0 ? (
             <div style={{ color: GRAY, fontSize: 12 }}>Sin clientes cargados en Mes {activeMesN}.</div>
           ) : (
