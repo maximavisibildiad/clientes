@@ -5546,9 +5546,9 @@ function FinanzasSection({ personal, onUpdate }) {
   const [ingForms, setIngForms] = us({});
   const [egForms,  setEgForms]  = us({});
   const ingF = (m) => ingForms[m] || {client:"",tipo:"",concept:"",amount:"",currency:"USD",months:"1"};
-  const egF  = (m) => egForms[m]  || {cat:"",desc:"",amount:""};
+  const egF  = (m) => egForms[m]  || {cat:"",desc:"",amount:"",months:"1"};
   const setIngF = (m,k,v) => setIngForms(p=>{ const c=p[m]||{client:"",tipo:"",concept:"",amount:"",currency:"USD",months:"1"}; return {...p,[m]:{...c,[k]:v}}; });
-  const setEgF  = (m,k,v) => setEgForms(p=>{ const c=p[m]||{cat:"",desc:"",amount:""}; return {...p,[m]:{...c,[k]:v}}; });
+  const setEgF  = (m,k,v) => setEgForms(p=>{ const c=p[m]||{cat:"",desc:"",amount:"",months:"1"}; return {...p,[m]:{...c,[k]:v}}; });
   const [assetName, setAssetName] = us(""); const [assetVal,  setAssetVal]  = us("");
   const [liabName,  setLiabName]  = us(""); const [liabVal,   setLiabVal]   = us("");
   const [debtName,  setDebtName]  = us(""); const [debtBal,   setDebtBal]   = us("");
@@ -5675,19 +5675,29 @@ function FinanzasSection({ personal, onUpdate }) {
     return giToEgresos(gi).map(e => ({ ...e, id: `_leg_${e.id}` }));
   };
 
+  // Recurrencia en gastos (2026-09-30, JP: "en gastos también colocarlo por cuánto tiempo") — mismo
+  // esquema que ingresos: se copia N meses seguidos (cruza de año), con serieId + "mes N de M".
   const addEgreso = (m) => {
     const f = egF(m);
     if (!f.amount) return;
-    const eg = { id:"eg_"+Date.now(), category:f.cat, description:f.desc.trim(), amount:parseFloat(f.amount)||0 };
-    setMD(m, md => {
-      if (md.egresos !== undefined) return { ...md, egresos:[...md.egresos, eg] };
-      // Auto-migrar gastoItems y agregar nuevo gasto en un solo update
+    const total  = Math.max(1, Math.min(36, parseInt(f.months,10) || 1));
+    const serieId = total > 1 ? "serie_eg_"+Date.now() : null;
+    const nextMD = { ...monthlyData };
+    for (let k = 0; k < total; k++) {
+      const key = monthKeyFrom(m, k);
+      const md  = nextMD[key] || {};
+      const eg  = { id:"eg_"+Date.now()+"_"+k, category:f.cat, description:f.desc.trim(), amount:parseFloat(f.amount)||0,
+        ...(serieId ? { serieId, serieN:k+1, serieTotal:total } : {}) };
+      if (md.egresos !== undefined) { nextMD[key] = { ...md, egresos:[...md.egresos, eg] }; continue; }
+      // Auto-migrar gastoItems (formato viejo) y agregar el gasto en el mismo update
       const migrated = giToEgresos(md.gastoItems || {});
       const { gastoItems:_, ...rest } = md;
-      return { ...rest, egresos:[...migrated, eg] };
-    });
-    setEgForms(p=>({...p,[m]:{cat:"",desc:"",amount:""}}));
+      nextMD[key] = { ...rest, egresos:[...migrated, eg] };
+    }
+    onUpdate({ finance:{ ...finance, monthlyData: nextMD } });
+    setEgForms(p=>({...p,[m]:{cat:"",desc:"",amount:"",months:"1"}}));
   };
+  const removeEgresoSerie = (eg) => window.confirm(`Este gasto es recurrente (${eg.serieN}/${eg.serieTotal}).\n\nAceptar = borrar este mes y los siguientes de la serie.\nCancelar = borrar solo este mes.`);
 
   const migrateGastoItems = (m) => {
     const md = getMD(m);
@@ -6232,14 +6242,28 @@ function FinanzasSection({ personal, onUpdate }) {
                                     <div style={{ flex:1 }}>
                                       <div style={{ color:INK,fontSize:12,fontWeight:600 }}>{(eg.category||"").split(" · ")[1]||eg.category||"Gasto"}</div>
                                       {eg.description && <div style={{ color:GRAY,fontSize:12,marginTop:1 }}>{eg.description}</div>}
+                                      {eg.serieId && (
+                                        <div style={{ display:"inline-block",marginTop:3,background:"#FBE9E9",color:"#B42323",borderRadius:4,padding:"1px 7px",fontSize:10,fontWeight:700 }}>
+                                          ↻ Recurrente · mes {eg.serieN} de {eg.serieTotal}
+                                        </div>
+                                      )}
                                     </div>
                                     <span style={{ color:"#C62828",fontSize:12,fontWeight:700,whiteSpace:"nowrap" }}>{fmtCOP(eg.amount)}</span>
-                                    <button onClick={()=>setMD(m,md=>{
+                                    <button title="Borrar gasto" onClick={()=>{
+                                      if (eg.serieId && eg.serieTotal > 1 && removeEgresoSerie(eg)) {
+                                        const nextMD = {};
+                                        Object.entries(monthlyData).forEach(([key, md]) => {
+                                          nextMD[key] = md.egresos ? { ...md, egresos: md.egresos.filter(x => !(x.serieId===eg.serieId && (x.serieN||0) >= (eg.serieN||0))) } : md;
+                                        });
+                                        onUpdate({ finance:{ ...finance, monthlyData: nextMD } });
+                                        return;
+                                      }
+                                      setMD(m,md=>{
                                       if (md.egresos !== undefined) return {...md, egresos:md.egresos.filter(x=>x.id!==eg.id)};
                                       // Legacy: migrar y omitir este item
                                       const kept = giToEgresos(md.gastoItems||{}).filter(x=>x.category!==eg.category||x.amount!==eg.amount);
                                       const {gastoItems:_,...rest}=md; return {...rest,egresos:kept};
-                                    })} style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:14,opacity:0.5,lineHeight:1,padding:0 }}>×</button>
+                                    }); }} style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:16,lineHeight:1,padding:0 }}>×</button>
                                   </div>
                                 ))}
                               </div>
@@ -6266,6 +6290,19 @@ function FinanzasSection({ personal, onUpdate }) {
                                 style={{ flex:1,background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:INK,fontSize:12,outline:"none" }} />
                               <button onClick={()=>addEgreso(m)}
                                 style={{ padding:"6px 16px",background:"#C62828",color:"#fff",border:"none",borderRadius:5,cursor:"pointer",fontWeight:700,fontSize:13 }}>+</button>
+                            </div>
+                            <div style={{ display:"flex",alignItems:"center",gap:6,marginTop:6,flexWrap:"wrap" }}>
+                              <span style={{ color:INK,fontSize:11,fontWeight:600 }}>↻ Recurrencia:</span>
+                              <select data-recurrencia="gasto" value={egF(m).months||"1"} onChange={e=>setEgF(m,"months",e.target.value)}
+                                style={{ background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"5px 8px",color:INK,fontSize:12,fontWeight:600,outline:"none" }}>
+                                <option value="1">Solo este mes</option>
+                                {[2,3,4,5,6,9,12,18,24,36].map(n=>(<option key={n} value={String(n)}>{n} meses</option>))}
+                              </select>
+                              {parseInt(egF(m).months,10)>1 && (
+                                <span style={{ color:GRAY,fontSize:10 }}>
+                                  {MONTHS[m]} {year} → {(()=>{ const d=new Date(year,m+parseInt(egF(m).months,10)-1,1); return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`; })()}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
