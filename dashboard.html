@@ -5512,6 +5512,9 @@ function MetricasSection({ personal, onUpdate }) {
 // ─── FINANZAS SECTION ─────────────────────────────────────────────────────────
 function FinanzasSection({ personal, onUpdate }) {
   const { useState: us } = React;
+  // Legibilidad (2026-09-30, JP: "letras muy pequeñas y se pierden con el blanco"): gris local más oscuro
+  // que el GRAY global (#546681 → #3E4F68, ~8:1 sobre blanco) y tamaños mínimos de 10-11px en toda la sección.
+  const GRAY = "#3E4F68";
   const finance         = personal.finance || {};
   const monthlyData     = finance.monthlyData     || {};
   const gastoCategories = finance.gastoCategories || { personales:["Hija","Casa","Juan","Tarjeta"], profesionales:["Softwares","Equipo","Impuestos","Anuncios"], otros:["Vuelos","Muebles"] };
@@ -5520,7 +5523,7 @@ function FinanzasSection({ personal, onUpdate }) {
   const debts       = finance.debts       || [];
   const visionUSD   = finance.visionUSD   !== undefined ? finance.visionUSD : 250000;
   const fxRate      = finance.fxRate      !== undefined ? finance.fxRate    : 3200;
-  const salesConfig = finance.salesConfig || {
+  const salesConfig = {
     monthlyTarget:    15000000,
     avgFee:           4500000,
     channelPct:       10,
@@ -5532,6 +5535,7 @@ function FinanzasSection({ personal, onUpdate }) {
     cacUSD:           100,
     adsPct:           50,
     usdRate:          3200,
+    ...(finance.salesConfig || {}),
   };
   const updateSC = (patch) => onUpdate({ finance:{ ...finance, salesConfig:{ ...salesConfig, ...patch } } });
 
@@ -5541,9 +5545,9 @@ function FinanzasSection({ personal, onUpdate }) {
   // Per-month form state (avoids cross-month interference)
   const [ingForms, setIngForms] = us({});
   const [egForms,  setEgForms]  = us({});
-  const ingF = (m) => ingForms[m] || {client:"",concept:"",amount:"",currency:"USD"};
+  const ingF = (m) => ingForms[m] || {client:"",concept:"",amount:"",currency:"USD",months:"1"};
   const egF  = (m) => egForms[m]  || {cat:"",desc:"",amount:""};
-  const setIngF = (m,k,v) => setIngForms(p=>{ const c=p[m]||{client:"",concept:"",amount:"",currency:"USD"}; return {...p,[m]:{...c,[k]:v}}; });
+  const setIngF = (m,k,v) => setIngForms(p=>{ const c=p[m]||{client:"",concept:"",amount:"",currency:"USD",months:"1"}; return {...p,[m]:{...c,[k]:v}}; });
   const setEgF  = (m,k,v) => setEgForms(p=>{ const c=p[m]||{cat:"",desc:"",amount:""}; return {...p,[m]:{...c,[k]:v}}; });
   const [assetName, setAssetName] = us(""); const [assetVal,  setAssetVal]  = us("");
   const [liabName,  setLiabName]  = us(""); const [liabVal,   setLiabVal]   = us("");
@@ -5597,12 +5601,41 @@ function FinanzasSection({ personal, onUpdate }) {
     return cat > 0 ? cat : (md.gastos||0);
   };
 
+  // Recurrencia (2026-09-30, JP): un ingreso se puede repetir N meses seguidos desde el mes donde se
+  // carga — cruza de año si hace falta. Cada copia lleva serieId + serieN/serieTotal para mostrar "2/6"
+  // y poder borrar la serie completa desde cualquier mes.
+  const monthKeyFrom = (m, offset) => {
+    const d = new Date(year, m + offset, 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+  };
   const addIngreso = (m) => {
     const f = ingF(m);
     if (!f.amount) return;
-    const ing = { id:"ing_"+Date.now(), client:f.client.trim(), concept:f.concept.trim(), amount:parseFloat(f.amount)||0, currency:f.currency||"USD" };
-    setMD(m, md=>({...md, ingresos:[...(md.ingresos||[]),ing]}));
-    setIngForms(p=>({...p,[m]:{client:"",concept:"",amount:"",currency:"USD"}}));
+    const total  = Math.max(1, Math.min(36, parseInt(f.months,10) || 1));
+    const serieId = total > 1 ? "serie_"+Date.now() : null;
+    const nextMD = { ...monthlyData };
+    for (let k = 0; k < total; k++) {
+      const key = monthKeyFrom(m, k);
+      const md  = nextMD[key] || {};
+      const ing = { id:"ing_"+Date.now()+"_"+k, client:f.client.trim(), concept:f.concept.trim(), amount:parseFloat(f.amount)||0, currency:f.currency||"USD",
+        ...(serieId ? { serieId, serieN:k+1, serieTotal:total } : {}) };
+      nextMD[key] = { ...md, ingresos:[...(md.ingresos||[]), ing] };
+    }
+    onUpdate({ finance:{ ...finance, monthlyData: nextMD } });
+    setIngForms(p=>({...p,[m]:{client:"",concept:"",amount:"",currency:"USD",months:"1"}}));
+  };
+  const removeIngreso = (m, ing) => {
+    if (ing.serieId && ing.serieTotal > 1 &&
+        window.confirm(`Este ingreso es recurrente (${ing.serieN}/${ing.serieTotal}).\n\nAceptar = borrar este mes y los siguientes de la serie.\nCancelar = borrar solo este mes.`)) {
+      const nextMD = {};
+      Object.entries(monthlyData).forEach(([key, md]) => {
+        const keep = (md.ingresos||[]).filter(x => !(x.serieId===ing.serieId && (x.serieN||0) >= (ing.serieN||0)));
+        nextMD[key] = md.ingresos ? { ...md, ingresos: keep } : md;
+      });
+      onUpdate({ finance:{ ...finance, monthlyData: nextMD } });
+      return;
+    }
+    setMD(m, md=>({...md, ingresos:(md.ingresos||[]).filter(x=>x.id!==ing.id)}));
   };
   // Convierte gastoItems (formato legacy) a array egresos — pura, sin side effects
   const giToEgresos = (gi) => {
@@ -5674,6 +5707,47 @@ function FinanzasSection({ personal, onUpdate }) {
   const monthsToGoal  = avgNetUSD>0 ? Math.ceil(gap/avgNetUSD) : null;
   const pctProgress   = Math.min(100,Math.max(0,netWorthUSD/visionUSD*100));
 
+  // ── Conexión Mensual ↔ Métricas Personales ↔ Visión $250K (2026-09-30, JP) ──
+  // Una sola fuente: la meta mensual y el valor por cliente salen de Parámetros (Mensual).
+  const scTarget  = salesConfig.monthlyTarget || 0;
+  const scCanal   = Math.max(0, (salesConfig.avgClientSales||0) - (salesConfig.commissionFloor||0)) * (salesConfig.channelPct||10) / 100;
+  const scRevPC   = (salesConfig.avgFee||0) + scCanal;
+  const scTC      = Math.round(100/(salesConfig.meetingsPerClose||3));
+  const metaNetCOP = scTarget - avgG;                 // lo que queda por mes si se cumple la meta
+  const metaNetUSD = metaNetCOP / fxRate;
+  const monthsToGoalAtTarget = gap<=0 ? 0 : (metaNetUSD>0 ? Math.ceil(gap/metaNetUSD) : null);
+  const dateAt = (n) => { const d=new Date(); d.setMonth(d.getMonth()+n); return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`; };
+  const targetFor = (n) => gap>0 ? gap/n*fxRate + avgG : 0; // meta mensual que hace falta para llegar en n meses
+
+  // Cascada de Métricas Personales. Conectada (default): meta = meta mensual, valor cliente = fee + canal,
+  // TC = 1 ÷ "Reuniones para 1 cierre". Desconectada: los valores manuales de siempre.
+  const mpCalc = ((finance.metricasPersonales||{}).calculadora) || {};
+  const calcLinked = mpCalc.linkFinanzas !== false;
+  const cascada = (() => {
+    const c = calcLinked
+      ? { tasaShowUp:60, tasaAgenda:4, diasVacaciones:10, ...mpCalc, metaMonto:scTarget, metaPeriodo:"mes", valorCliente:scRevPC, tasaCierre:scTC }
+      : mpCalc;
+    const metaMonto    = parseFloat(c.metaMonto)    || 0;
+    const valorCliente = parseFloat(c.valorCliente) || 0;
+    const tc  = (parseFloat(c.tasaCierre)  || 0) / 100;
+    const sur = (parseFloat(c.tasaShowUp)  || 0) / 100;
+    const ta  = (parseFloat(c.tasaAgenda)  || 0) / 100;
+    const diasVac = parseFloat(c.diasVacaciones) || 0;
+    const diasHabiles = Math.max(0, 365 - 104 - diasVac);
+    // Días hábiles del PERÍODO de la meta (antes se dividía siempre por el año, aunque la meta fuera mensual)
+    const periodoFrac = c.metaPeriodo==="mes" ? 1/12 : c.metaPeriodo==="trimestre" ? 1/4 : 1;
+    const diasPeriodo = diasHabiles * periodoFrac;
+    const mensajesPorTanda = parseFloat(c.mensajesPorTanda) || 10;
+    const minutosPorTanda  = parseFloat(c.minutosPorTanda)  || 20;
+    const clientesRequeridos = valorCliente>0 ? metaMonto/valorCliente : 0;
+    const llamadasRequeridas = tc>0  ? clientesRequeridos/tc  : 0;
+    const llamadasNecesarias = sur>0 ? llamadasRequeridas/sur : 0;
+    const mensajesEnPeriodo  = ta>0  ? llamadasNecesarias/ta  : 0;
+    const mensajesPorDia     = diasPeriodo>0 ? mensajesEnPeriodo/diasPeriodo : 0;
+    const horasPorDia        = mensajesPorTanda>0 ? (mensajesPorDia/mensajesPorTanda)*(minutosPorTanda/60) : 0;
+    return { c, metaMonto, valorCliente, diasHabiles, diasPeriodo, clientesRequeridos, llamadasRequeridas, llamadasNecesarias, mensajesEnPeriodo, mensajesPorDia, horasPorDia };
+  })();
+
   const calcDebt = (balance,ratePct,payment) => {
     if (!payment||payment<=0) return {months:null,totalPaid:null,totalInterest:null};
     const r=(ratePct||0)/100;
@@ -5718,7 +5792,9 @@ function FinanzasSection({ personal, onUpdate }) {
               const ingresos = md.ingresos||[];
               const uniqueClients = [...new Set(ingresos.map(i=>i.client||"").filter(Boolean))].length;
               const rev = getCashCollected(m);
-              const gap = cltsN ? Math.max(0, cltsN - uniqueClients) : null;
+              // 2026-09-30: "llegaste" se mide en PLATA, no en cantidad de clientes (antes Sep marcaba
+              // "Completo" con 3 clientes y 50% de la meta). gap = clientes que faltan para cubrir lo que falta.
+              const gap = revPC>0 ? (rev>=target ? 0 : Math.ceil((target-rev)/revPC)) : null;
               const hasData = rev>0||uniqueClients>0;
               return { m, label:MONTHS_SHORT[m], clients:uniqueClients, rev, gap, hasData };
             });
@@ -5729,13 +5805,25 @@ function FinanzasSection({ personal, onUpdate }) {
                 {/* Header */}
                 <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:14, gap:12 }}>
                   <div>
-                    <div style={{ color:BLUE_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:4 }}>Escalera de valor</div>
+                    <div style={{ color:BLUE_DIM, fontSize:11, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:4 }}>Escalera de valor</div>
                     <div style={{ color:INK, fontWeight:900, fontSize:17, lineHeight:1, letterSpacing:-0.3 }}>Pipeline de Ventas</div>
                   </div>
                   <div style={{ textAlign:"right", flexShrink:0 }}>
-                    <div style={{ color:GRAY, fontSize:9, marginBottom:2 }}>Meta mensual</div>
+                    <div style={{ color:GRAY, fontSize:11, marginBottom:2 }}>Meta mensual</div>
                     <div style={{ color:BLUE_GP, fontWeight:900, fontSize:22, lineHeight:1 }}>{fmtCOP(target)}</div>
                   </div>
+                </div>
+
+                {/* Conexión con Métricas Personales y Visión $250K (2026-09-30) */}
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:12 }}>
+                  <button onClick={()=>setTab("metricas_personales")}
+                    style={{ flex:1, minWidth:220, textAlign:"left", background:"#FFFFFF", border:`1px solid ${BLUE_GP}55`, borderRadius:8, padding:"9px 12px", cursor:"pointer", color:INK, fontSize:13, lineHeight:1.5 }}>
+                    📊 <b>Métricas:</b> esta meta pide ≈ <b style={{ color:BLUE_GP }}>{Math.round(cascada.mensajesPorDia||0)} mensajes/día</b> ({(cascada.horasPorDia||0).toFixed(1)} h) →
+                  </button>
+                  <button onClick={()=>setTab("vision")}
+                    style={{ flex:1, minWidth:220, textAlign:"left", background:"#FFFFFF", border:`1px solid #146C3A55`, borderRadius:8, padding:"9px 12px", cursor:"pointer", color:INK, fontSize:13, lineHeight:1.5 }}>
+                    🎯 <b>Visión {fmtUSD(visionUSD)}:</b> cumpliendo la meta llegás en <b style={{ color:"#146C3A" }}>{monthsToGoalAtTarget===0?"ya llegaste":monthsToGoalAtTarget?`${monthsToGoalAtTarget} meses (${dateAt(monthsToGoalAtTarget)})`:"— (gastos ≥ meta)"}</b> →
+                  </button>
                 </div>
 
                 {/* Metric chips */}
@@ -5747,9 +5835,9 @@ function FinanzasSection({ personal, onUpdate }) {
                     { label:"Upsell / Adicional",val:fmtCOP(salesConfig.upsellPrice||0),   color:"#6D28D9", sub:"servicio extra por cliente" },
                   ].map(chip=>(
                     <div key={chip.label} style={{ background:"#F3F6FB", borderRadius:8, padding:"10px 10px", border:`1px solid ${chip.color}18` }}>
-                      <div style={{ color:GRAY, fontSize:9, marginBottom:5 }}>{chip.label}</div>
+                      <div style={{ color:GRAY, fontSize:11, marginBottom:5 }}>{chip.label}</div>
                       <div style={{ color:chip.color, fontWeight:900, fontSize:14, lineHeight:1, marginBottom:3 }}>{chip.val}</div>
-                      <div style={{ color:GRAY, fontSize:9 }}>{chip.sub}</div>
+                      <div style={{ color:GRAY, fontSize:11 }}>{chip.sub}</div>
                     </div>
                   ))}
                 </div>
@@ -5759,20 +5847,20 @@ function FinanzasSection({ personal, onUpdate }) {
                   <div style={{ display:"flex", gap:20, marginBottom:12, background:"#F3F6FB", borderRadius:8, padding:"10px 14px", alignItems:"center", flexWrap:"wrap", border:`1px solid #A24A0722` }}>
                     <div style={{ display:"flex", flexDirection:"column", alignItems:"center" }}>
                       <div style={{ color:"#A24A07", fontWeight:900, fontSize:26, lineHeight:1 }}>{meetN}</div>
-                      <div style={{ color:GRAY, fontSize:9, marginTop:2 }}>reuniones / mes</div>
+                      <div style={{ color:GRAY, fontSize:11, marginTop:2 }}>reuniones / mes</div>
                     </div>
                     <div style={{ color:"#546681", fontSize:18 }}>→</div>
                     <div style={{ display:"flex", flexDirection:"column", alignItems:"center" }}>
                       <div style={{ color:INK, fontWeight:900, fontSize:26, lineHeight:1 }}>{cltsN}</div>
-                      <div style={{ color:GRAY, fontSize:9, marginTop:2 }}>clientes a cerrar</div>
+                      <div style={{ color:GRAY, fontSize:11, marginTop:2 }}>clientes a cerrar</div>
                     </div>
                     <div style={{ color:"#546681", fontSize:18 }}>·</div>
                     <div style={{ display:"flex", flexDirection:"column", alignItems:"center" }}>
                       <div style={{ color:"#146C3A", fontWeight:900, fontSize:20, lineHeight:1 }}>{convRate}%</div>
-                      <div style={{ color:GRAY, fontSize:9, marginTop:2 }}>tasa de cierre</div>
+                      <div style={{ color:GRAY, fontSize:11, marginTop:2 }}>tasa de cierre</div>
                     </div>
                     <div style={{ flex:1, minWidth:120, textAlign:"right" }}>
-                      <div style={{ color:GRAY, fontSize:10 }}>Para llegar a la meta <span style={{ color:BLUE_GP, fontWeight:700 }}>sin upsell</span></div>
+                      <div style={{ color:GRAY, fontSize:12 }}>Para llegar a la meta <span style={{ color:BLUE_GP, fontWeight:700 }}>sin upsell</span></div>
                     </div>
                   </div>
                 )}
@@ -5785,9 +5873,9 @@ function FinanzasSection({ personal, onUpdate }) {
                   const cacCOP= cacUSD * usdR;
                   const cc    = curStats.clients;
                   const curRev= curStats.rev;
-                  const gap   = cltsN ? Math.max(0, cltsN - cc) : null;
+                  const gap   = revPC>0 ? (curRev>=target ? 0 : Math.ceil((target-curRev)/revPC)) : null;
                   const gapMt = gap ? gap * (salesConfig.meetingsPerClose||3) : 0;
-                  const prog  = cltsN ? Math.min(100, Math.round(cc/cltsN*100)) : 0;
+                  const prog  = target>0 ? Math.min(100, Math.round(curRev/target*100)) : 0;
                   const byAds = gap ? Math.round(gap * adsPct/100) : 0;
                   const byOrg = gap ? gap - byAds : 0;
                   const adsBudget    = byAds * cacUSD;
@@ -5798,16 +5886,16 @@ function FinanzasSection({ personal, onUpdate }) {
                   <div style={{ marginBottom:12 }}>
                     {/* Barra progreso mes actual */}
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:5 }}>
-                      <div style={{ fontSize:10, color:GRAY }}>
+                      <div style={{ fontSize:12, color:GRAY }}>
                         <span style={{ color:INK, fontWeight:700, fontSize:14 }}>{cc}</span>
                         <span> / </span>
                         <span style={{ color:BLUE_GP, fontWeight:700 }}>{cltsN||"?"}</span>
                         <span> clientes · {MONTHS_SHORT[todayM]}</span>
                       </div>
-                      <div style={{ fontSize:10, color:GRAY }}>
+                      <div style={{ fontSize:12, color:GRAY }}>
                         Revenue: <span style={{ color:"#146C3A", fontWeight:700 }}>{fmtCOP(curRev)}</span>
-                        {gap>0&&<span style={{ color:"#C62828" }}> · faltan {gap}</span>}
-                        {gap===0&&cc>0&&<span style={{ color:"#146C3A" }}> · ¡Meta!</span>}
+                        {gap>0&&<span style={{ color:"#C62828" }}> · faltan {fmtCOP(Math.max(0,target-curRev))} ({gap} cliente{gap!==1?"s":""})</span>}
+                        {gap===0&&curRev>0&&<span style={{ color:"#146C3A" }}> · ¡Meta!</span>}
                       </div>
                     </div>
                     <div style={{ background:"#F3F6FB", borderRadius:20, height:5, marginBottom:10 }}>
@@ -5818,7 +5906,7 @@ function FinanzasSection({ personal, onUpdate }) {
                     <div style={{ marginBottom:10, background:"#F3F6FB", borderRadius:8, overflow:"hidden", border:`1px solid ${BORDER}33` }}>
                       <div style={{ display:"grid", gridTemplateColumns:"40px 60px 1fr 1fr 1fr", padding:"5px 10px", borderBottom:`1px solid ${BORDER}33` }}>
                         {["Mes","Clientes","Ingresos","% de la meta","¿Llegaste?"].map(h=>(
-                          <div key={h} style={{ color:GRAY, fontSize:9, fontWeight:700, letterSpacing:1 }}>{h}</div>
+                          <div key={h} style={{ color:GRAY, fontSize:11, fontWeight:700, letterSpacing:1 }}>{h}</div>
                         ))}
                       </div>
                       {monthStats.map(({m:mi,label,clients,rev,gap:g,hasData})=>{
@@ -5830,10 +5918,10 @@ function FinanzasSection({ personal, onUpdate }) {
                             background: isCur?"#146C3A08":hasData?"#FFFFFF04":"transparent",
                             borderLeft: isCur?`2px solid ${BLUE_GP}`:"2px solid transparent",
                             borderBottom:`1px solid ${BORDER}22` }}>
-                            <div style={{ color:isCur?BLUE_GP:GRAY, fontSize:10, fontWeight:isCur?700:400 }}>{label}</div>
-                            <div style={{ color:hasData?INK:GRAY, fontSize:10, fontWeight:hasData?700:400 }}>{clients>0?clients:"—"}</div>
-                            <div style={{ color:rev>0?"#146C3A":GRAY, fontSize:10, fontWeight:rev>0?700:400 }}>{rev>0?fmtCOP(rev):"—"}</div>
-                            <div style={{ fontSize:10 }}>
+                            <div style={{ color:isCur?BLUE_GP:GRAY, fontSize:12, fontWeight:isCur?700:400 }}>{label}</div>
+                            <div style={{ color:hasData?INK:GRAY, fontSize:12, fontWeight:hasData?700:400 }}>{clients>0?clients:"—"}</div>
+                            <div style={{ color:rev>0?"#146C3A":GRAY, fontSize:12, fontWeight:rev>0?700:400 }}>{rev>0?fmtCOP(rev):"—"}</div>
+                            <div style={{ fontSize:12 }}>
                               {hasData ? (
                                 <div style={{ display:"flex", alignItems:"center", gap:4 }}>
                                   <div style={{ background:ok?"#146C3A33":"#C6282833", borderRadius:10, height:4, width:40 }}>
@@ -5843,8 +5931,8 @@ function FinanzasSection({ personal, onUpdate }) {
                                 </div>
                               ):<span style={{ color:GRAY }}>—</span>}
                             </div>
-                            <div style={{ color:g===0&&hasData?"#146C3A":g>0?"#C62828":GRAY, fontSize:10, fontWeight:700 }}>
-                              {hasData ? (g===0?"Completo":`Faltan ${g}`) : "—"}
+                            <div style={{ color:g===0&&hasData?"#146C3A":g>0?"#C62828":GRAY, fontSize:12, fontWeight:700 }}>
+                              {hasData ? (g===0?"Completo":`Falta ${fmtCOP(Math.max(0,target-rev))} · ${g} cliente${g!==1?"s":""}`) : "—"}
                             </div>
                           </div>
                         );
@@ -5854,34 +5942,34 @@ function FinanzasSection({ personal, onUpdate }) {
                     {/* CAC del mes */}
                     {gap>0 && (
                     <div style={{ background:"#F3F6FB", borderRadius:8, padding:"10px 12px", border:`1px solid #2966A522`, marginBottom:8 }}>
-                      <div style={{ color:"#2966A5", fontSize:9, fontWeight:700, letterSpacing:1.5, marginBottom:8 }}>ADQUISICIÓN ESTE MES · {gap} CLIENTES FALTANTES</div>
+                      <div style={{ color:"#2966A5", fontSize:11, fontWeight:700, letterSpacing:1.5, marginBottom:8 }}>ADQUISICIÓN ESTE MES · {gap} CLIENTES FALTANTES</div>
                       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", gap:8, marginBottom:8 }}>
                         <div style={{ background:"#FFFFFF", borderRadius:6, padding:"8px 10px", border:`1px solid #2966A533` }}>
-                          <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>Ads ({adsPct}%)</div>
+                          <div style={{ color:GRAY, fontSize:11, marginBottom:3 }}>Ads ({adsPct}%)</div>
                           <div style={{ color:"#2966A5", fontWeight:800, fontSize:16 }}>{byAds}</div>
-                          <div style={{ color:GRAY, fontSize:9 }}>clientes</div>
+                          <div style={{ color:GRAY, fontSize:11 }}>clientes</div>
                         </div>
                         <div style={{ background:"#FFFFFF", borderRadius:6, padding:"8px 10px", border:`1px solid #146C3A33` }}>
-                          <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>Orgánico ({100-adsPct}%)</div>
+                          <div style={{ color:GRAY, fontSize:11, marginBottom:3 }}>Orgánico ({100-adsPct}%)</div>
                           <div style={{ color:"#146C3A", fontWeight:800, fontSize:16 }}>{byOrg}</div>
-                          <div style={{ color:GRAY, fontSize:9 }}>clientes</div>
+                          <div style={{ color:GRAY, fontSize:11 }}>clientes</div>
                         </div>
                         <div style={{ background:"#FFFFFF", borderRadius:6, padding:"8px 10px", border:`1px solid #A24A0733` }}>
-                          <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>Presupuesto ads</div>
+                          <div style={{ color:GRAY, fontSize:11, marginBottom:3 }}>Presupuesto ads</div>
                           <div style={{ color:"#A24A07", fontWeight:800, fontSize:13 }}>${adsBudget.toLocaleString()} USD</div>
-                          <div style={{ color:GRAY, fontSize:9 }}>{fmtCOP(adsBudgetCOP)}</div>
+                          <div style={{ color:GRAY, fontSize:11 }}>{fmtCOP(adsBudgetCOP)}</div>
                         </div>
                         <div style={{ background:"#FFFFFF", borderRadius:6, padding:"8px 10px", border:`1px solid #6D28D933` }}>
-                          <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>Reuniones pendientes</div>
+                          <div style={{ color:GRAY, fontSize:11, marginBottom:3 }}>Reuniones pendientes</div>
                           <div style={{ color:"#6D28D9", fontWeight:800, fontSize:16 }}>{gapMt}</div>
-                          <div style={{ color:GRAY, fontSize:9 }}>para cerrar</div>
+                          <div style={{ color:GRAY, fontSize:11 }}>para cerrar</div>
                         </div>
                       </div>
                       {paybackDays && (
                       <div style={{ display:"flex", gap:16, padding:"6px 8px", background:"#146C3A0A", borderRadius:6, border:`1px solid #146C3A22`, flexWrap:"wrap" }}>
-                        <span style={{ fontSize:11, color:GRAY }}>CAC: <span style={{ color:INK, fontWeight:700 }}>${cacUSD} USD = {fmtCOP(cacCOP)}</span></span>
-                        <span style={{ fontSize:11, color:GRAY }}>Payback: <span style={{ color:"#146C3A", fontWeight:700 }}>{paybackDays} días</span></span>
-                        <span style={{ fontSize:11, color:GRAY }}>ROI 12m: <span style={{ color:BLUE_GP, fontWeight:700 }}>{roi12}×</span></span>
+                        <span style={{ fontSize:12, color:GRAY }}>CAC: <span style={{ color:INK, fontWeight:700 }}>${cacUSD} USD = {fmtCOP(cacCOP)}</span></span>
+                        <span style={{ fontSize:12, color:GRAY }}>Payback: <span style={{ color:"#146C3A", fontWeight:700 }}>{paybackDays} días</span></span>
+                        <span style={{ fontSize:12, color:GRAY }}>ROI 12m: <span style={{ color:BLUE_GP, fontWeight:700 }}>{roi12}×</span></span>
                       </div>
                       )}
                     </div>
@@ -5892,7 +5980,7 @@ function FinanzasSection({ personal, onUpdate }) {
 
                 {/* Parámetros editables */}
                 <div style={{ borderTop:`1px solid ${BORDER}33`, paddingTop:12 }}>
-                  <div style={{ color:GRAY, fontSize:9, fontWeight:700, letterSpacing:1.5, textTransform:"uppercase", marginBottom:8 }}>Parámetros</div>
+                  <div style={{ color:GRAY, fontSize:11, fontWeight:700, letterSpacing:1.5, textTransform:"uppercase", marginBottom:8 }}>Parámetros</div>
                   <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8 }}>
                     {[
                       ["Meta mensual (COP)",              "monthlyTarget",    salesConfig.monthlyTarget,     1],
@@ -5907,11 +5995,11 @@ function FinanzasSection({ personal, onUpdate }) {
                       ["TRM (COP / USD)",                  "usdRate",          salesConfig.usdRate||3200,     1],
                     ].map(([label,key,val,step])=>(
                       <div key={key}>
-                        <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>{label}</div>
+                        <div style={{ color:GRAY, fontSize:11, marginBottom:3 }}>{label}</div>
                         <input type="number" value={val||""} step={step}
                           placeholder={key==="avgClientSales"?"Ej: 100000000":""}
                           onChange={e=>updateSC({[key]:parseFloat(e.target.value)||0})}
-                          style={{ width:"100%", background:"#FFFFFF", border:`1px solid ${key==="currentClients"?`#146C3A44`:key==="avgClientSales"&&!val?`${BLUE_GP}55`:BORDER}`, borderRadius:6, padding:"5px 8px", color:key==="currentClients"?"#146C3A":BLUE_GP, fontSize:12, outline:"none", fontWeight:700, boxSizing:"border-box" }} />
+                          style={{ width:"100%", background:"#FFFFFF", border:`1px solid ${key==="currentClients"?`#146C3A44`:key==="avgClientSales"&&!val?`${BLUE_GP}55`:BORDER}`, borderRadius:6, padding:"5px 8px", color:key==="currentClients"?"#146C3A":BLUE_GP, fontSize:13, outline:"none", fontWeight:700, boxSizing:"border-box" }} />
                       </div>
                     ))}
                   </div>
@@ -5929,9 +6017,9 @@ function FinanzasSection({ personal, onUpdate }) {
               { overline:"Rentabilidad", label:"Margen",     val:totCC>0?(totFlujo/totCC*100).toFixed(0)+"%":"—", color:totFlujo>=0?"#146C3A":"#C62828" },
             ].map(({overline,label,val,color})=>(
               <div key={label} style={{ background:"#F6F9FD", borderRadius:12, padding:"14px 16px", border:`1px solid ${BORDER}`, borderTop:`2px solid ${color}55`, boxShadow:"0 2px 10px rgba(27,42,74,0.113)" }}>
-                <div style={{ color:color, fontSize:9, fontWeight:700, letterSpacing:2, textTransform:"uppercase", marginBottom:6 }}>{overline}</div>
+                <div style={{ color:color, fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", marginBottom:6 }}>{overline}</div>
                 <div style={{ color, fontWeight:900, fontSize:18, lineHeight:1, letterSpacing:-0.5 }}>{val}</div>
-                <div style={{ color:GRAY, fontSize:10, marginTop:5 }}>{label}</div>
+                <div style={{ color:GRAY, fontSize:12, marginTop:5 }}>{label}</div>
               </div>
             ))}
           </div>
@@ -5939,12 +6027,12 @@ function FinanzasSection({ personal, onUpdate }) {
           {/* Editor de categorías */}
           <div style={{ marginBottom:14 }}>
             <button onClick={()=>setShowCatEditor(s=>!s)}
-              style={{ padding:"6px 14px", borderRadius:7, fontSize:11, cursor:"pointer", border:`1px solid ${showCatEditor?BLUE_GP:BORDER}`, background:showCatEditor?"rgba(41,102,165,0.08)":"transparent", color:showCatEditor?BLUE_GP:GRAY, fontWeight:600 }}>
+              style={{ padding:"6px 14px", borderRadius:7, fontSize:12, cursor:"pointer", border:`1px solid ${showCatEditor?BLUE_GP:BORDER}`, background:showCatEditor?"rgba(41,102,165,0.08)":"transparent", color:showCatEditor?BLUE_GP:GRAY, fontWeight:600 }}>
               {showCatEditor ? "✕ Cerrar categorías" : "⚙ Categorías de gasto"}
             </button>
             {showCatEditor && (
               <div style={{ background:"#F6F9FD", border:`1px solid ${BLUE_GP}22`, borderRadius:10, padding:"14px 16px", marginTop:8 }}>
-                <div style={{ color:BLUE_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:10 }}>Administrar categorías</div>
+                <div style={{ color:BLUE_DIM, fontSize:11, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:10 }}>Administrar categorías</div>
                 {[
                   { key:"personales",     label:"Personales",     color:"#A24A07" },
                   { key:"profesionales",  label:"Profesionales",  color:"#2966A5" },
@@ -5953,24 +6041,24 @@ function FinanzasSection({ personal, onUpdate }) {
                   const cats = gastoCategories[key] || [];
                   return (
                     <div key={key} style={{ marginBottom:12 }}>
-                      <div style={{ color, fontSize:10, fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:6 }}>{label}</div>
+                      <div style={{ color, fontSize:12, fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:6 }}>{label}</div>
                       <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:6 }}>
                         {cats.map(c => (
                           <div key={c} style={{ display:"flex", alignItems:"center", gap:4, background:`${color}12`, border:`1px solid ${color}33`, borderRadius:20, padding:"2px 10px 2px 10px" }}>
-                            <span style={{ color, fontSize:11, fontWeight:600 }}>{c}</span>
+                            <span style={{ color, fontSize:12, fontWeight:600 }}>{c}</span>
                             <button onClick={()=>updateGastoCats({ ...gastoCategories, [key]: cats.filter(x=>x!==c) })}
                               style={{ background:"none", border:"none", color:`${color}`, cursor:"pointer", fontSize:13, lineHeight:1, padding:"0 0 0 3px" }}>×</button>
                           </div>
                         ))}
-                        {cats.length === 0 && <span style={{ color:GRAY, fontSize:11 }}>Sin categorías</span>}
+                        {cats.length === 0 && <span style={{ color:GRAY, fontSize:12 }}>Sin categorías</span>}
                       </div>
                       <div style={{ display:"flex", gap:6 }}>
                         <input value={newCatInputs[key]} onChange={e=>setNewCatInputs(p=>({...p,[key]:e.target.value}))}
                           onKeyDown={e=>{ if(e.key==="Enter"&&newCatInputs[key].trim()){ updateGastoCats({...gastoCategories,[key]:[...cats,newCatInputs[key].trim()]}); setNewCatInputs(p=>({...p,[key]:""})); }}}
                           placeholder={`Nueva categoría ${label.toLowerCase()}...`}
-                          style={{ flex:1, background:"#FFFFFF", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 9px", color:INK, fontSize:11, outline:"none" }} />
+                          style={{ flex:1, background:"#FFFFFF", border:`1px solid ${BORDER}`, borderRadius:6, padding:"5px 9px", color:INK, fontSize:12, outline:"none" }} />
                         <button onClick={()=>{ if(!newCatInputs[key].trim()) return; updateGastoCats({...gastoCategories,[key]:[...cats,newCatInputs[key].trim()]}); setNewCatInputs(p=>({...p,[key]:""})); }}
-                          style={{ padding:"5px 14px", background:color, color:"#FFFFFF", border:"none", borderRadius:6, cursor:"pointer", fontWeight:700, fontSize:11 }}>+</button>
+                          style={{ padding:"5px 14px", background:color, color:"#FFFFFF", border:"none", borderRadius:6, cursor:"pointer", fontWeight:700, fontSize:12 }}>+</button>
                       </div>
                     </div>
                   );
@@ -5999,18 +6087,18 @@ function FinanzasSection({ personal, onUpdate }) {
                     <span style={{ color:INK,fontWeight:700,fontSize:13,width:36 }}>{mes}</span>
                     <div style={{ flex:1,display:"flex",gap:5,alignItems:"center",overflow:"hidden" }}>
                       {ingresos.slice(0,2).map(i=>(
-                        <span key={i.id} style={{ background:"#146C3A22",borderRadius:4,padding:"1px 7px",color:"#146C3A",fontSize:10,whiteSpace:"nowrap",maxWidth:100,overflow:"hidden",textOverflow:"ellipsis" }}>
+                        <span key={i.id} style={{ background:"#146C3A22",borderRadius:4,padding:"1px 7px",color:"#146C3A",fontSize:12,whiteSpace:"nowrap",maxWidth:100,overflow:"hidden",textOverflow:"ellipsis" }}>
                           {i.client||i.concept||"Ingreso"}
                         </span>
                       ))}
-                      {ingresos.length>2 && <span style={{ color:GRAY,fontSize:10 }}>+{ingresos.length-2}</span>}
+                      {ingresos.length>2 && <span style={{ color:GRAY,fontSize:12 }}>+{ingresos.length-2}</span>}
                     </div>
-                    <span style={{ color:"#146C3A",fontSize:12,fontWeight:700,width:96,textAlign:"right" }}>{cc>0?fmtCOP(cc):"—"}</span>
-                    <span style={{ color:"#C62828",fontSize:12,fontWeight:700,width:96,textAlign:"right" }}>{g>0?fmtCOP(g):"—"}</span>
-                    <span style={{ color:flujo>0?"#146C3A":flujo<0?"#C62828":GRAY,fontSize:12,fontWeight:800,width:100,textAlign:"right" }}>
+                    <span style={{ color:"#146C3A",fontSize:13,fontWeight:700,width:96,textAlign:"right" }}>{cc>0?fmtCOP(cc):"—"}</span>
+                    <span style={{ color:"#C62828",fontSize:13,fontWeight:700,width:96,textAlign:"right" }}>{g>0?fmtCOP(g):"—"}</span>
+                    <span style={{ color:flujo>0?"#146C3A":flujo<0?"#C62828":GRAY,fontSize:13,fontWeight:800,width:100,textAlign:"right" }}>
                       {(cc>0||g>0)?(flujo>0?"+":"")+fmtCOP(flujo):"—"}
                     </span>
-                    <span style={{ color:GRAY,fontSize:11,marginLeft:10 }}>{exp?"▲":"▼"}</span>
+                    <span style={{ color:GRAY,fontSize:12,marginLeft:10 }}>{exp?"▲":"▼"}</span>
                   </div>
 
                   {exp && (
@@ -6019,7 +6107,7 @@ function FinanzasSection({ personal, onUpdate }) {
 
                         {/* INGRESOS */}
                         <div>
-                          <div style={{ color:"#146C3A",fontWeight:700,fontSize:12,letterSpacing:1,marginBottom:10 }}>
+                          <div style={{ color:"#146C3A",fontWeight:700,fontSize:13,letterSpacing:1,marginBottom:10 }}>
                             INGRESOS · {fmtCOP(cc)}
                           </div>
                           {ingresos.map(ing=>{
@@ -6028,57 +6116,75 @@ function FinanzasSection({ personal, onUpdate }) {
                             return (
                             <div key={ing.id} style={{ display:"flex",gap:8,marginBottom:6,padding:"8px 10px",background:"#146C3A08",borderRadius:7,border:`1px solid #146C3A22`,alignItems:"flex-start" }}>
                               <div style={{ flex:1 }}>
-                                <div style={{ color:INK,fontSize:12,fontWeight:600 }}>{ing.client||"Sin nombre"}</div>
-                                {ing.concept && <div style={{ color:GRAY,fontSize:10,marginTop:2 }}>{ing.concept}</div>}
+                                <div style={{ color:INK,fontSize:13,fontWeight:600 }}>{ing.client||"Sin nombre"}</div>
+                                {ing.concept && <div style={{ color:GRAY,fontSize:12,marginTop:2 }}>{ing.concept}</div>}
+                                {ing.serieId && (
+                                  <div style={{ display:"inline-block",marginTop:4,background:"#E7EDF6",color:BLUE_GP,borderRadius:4,padding:"1px 7px",fontSize:12,fontWeight:700 }}>
+                                    ↻ Recurrente · mes {ing.serieN} de {ing.serieTotal}
+                                  </div>
+                                )}
                               </div>
                               <div style={{ textAlign:"right",flexShrink:0 }}>
-                                <div style={{ color:"#146C3A",fontSize:12,fontWeight:700,whiteSpace:"nowrap" }}>
+                                <div style={{ color:"#146C3A",fontSize:13,fontWeight:700,whiteSpace:"nowrap" }}>
                                   {isUSD ? `$${Number(ing.amount).toLocaleString("en-US")} USD` : fmtCOP(ing.amount)}
                                 </div>
-                                {isUSD && <div style={{ color:GRAY,fontSize:9,marginTop:1 }}>≈ {fmtCOP(copVal)}</div>}
+                                {isUSD && <div style={{ color:GRAY,fontSize:11,marginTop:1 }}>≈ {fmtCOP(copVal)}</div>}
                               </div>
-                              <button onClick={()=>setMD(m,md=>({...md,ingresos:(md.ingresos||[]).filter(x=>x.id!==ing.id)}))}
-                                style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:14,opacity:0.5,lineHeight:1,padding:0 }}>×</button>
+                              <button onClick={()=>removeIngreso(m,ing)} title="Borrar ingreso"
+                                style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:16,lineHeight:1,padding:0 }}>×</button>
                             </div>
                             );
                           })}
-                          {ingresos.length===0 && <div style={{ color:GRAY,fontSize:11,marginBottom:8 }}>Sin ingresos registrados</div>}
+                          {ingresos.length===0 && <div style={{ color:GRAY,fontSize:12,marginBottom:8 }}>Sin ingresos registrados</div>}
 
                           {/* Formulario ingreso */}
                           <div style={{ marginTop:8,padding:"10px",background:"#F3F6FB",borderRadius:8,border:`1px solid #146C3A22` }}>
-                            <div style={{ color:"#146C3A",fontSize:10,fontWeight:700,marginBottom:7,letterSpacing:0.5 }}>+ AGREGAR INGRESO</div>
+                            <div style={{ color:"#146C3A",fontSize:12,fontWeight:700,marginBottom:7,letterSpacing:0.5 }}>+ AGREGAR INGRESO</div>
                             <input value={ingF(m).client} onChange={e=>setIngF(m,"client",e.target.value)}
                               placeholder="Cliente / Fuente  (Ej: Zenova, Stefa, AYM...)"
-                              style={{ width:"100%",background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:INK,fontSize:11,outline:"none",marginBottom:5,boxSizing:"border-box" }} />
+                              style={{ width:"100%",background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:INK,fontSize:12,outline:"none",marginBottom:5,boxSizing:"border-box" }} />
                             <input value={ingF(m).concept} onChange={e=>setIngF(m,"concept",e.target.value)}
                               placeholder="Concepto  (Ej: Fee julio, Comisión cerrada, Bono)"
                               onKeyDown={e=>e.key==="Enter"&&ingF(m).amount&&addIngreso(m)}
-                              style={{ width:"100%",background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:INK,fontSize:11,outline:"none",marginBottom:5,boxSizing:"border-box" }} />
+                              style={{ width:"100%",background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:INK,fontSize:12,outline:"none",marginBottom:5,boxSizing:"border-box" }} />
                             <div style={{ display:"flex",gap:6 }}>
                               <select value={ingF(m).currency||"USD"} onChange={e=>setIngF(m,"currency",e.target.value)}
-                                style={{ background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:BLUE_GP,fontSize:12,fontWeight:700,outline:"none",width:70 }}>
+                                style={{ background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:BLUE_GP,fontSize:13,fontWeight:700,outline:"none",width:70 }}>
                                 <option value="USD">USD</option>
                                 <option value="COP">COP</option>
                               </select>
                               <input value={ingF(m).amount} onChange={e=>setIngF(m,"amount",e.target.value)} type="number"
                                 placeholder={ingF(m).currency==="USD"?"Monto en USD":"Monto en COP"}
                                 onKeyDown={e=>e.key==="Enter"&&addIngreso(m)}
-                                style={{ flex:1,background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:INK,fontSize:11,outline:"none" }} />
+                                style={{ flex:1,background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:INK,fontSize:12,outline:"none" }} />
                               <button onClick={()=>addIngreso(m)}
                                 style={{ padding:"6px 16px",background:"#146C3A",color:"#FFFFFF",border:"none",borderRadius:5,cursor:"pointer",fontWeight:700,fontSize:13 }}>+</button>
                             </div>
                             {ingF(m).currency==="USD"&&ingF(m).amount&&(
-                              <div style={{ color:GRAY,fontSize:10,marginTop:4 }}>
+                              <div style={{ color:GRAY,fontSize:12,marginTop:4 }}>
                                 ≈ {fmtCOP(parseFloat(ingF(m).amount)*trm)} a TRM ${trm.toLocaleString()}
                               </div>
                             )}
+                            <div style={{ display:"flex",alignItems:"center",gap:6,marginTop:6,flexWrap:"wrap" }}>
+                              <span style={{ color:INK,fontSize:12,fontWeight:600 }}>↻ Recurrencia:</span>
+                              <select value={ingF(m).months||"1"} onChange={e=>setIngF(m,"months",e.target.value)}
+                                style={{ background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"5px 8px",color:INK,fontSize:13,fontWeight:600,outline:"none" }}>
+                                <option value="1">Solo este mes</option>
+                                {[2,3,4,5,6,9,12,18,24,36].map(n=>(<option key={n} value={String(n)}>{n} meses</option>))}
+                              </select>
+                              {parseInt(ingF(m).months,10)>1 && (
+                                <span style={{ color:GRAY,fontSize:12 }}>
+                                  {MONTHS[m]} {year} → {(()=>{ const d=new Date(year,m+parseInt(ingF(m).months,10)-1,1); return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`; })()}
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                         </div>
 
                         {/* EGRESOS */}
                         <div>
-                          <div style={{ color:"#C62828",fontWeight:700,fontSize:12,letterSpacing:1,marginBottom:10 }}>
+                          <div style={{ color:"#C62828",fontWeight:700,fontSize:13,letterSpacing:1,marginBottom:10 }}>
                             EGRESOS · {fmtCOP(g)}
                           </div>
                           {(()=>{
@@ -6090,14 +6196,14 @@ function FinanzasSection({ personal, onUpdate }) {
                             });
                             return Object.entries(groups).map(([grp,items])=>(
                               <div key={grp} style={{ marginBottom:8 }}>
-                                <div style={{ color:CAT_COLORS[grp]||GRAY,fontSize:10,fontWeight:700,marginBottom:4,letterSpacing:0.5 }}>{grp.toUpperCase()}</div>
+                                <div style={{ color:CAT_COLORS[grp]||GRAY,fontSize:12,fontWeight:700,marginBottom:4,letterSpacing:0.5 }}>{grp.toUpperCase()}</div>
                                 {items.map(eg=>(
                                   <div key={eg.id} style={{ display:"flex",gap:8,marginBottom:4,padding:"6px 8px",background:"#C6282808",borderRadius:6,border:`1px solid #C6282822`,alignItems:"flex-start" }}>
                                     <div style={{ flex:1 }}>
-                                      <div style={{ color:INK,fontSize:11,fontWeight:600 }}>{(eg.category||"").split(" · ")[1]||eg.category||"Gasto"}</div>
-                                      {eg.description && <div style={{ color:GRAY,fontSize:10,marginTop:1 }}>{eg.description}</div>}
+                                      <div style={{ color:INK,fontSize:12,fontWeight:600 }}>{(eg.category||"").split(" · ")[1]||eg.category||"Gasto"}</div>
+                                      {eg.description && <div style={{ color:GRAY,fontSize:12,marginTop:1 }}>{eg.description}</div>}
                                     </div>
-                                    <span style={{ color:"#C62828",fontSize:11,fontWeight:700,whiteSpace:"nowrap" }}>{fmtCOP(eg.amount)}</span>
+                                    <span style={{ color:"#C62828",fontSize:12,fontWeight:700,whiteSpace:"nowrap" }}>{fmtCOP(eg.amount)}</span>
                                     <button onClick={()=>setMD(m,md=>{
                                       if (md.egresos !== undefined) return {...md, egresos:md.egresos.filter(x=>x.id!==eg.id)};
                                       // Legacy: migrar y omitir este item
@@ -6109,25 +6215,25 @@ function FinanzasSection({ personal, onUpdate }) {
                               </div>
                             ));
                           })()}
-                          {egresos.length===0 && <div style={{ color:GRAY,fontSize:11,marginBottom:8 }}>Sin gastos registrados</div>}
+                          {egresos.length===0 && <div style={{ color:GRAY,fontSize:12,marginBottom:8 }}>Sin gastos registrados</div>}
 
                           {/* Formulario egreso */}
                           <div style={{ marginTop:8,padding:"10px",background:"#F3F6FB",borderRadius:8,border:`1px solid #C6282822` }}>
-                            <div style={{ color:"#C62828",fontSize:10,fontWeight:700,marginBottom:7,letterSpacing:0.5 }}>+ AGREGAR GASTO</div>
+                            <div style={{ color:"#C62828",fontSize:12,fontWeight:700,marginBottom:7,letterSpacing:0.5 }}>+ AGREGAR GASTO</div>
                             <select value={egF(m).cat} onChange={e=>setEgF(m,"cat",e.target.value)}
-                              style={{ width:"100%",background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:egF(m).cat?INK:"#666",fontSize:11,outline:"none",marginBottom:5,boxSizing:"border-box" }}>
+                              style={{ width:"100%",background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:egF(m).cat?INK:GRAY,fontSize:12,outline:"none",marginBottom:5,boxSizing:"border-box" }}>
                               <option value="">Categoría...</option>
                               {egCats.map(c=>(<option key={c} value={c}>{c}</option>))}
                             </select>
                             <input value={egF(m).desc} onChange={e=>setEgF(m,"desc",e.target.value)}
                               placeholder="Descripción  (Ej: Mercado, Netflix, Vuelo Madrid)"
                               onKeyDown={e=>e.key==="Enter"&&egF(m).amount&&addEgreso(m)}
-                              style={{ width:"100%",background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:INK,fontSize:11,outline:"none",marginBottom:5,boxSizing:"border-box" }} />
+                              style={{ width:"100%",background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:INK,fontSize:12,outline:"none",marginBottom:5,boxSizing:"border-box" }} />
                             <div style={{ display:"flex",gap:6 }}>
                               <input value={egF(m).amount} onChange={e=>setEgF(m,"amount",e.target.value)} type="number"
                                 placeholder="$ Monto COP"
                                 onKeyDown={e=>e.key==="Enter"&&addEgreso(m)}
-                                style={{ flex:1,background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:INK,fontSize:11,outline:"none" }} />
+                                style={{ flex:1,background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"6px 8px",color:INK,fontSize:12,outline:"none" }} />
                               <button onClick={()=>addEgreso(m)}
                                 style={{ padding:"6px 16px",background:"#C62828",color:"#fff",border:"none",borderRadius:5,cursor:"pointer",fontWeight:700,fontSize:13 }}>+</button>
                             </div>
@@ -6138,9 +6244,9 @@ function FinanzasSection({ personal, onUpdate }) {
                       {/* Resumen del mes */}
                       {(cc>0||g>0) && (
                         <div style={{ marginTop:14,padding:"10px 14px",background:"#F3F6FB",borderRadius:8,display:"flex",gap:20,flexWrap:"wrap" }}>
-                          <span style={{ fontSize:11,color:GRAY }}>Ingresos: <span style={{ color:BLUE_GP,fontWeight:700 }}>{fmtCOP(cc)}</span></span>
-                          <span style={{ fontSize:11,color:GRAY }}>Gastos: <span style={{ color:"#C62828",fontWeight:700 }}>{fmtCOP(g)}</span></span>
-                          <span style={{ fontSize:11,color:GRAY }}>Flujo Neto: <span style={{ color:flujo>=0?"#146C3A":"#C62828",fontWeight:700 }}>{fmtCOP(flujo)}</span></span>
+                          <span style={{ fontSize:12,color:GRAY }}>Ingresos: <span style={{ color:BLUE_GP,fontWeight:700 }}>{fmtCOP(cc)}</span></span>
+                          <span style={{ fontSize:12,color:GRAY }}>Gastos: <span style={{ color:"#C62828",fontWeight:700 }}>{fmtCOP(g)}</span></span>
+                          <span style={{ fontSize:12,color:GRAY }}>Flujo Neto: <span style={{ color:flujo>=0?"#146C3A":"#C62828",fontWeight:700 }}>{fmtCOP(flujo)}</span></span>
                         </div>
                       )}
 
@@ -6175,20 +6281,20 @@ function FinanzasSection({ personal, onUpdate }) {
 
                         return (
                           <div style={{ marginTop:14,background:"#F6F9FD",borderRadius:10,border:`1px solid ${BLUE_GP}22`,padding:"14px 16px" }}>
-                            <div style={{ color:BLUE_GP,fontWeight:700,fontSize:11,letterSpacing:1,marginBottom:12 }}>PROYECCIÓN DE CIERRE</div>
+                            <div style={{ color:BLUE_GP,fontWeight:700,fontSize:12,letterSpacing:1,marginBottom:12 }}>PROYECCIÓN DE CIERRE</div>
 
                             {/* Progress bar */}
                             <div style={{ marginBottom:12 }}>
                               <div style={{ display:"flex",justifyContent:"space-between",marginBottom:5 }}>
-                                <span style={{ color:GRAY,fontSize:11 }}>Meta: <span style={{ color:INK,fontWeight:700 }}>{fmtCOP(target)}</span></span>
-                                <span style={{ color:pctDone>=100?"#146C3A":BLUE_GP,fontSize:11,fontWeight:700 }}>{pctDone.toFixed(0)}%</span>
+                                <span style={{ color:GRAY,fontSize:12 }}>Meta: <span style={{ color:INK,fontWeight:700 }}>{fmtCOP(target)}</span></span>
+                                <span style={{ color:pctDone>=100?"#146C3A":BLUE_GP,fontSize:12,fontWeight:700 }}>{pctDone.toFixed(0)}%</span>
                               </div>
-                              <div style={{ height:6,background:"#222",borderRadius:3,overflow:"hidden" }}>
+                              <div style={{ height:6,background:"#E7EDF6",borderRadius:3,overflow:"hidden" }}>
                                 <div style={{ height:"100%",width:pctDone+"%",background:`linear-gradient(90deg,${BLUE_DIM},${BLUE_GP})`,borderRadius:3,transition:"width 0.4s" }} />
                               </div>
                               {gapToTarget>0
-                                ? <div style={{ color:"#C62828",fontSize:11,marginTop:5 }}>Falta cerrar: <span style={{ fontWeight:700 }}>{fmtCOP(gapToTarget)}</span></div>
-                                : <div style={{ color:"#146C3A",fontSize:11,fontWeight:700,marginTop:5 }}>✓ Meta del mes alcanzada</div>
+                                ? <div style={{ color:"#C62828",fontSize:12,marginTop:5 }}>Falta cerrar: <span style={{ fontWeight:700 }}>{fmtCOP(gapToTarget)}</span></div>
+                                : <div style={{ color:"#146C3A",fontSize:12,fontWeight:700,marginTop:5 }}>✓ Meta del mes alcanzada</div>
                               }
                             </div>
 
@@ -6196,7 +6302,7 @@ function FinanzasSection({ personal, onUpdate }) {
                               <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
 
                                 {/* Revenue per client breakdown */}
-                                <div style={{ background:CARD,borderRadius:8,padding:"8px 12px",fontSize:10,color:GRAY }}>
+                                <div style={{ background:CARD,borderRadius:8,padding:"8px 12px",fontSize:12,color:GRAY }}>
                                   <span>Por cliente: </span>
                                   <span style={{ color:INK }}>{fmtCOP(fee)}</span><span> fee </span>
                                   <span style={{ color:"#146C3A",fontWeight:700 }}>+ {fmtCOP(canal)} canal ({salesConfig.channelPct||10}%{cFloor2>0?` sobre >${fmtCOP(cFloor2)}`:""})</span>
@@ -6205,19 +6311,19 @@ function FinanzasSection({ personal, onUpdate }) {
 
                                 {/* Option A: Pure new clients */}
                                 <div style={{ background:CARD,borderRadius:8,padding:"10px 12px",border:`1px solid #2966A522` }}>
-                                  <div style={{ color:"#2966A5",fontSize:10,fontWeight:700,letterSpacing:0.5,marginBottom:8 }}>A · SOLO NUEVOS CLIENTES</div>
+                                  <div style={{ color:"#2966A5",fontSize:12,fontWeight:700,letterSpacing:0.5,marginBottom:8 }}>A · SOLO NUEVOS CLIENTES</div>
                                   <div style={{ display:"flex",gap:20 }}>
                                     <div style={{ textAlign:"center" }}>
                                       <div style={{ color:INK,fontWeight:900,fontSize:22 }}>{newClientsNeeded ?? "—"}</div>
-                                      <div style={{ color:GRAY,fontSize:9 }}>clientes a cerrar</div>
+                                      <div style={{ color:GRAY,fontSize:11 }}>clientes a cerrar</div>
                                     </div>
                                     <div style={{ textAlign:"center" }}>
                                       <div style={{ color:"#A24A07",fontWeight:900,fontSize:22 }}>{meetingsNeeded ?? "—"}</div>
-                                      <div style={{ color:GRAY,fontSize:9 }}>reuniones a agendar</div>
+                                      <div style={{ color:GRAY,fontSize:11 }}>reuniones a agendar</div>
                                     </div>
                                     <div style={{ textAlign:"center" }}>
                                       <div style={{ color:GRAY,fontWeight:700,fontSize:16 }}>{convPct}%</div>
-                                      <div style={{ color:GRAY,fontSize:9 }}>conversión</div>
+                                      <div style={{ color:GRAY,fontSize:11 }}>conversión</div>
                                     </div>
                                   </div>
                                 </div>
@@ -6225,14 +6331,14 @@ function FinanzasSection({ personal, onUpdate }) {
                                 {/* Option B: Upsell / Adicional + new clients */}
                                 {existingClients>0 && (
                                   <div style={{ background:CARD,borderRadius:8,padding:"10px 12px",border:`1px solid #6D28D922` }}>
-                                    <div style={{ color:"#6D28D9",fontSize:10,fontWeight:700,letterSpacing:0.5,marginBottom:8 }}>B · UPSELL A CLIENTES ACTUALES + NUEVOS (RECOMENDADO)</div>
-                                    <div style={{ color:GRAY,fontSize:10,marginBottom:6 }}>
+                                    <div style={{ color:"#6D28D9",fontSize:12,fontWeight:700,letterSpacing:0.5,marginBottom:8 }}>B · UPSELL A CLIENTES ACTUALES + NUEVOS (RECOMENDADO)</div>
+                                    <div style={{ color:GRAY,fontSize:12,marginBottom:6 }}>
                                       Ofrecer servicio adicional a {existingClients} cliente{existingClients!==1?"s":""} actuales:
                                       <span style={{ color:"#6D28D9",fontWeight:700 }}> +{fmtCOP(upsellTotal)}/mes</span>
                                     </div>
                                     {gapAfterUpsell<=0
-                                      ? <div style={{ color:"#146C3A",fontSize:11,fontWeight:700 }}>✓ Solo el upsell ya cubre la brecha</div>
-                                      : <div style={{ color:GRAY,fontSize:10 }}>
+                                      ? <div style={{ color:"#146C3A",fontSize:12,fontWeight:700 }}>✓ Solo el upsell ya cubre la brecha</div>
+                                      : <div style={{ color:GRAY,fontSize:12 }}>
                                           Brecha restante: <span style={{ color:"#C62828",fontWeight:700 }}>{fmtCOP(gapAfterUpsell)}</span>
                                           {" → "}<span style={{ color:INK,fontWeight:700 }}>{newAfterUpsell}</span> cliente nuevo
                                           {" = "}<span style={{ color:"#A24A07",fontWeight:700 }}>{meetingsAfterUpsell}</span> reunión{meetingsAfterUpsell!==1?"es":""}
@@ -6244,7 +6350,7 @@ function FinanzasSection({ personal, onUpdate }) {
                                 {/* Call to action */}
                                 <div style={{ background:"#A24A0711",borderRadius:8,padding:"8px 12px",border:`1px solid #A24A0722`,display:"flex",alignItems:"center",gap:8 }}>
                                   <span style={{ fontSize:14 }}>📅</span>
-                                  <span style={{ color:"#A24A07",fontSize:11,fontWeight:700 }}>
+                                  <span style={{ color:"#A24A07",fontSize:12,fontWeight:700 }}>
                                     Agendá {existingClients>0?meetingsAfterUpsell:meetingsNeeded} reunión{(existingClients>0?meetingsAfterUpsell:meetingsNeeded)!==1?"es":""} este mes para cerrar la meta
                                   </span>
                                 </div>
@@ -6274,9 +6380,9 @@ function FinanzasSection({ personal, onUpdate }) {
                 { overline:"Balance",     label:"Queda después de costos", val:fmtCOP(totFlujo),  color:totFlujo>=0?"#146C3A":"#C62828" },
               ].map(({overline,label,val,color})=>(
                 <div key={label} style={{ background:"#F6F9FD", borderRadius:12, padding:"14px 16px", border:`1px solid ${BORDER}`, borderTop:`2px solid ${color}55`, textAlign:"center" }}>
-                  <div style={{ color:color, fontSize:9, fontWeight:700, letterSpacing:2, textTransform:"uppercase", marginBottom:6 }}>{overline}</div>
+                  <div style={{ color:color, fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", marginBottom:6 }}>{overline}</div>
                   <div style={{ color, fontWeight:900, fontSize:18, lineHeight:1, letterSpacing:-0.5 }}>{val}</div>
-                  <div style={{ color:GRAY, fontSize:10, marginTop:5 }}>{label}</div>
+                  <div style={{ color:GRAY, fontSize:12, marginTop:5 }}>{label}</div>
                 </div>
               ))}
             </div>
@@ -6285,18 +6391,18 @@ function FinanzasSection({ personal, onUpdate }) {
           <div style={{ background:"#F6F9FD", borderRadius:14, padding:"22px 24px", border:`1px solid ${netWorth>=0?"#146C3A33":"#C6282833"}`, borderLeft:`4px solid ${netWorth>=0?"#146C3A":"#C62828"}`, marginBottom:20 }}>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
               <div>
-                <div style={{ color:(netWorth>=0?"#146C3A":"#C62828"), fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:6 }}>Posición financiera</div>
+                <div style={{ color:(netWorth>=0?"#146C3A":"#C62828"), fontSize:11, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:6 }}>Posición financiera</div>
                 <div style={{ color:netWorth>=0?"#146C3A":"#C62828", fontWeight:900, fontSize:32, lineHeight:1, letterSpacing:-1 }}>{fmtCOP(netWorth)}</div>
-                <div style={{ color:GRAY, fontSize:11, marginTop:6 }}>Patrimonio Neto</div>
+                <div style={{ color:GRAY, fontSize:12, marginTop:6 }}>Patrimonio Neto</div>
               </div>
               <div style={{ textAlign:"right" }}>
-                <div style={{ color:GRAY, fontSize:9, marginBottom:3 }}>Equivalente USD</div>
+                <div style={{ color:GRAY, fontSize:11, marginBottom:3 }}>Equivalente USD</div>
                 <div style={{ color:INK, fontWeight:700, fontSize:18 }}>{fmtUSD(netWorthUSD)}</div>
                 <div style={{ display:"flex", alignItems:"center", gap:5, marginTop:6, justifyContent:"flex-end" }}>
-                  <span style={{ color:GRAY, fontSize:10 }}>TRM</span>
+                  <span style={{ color:GRAY, fontSize:12 }}>TRM</span>
                   <input value={fxRate} onChange={e=>onUpdate({finance:{...finance,fxRate:parseFloat(e.target.value)||3200}})} type="number"
-                    style={{ width:68, background:"#F3F6FB", border:`1px solid ${BORDER}`, borderRadius:5, padding:"3px 7px", color:BLUE_GP, fontSize:11, outline:"none", textAlign:"right" }} />
-                  <span style={{ color:GRAY, fontSize:10 }}>COP/USD</span>
+                    style={{ width:68, background:"#F3F6FB", border:`1px solid ${BORDER}`, borderRadius:5, padding:"3px 7px", color:BLUE_GP, fontSize:12, outline:"none", textAlign:"right" }} />
+                  <span style={{ color:GRAY, fontSize:12 }}>COP/USD</span>
                 </div>
               </div>
             </div>
@@ -6309,20 +6415,20 @@ function FinanzasSection({ personal, onUpdate }) {
                 <span style={{ color:INK,fontWeight:700,fontSize:13 }}>Activos</span>
                 <span style={{ color:"#146C3A",fontWeight:700,fontSize:13 }}>{fmtCOP(totalAssets)}</span>
               </div>
-              {assets.length===0 && <div style={{ color:GRAY,fontSize:11,marginBottom:8 }}>Ej: Efectivo, Inversiones, Propiedad...</div>}
+              {assets.length===0 && <div style={{ color:GRAY,fontSize:12,marginBottom:8 }}>Ej: Efectivo, Inversiones, Propiedad...</div>}
               {assets.map(a=>(
                 <div key={a.id} style={{ display:"flex",alignItems:"center",gap:8,marginBottom:6 }}>
-                  <span style={{ flex:1,color:INK,fontSize:12 }}>{a.name}</span>
-                  <span style={{ color:"#146C3A",fontSize:12 }}>{fmtCOP(a.value)}</span>
+                  <span style={{ flex:1,color:INK,fontSize:13 }}>{a.name}</span>
+                  <span style={{ color:"#146C3A",fontSize:13 }}>{fmtCOP(a.value)}</span>
                   <button onClick={()=>onUpdate({finance:{...finance,assets:assets.filter(x=>x.id!==a.id)}})}
                     style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:14,opacity:0.5 }}>×</button>
                 </div>
               ))}
               <div style={{ display:"flex",gap:6,marginTop:10 }}>
                 <input value={assetName} onChange={e=>setAssetName(e.target.value)} placeholder="Nombre activo..."
-                  style={{ flex:1,background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"6px 8px",color:INK,fontSize:11,outline:"none" }} />
+                  style={{ flex:1,background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"6px 8px",color:INK,fontSize:12,outline:"none" }} />
                 <input value={assetVal} onChange={e=>setAssetVal(e.target.value)} placeholder="$ COP" type="number"
-                  style={{ width:90,background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"6px 8px",color:INK,fontSize:11,outline:"none" }} />
+                  style={{ width:90,background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"6px 8px",color:INK,fontSize:12,outline:"none" }} />
                 <button onClick={()=>{ if(!assetName.trim()||!assetVal)return; onUpdate({finance:{...finance,assets:[...assets,{id:"a_"+Date.now(),name:assetName.trim(),value:parseFloat(assetVal)}]}}); setAssetName("");setAssetVal(""); }}
                   style={{ padding:"6px 12px",background:"#146C3A",color:"#FFFFFF",border:"none",borderRadius:6,cursor:"pointer",fontWeight:700,fontSize:13 }}>+</button>
               </div>
@@ -6381,30 +6487,30 @@ function FinanzasSection({ personal, onUpdate }) {
                     {/* Info principal */}
                     <div style={{ padding:"10px 12px" }}>
                       <div style={{ display:"flex",justifyContent:"space-between",marginBottom:5 }}>
-                        <span style={{ color:INK,fontSize:12,fontWeight:700 }}>{d.name}</span>
+                        <span style={{ color:INK,fontSize:13,fontWeight:700 }}>{d.name}</span>
                         <button onClick={()=>onUpdate({finance:{...finance,debts:debts.filter(x=>x.id!==d.id)}})}
                           style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:14,opacity:0.5 }}>×</button>
                       </div>
-                      <div style={{ display:"flex",gap:10,fontSize:11,color:GRAY,flexWrap:"wrap",marginBottom:6 }}>
+                      <div style={{ display:"flex",gap:10,fontSize:12,color:GRAY,flexWrap:"wrap",marginBottom:6 }}>
                         <span>Saldo: <span style={{ color:"#C62828",fontWeight:700 }}>{fmtCOP(d.balance)}</span></span>
                         {d.rate>0 && <span>Tasa: <span style={{ color:"#A24A07" }}>{d.rate}%/mes</span></span>}
                         {d.payment>0 && <span>Cuota: <span style={{ color:INK }}>{fmtCOP(d.payment)}</span></span>}
                         {totalAbonado>0 && <span>Abonado: <span style={{ color:"#146C3A",fontWeight:700 }}>{fmtCOP(totalAbonado)}</span></span>}
                       </div>
 
-                      {noAlcanza && <div style={{ color:"#C62828",fontSize:11,fontWeight:700,marginBottom:6 }}>⚠ La cuota no cubre los intereses — nunca termina</div>}
+                      {noAlcanza && <div style={{ color:"#C62828",fontSize:12,fontWeight:700,marginBottom:6 }}>⚠ La cuota no cubre los intereses — nunca termina</div>}
 
                       {/* Abono rápido */}
                       <div style={{ display:"flex",gap:5 }}>
                         <input type="date" value={abonoDate[d.id]||new Date().toISOString().slice(0,10)}
                           onChange={e=>setAbonoDate(p=>({...p,[d.id]:e.target.value}))}
-                          style={{ background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"5px 7px",color:GRAY,fontSize:10,outline:"none",width:115 }} />
+                          style={{ background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:5,padding:"5px 7px",color:GRAY,fontSize:12,outline:"none",width:115 }} />
                         <input value={abonoInputs[d.id]||""} type="number" placeholder="Monto a abonar..."
                           onChange={e=>setAbonoInputs(p=>({...p,[d.id]:e.target.value}))}
                           onKeyDown={e=>e.key==="Enter"&&doAbono()}
-                          style={{ flex:1,background:"#FFFFFF",border:`1px solid #146C3A44`,borderRadius:5,padding:"5px 8px",color:INK,fontSize:11,outline:"none" }} />
+                          style={{ flex:1,background:"#FFFFFF",border:`1px solid #146C3A44`,borderRadius:5,padding:"5px 8px",color:INK,fontSize:12,outline:"none" }} />
                         <button onClick={doAbono}
-                          style={{ padding:"5px 12px",background:"#146C3A",color:"#111",border:"none",borderRadius:5,cursor:"pointer",fontWeight:800,fontSize:12,whiteSpace:"nowrap" }}>↓ Abonar</button>
+                          style={{ padding:"5px 12px",background:"#146C3A",color:"#111",border:"none",borderRadius:5,cursor:"pointer",fontWeight:800,fontSize:13,whiteSpace:"nowrap" }}>↓ Abonar</button>
                       </div>
                     </div>
 
@@ -6422,45 +6528,45 @@ function FinanzasSection({ personal, onUpdate }) {
                       const simCredit = simPmt * 30;
                       return (
                       <div style={{ borderTop:`1px solid #146C3A22`,padding:"10px 12px",background:"#146C3A05" }}>
-                        <div style={{ color:"#146C3A",fontSize:9,fontWeight:700,letterSpacing:1.5,marginBottom:8 }}>PROYECCIÓN & ACCESO A CRÉDITO</div>
+                        <div style={{ color:"#146C3A",fontSize:11,fontWeight:700,letterSpacing:1.5,marginBottom:8 }}>PROYECCIÓN & ACCESO A CRÉDITO</div>
 
                         {/* Fecha objetivo */}
                         <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:10 }}>
-                          <span style={{ color:GRAY,fontSize:11,whiteSpace:"nowrap" }}>Fecha objetivo:</span>
+                          <span style={{ color:GRAY,fontSize:12,whiteSpace:"nowrap" }}>Fecha objetivo:</span>
                           <input type="date" value={d.targetDate||""}
                             onChange={e=>onUpdate({finance:{...finance,debts:debts.map(x=>x.id===d.id?{...x,targetDate:e.target.value}:x)}})}
-                            style={{ background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:4,padding:"3px 6px",color:INK,fontSize:11,outline:"none" }} />
+                            style={{ background:"#FFFFFF",border:`1px solid ${BORDER}`,borderRadius:4,padding:"3px 6px",color:INK,fontSize:12,outline:"none" }} />
                         </div>
 
                         {/* Chips base */}
                         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:10 }}>
                           <div style={{ background:"#F3F6FB",borderRadius:6,padding:"7px 9px" }}>
-                            <div style={{ color:GRAY,fontSize:9,marginBottom:3 }}>Liquidación actual</div>
-                            <div style={{ color:simExtra>0?"#546681":INK,fontSize:12,fontWeight:700,lineHeight:1.2,textDecoration:simExtra>0?"line-through":"none" }}>{payoffStr}</div>
-                            <div style={{ color:GRAY,fontSize:10,marginTop:2 }}>{months} cuotas · {(months/12).toFixed(1)}a</div>
+                            <div style={{ color:GRAY,fontSize:11,marginBottom:3 }}>Liquidación actual</div>
+                            <div style={{ color:simExtra>0?"#546681":INK,fontSize:13,fontWeight:700,lineHeight:1.2,textDecoration:simExtra>0?"line-through":"none" }}>{payoffStr}</div>
+                            <div style={{ color:GRAY,fontSize:12,marginTop:2 }}>{months} cuotas · {(months/12).toFixed(1)}a</div>
                           </div>
                           <div style={{ background:"#F3F6FB",borderRadius:6,padding:"7px 9px" }}>
-                            <div style={{ color:GRAY,fontSize:9,marginBottom:3 }}>Flujo liberado/mes</div>
-                            <div style={{ color:"#146C3A",fontSize:12,fontWeight:700 }}>{fmtCOP(d.payment||0)}</div>
-                            <div style={{ color:GRAY,fontSize:10,marginTop:2 }}>al terminar</div>
+                            <div style={{ color:GRAY,fontSize:11,marginBottom:3 }}>Flujo liberado/mes</div>
+                            <div style={{ color:"#146C3A",fontSize:13,fontWeight:700 }}>{fmtCOP(d.payment||0)}</div>
+                            <div style={{ color:GRAY,fontSize:12,marginTop:2 }}>al terminar</div>
                           </div>
                           <div style={{ background:"#F3F6FB",borderRadius:6,padding:"7px 9px" }}>
-                            <div style={{ color:GRAY,fontSize:9,marginBottom:3 }}>Crédito accesible est.</div>
-                            <div style={{ color:simExtra>0?"#546681":BLUE_GP,fontSize:12,fontWeight:700,textDecoration:simExtra>0?"line-through":"none" }}>{fmtCOP(creditCap)}</div>
-                            <div style={{ color:GRAY,fontSize:10,marginTop:2 }}>en {baseCreditDate}</div>
+                            <div style={{ color:GRAY,fontSize:11,marginBottom:3 }}>Crédito accesible est.</div>
+                            <div style={{ color:simExtra>0?"#546681":BLUE_GP,fontSize:13,fontWeight:700,textDecoration:simExtra>0?"line-through":"none" }}>{fmtCOP(creditCap)}</div>
+                            <div style={{ color:GRAY,fontSize:12,marginTop:2 }}>en {baseCreditDate}</div>
                           </div>
                         </div>
 
                         {/* ── Simulador ── */}
                         <div style={{ background:"#F3F6FB",borderRadius:7,padding:"9px 10px",marginBottom:8 }}>
-                          <div style={{ color:BLUE_GP,fontSize:9,fontWeight:700,letterSpacing:1.5,marginBottom:7 }}>SIMULAR PAGO EXTRA</div>
+                          <div style={{ color:BLUE_GP,fontSize:11,fontWeight:700,letterSpacing:1.5,marginBottom:7 }}>SIMULAR PAGO EXTRA</div>
                           <div style={{ display:"flex",gap:6,alignItems:"center",marginBottom: simExtra>0?8:0 }}>
-                            <span style={{ color:GRAY,fontSize:11,whiteSpace:"nowrap" }}>+ Extra/mes:</span>
+                            <span style={{ color:GRAY,fontSize:12,whiteSpace:"nowrap" }}>+ Extra/mes:</span>
                             <input type="number" value={simExtras[d.id]||""} placeholder="0"
                               onChange={e=>setSimExtras(p=>({...p,[d.id]:e.target.value}))}
-                              style={{ flex:1,background:"#FFFFFF",border:`1px solid ${BLUE_GP}55`,borderRadius:5,padding:"4px 8px",color:BLUE_GP,fontSize:12,fontWeight:700,outline:"none" }} />
+                              style={{ flex:1,background:"#FFFFFF",border:`1px solid ${BLUE_GP}55`,borderRadius:5,padding:"4px 8px",color:BLUE_GP,fontSize:13,fontWeight:700,outline:"none" }} />
                             {simExtra>0&&<button onClick={()=>setSimExtras(p=>({...p,[d.id]:""}))}
-                              style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:12,opacity:0.5 }}>×</button>}
+                              style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:13,opacity:0.5 }}>×</button>}
                           </div>
 
                           {/* Resultado simulación */}
@@ -6468,28 +6574,28 @@ function FinanzasSection({ personal, onUpdate }) {
                             <div>
                               <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:6 }}>
                                 <div style={{ background:"#F6F9FD",borderRadius:5,padding:"6px 8px",border:`1px solid ${BLUE_GP}33` }}>
-                                  <div style={{ color:GRAY,fontSize:9,marginBottom:2 }}>Nueva liquidación</div>
-                                  <div style={{ color:BLUE_GP,fontSize:12,fontWeight:800 }}>{simStr}</div>
-                                  <div style={{ color:"#146C3A",fontSize:10,marginTop:1 }}>-{msSaved} meses antes</div>
+                                  <div style={{ color:GRAY,fontSize:11,marginBottom:2 }}>Nueva liquidación</div>
+                                  <div style={{ color:BLUE_GP,fontSize:13,fontWeight:800 }}>{simStr}</div>
+                                  <div style={{ color:"#146C3A",fontSize:12,marginTop:1 }}>-{msSaved} meses antes</div>
                                 </div>
                                 <div style={{ background:"#F6F9FD",borderRadius:5,padding:"6px 8px",border:`1px solid #146C3A33` }}>
-                                  <div style={{ color:GRAY,fontSize:9,marginBottom:2 }}>Intereses ahorrados</div>
-                                  <div style={{ color:"#146C3A",fontSize:12,fontWeight:800 }}>{fmtCOP(Math.round(intSaved))}</div>
-                                  <div style={{ color:GRAY,fontSize:10,marginTop:1 }}>{sim.months} cuotas</div>
+                                  <div style={{ color:GRAY,fontSize:11,marginBottom:2 }}>Intereses ahorrados</div>
+                                  <div style={{ color:"#146C3A",fontSize:13,fontWeight:800 }}>{fmtCOP(Math.round(intSaved))}</div>
+                                  <div style={{ color:GRAY,fontSize:12,marginTop:1 }}>{sim.months} cuotas</div>
                                 </div>
                                 <div style={{ background:"#F6F9FD",borderRadius:5,padding:"6px 8px",border:`1px solid ${BLUE_GP}33` }}>
-                                  <div style={{ color:GRAY,fontSize:9,marginBottom:2 }}>Crédito accesible</div>
-                                  <div style={{ color:BLUE_GP,fontSize:12,fontWeight:800 }}>{fmtCOP(Math.round(simCredit))}</div>
-                                  <div style={{ color:GRAY,fontSize:10,marginTop:1 }}>en {simCreditDate}</div>
+                                  <div style={{ color:GRAY,fontSize:11,marginBottom:2 }}>Crédito accesible</div>
+                                  <div style={{ color:BLUE_GP,fontSize:13,fontWeight:800 }}>{fmtCOP(Math.round(simCredit))}</div>
+                                  <div style={{ color:GRAY,fontSize:12,marginTop:1 }}>en {simCreditDate}</div>
                                 </div>
                               </div>
-                              <div style={{ padding:"5px 8px",borderRadius:5,background:"#146C3A10",border:`1px solid #146C3A22`,fontSize:10,color:"#146C3A" }}>
+                              <div style={{ padding:"5px 8px",borderRadius:5,background:"#146C3A10",border:`1px solid #146C3A22`,fontSize:12,color:"#146C3A" }}>
                                 Pagando <span style={{ fontWeight:700 }}>{fmtCOP(simPmt)}/mes</span> ({fmtCOP(simExtra)} extra) accedes a ~<span style={{ fontWeight:700 }}>{fmtCOP(Math.round(simCredit))}</span> en crédito nuevo <span style={{ fontWeight:700 }}>{msSaved} meses antes</span>
                               </div>
                             </div>
                           )}
                           {simExtra>0 && !simStr && (
-                            <div style={{ color:"#A24A07",fontSize:10 }}>Calcula agregando tasa mensual para ver proyección</div>
+                            <div style={{ color:"#A24A07",fontSize:12 }}>Calcula agregando tasa mensual para ver proyección</div>
                           )}
                         </div>
 
@@ -6499,15 +6605,15 @@ function FinanzasSection({ personal, onUpdate }) {
                             background:targetStatus.onTrack?"#146C3A15":"#C6282815",
                             border:`1px solid ${targetStatus.onTrack?"#146C3A33":"#C6282833"}` }}>
                             {targetStatus.onTrack
-                              ? <span style={{ color:"#146C3A",fontSize:11,fontWeight:600 }}>✓ Vas en ritmo — terminas antes de la fecha objetivo</span>
-                              : <span style={{ color:"#C62828",fontSize:11 }}>Para tu fecha objetivo necesitas <span style={{ fontWeight:700 }}>{fmtCOP(targetStatus.extra)}/mes extra</span></span>
+                              ? <span style={{ color:"#146C3A",fontSize:12,fontWeight:600 }}>✓ Vas en ritmo — terminas antes de la fecha objetivo</span>
+                              : <span style={{ color:"#C62828",fontSize:12 }}>Para tu fecha objetivo necesitas <span style={{ fontWeight:700 }}>{fmtCOP(targetStatus.extra)}/mes extra</span></span>
                             }
                           </div>
                         )}
 
                         {/* Intereses base */}
                         {totalPaid && (
-                          <div style={{ display:"flex",gap:16,fontSize:10 }}>
+                          <div style={{ display:"flex",gap:16,fontSize:12 }}>
                             <span style={{ color:GRAY }}>Intereses totales: <span style={{ color:"#C62828",fontWeight:600 }}>{fmtCOP(totalInterest)}</span></span>
                             <span style={{ color:GRAY }}>Costo total: <span style={{ color:INK,fontWeight:600 }}>{fmtCOP(totalPaid)}</span></span>
                           </div>
@@ -6521,19 +6627,19 @@ function FinanzasSection({ personal, onUpdate }) {
                       <div style={{ borderTop:`1px solid #C6282822` }}>
                         <div onClick={()=>setExpandedDebt(expD?null:d.id)}
                           style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 12px",cursor:"pointer",userSelect:"none" }}>
-                          <span style={{ color:GRAY,fontSize:10,fontWeight:700,letterSpacing:1 }}>HISTORIAL · {payments.length} abonos · {fmtCOP(totalAbonado)} total</span>
-                          <span style={{ color:GRAY,fontSize:10 }}>{expD?"▲":"▼"}</span>
+                          <span style={{ color:GRAY,fontSize:12,fontWeight:700,letterSpacing:1 }}>HISTORIAL · {payments.length} abonos · {fmtCOP(totalAbonado)} total</span>
+                          <span style={{ color:GRAY,fontSize:12 }}>{expD?"▲":"▼"}</span>
                         </div>
                         {expD && (
                           <div style={{ padding:"0 12px 10px" }}>
                             {[...payments].reverse().map(p=>(
                               <div key={p.id} style={{ display:"flex",alignItems:"center",gap:8,padding:"4px 0",borderBottom:`1px solid #C6282811` }}>
-                                <span style={{ color:GRAY,fontSize:11,flex:1 }}>{p.date}</span>
-                                <span style={{ color:"#146C3A",fontSize:11,fontWeight:700 }}>-{fmtCOP(p.amount)}</span>
+                                <span style={{ color:GRAY,fontSize:12,flex:1 }}>{p.date}</span>
+                                <span style={{ color:"#146C3A",fontSize:12,fontWeight:700 }}>-{fmtCOP(p.amount)}</span>
                                 <button onClick={()=>{
                                   const restored = d.balance+parseFloat(p.amount);
                                   onUpdate({finance:{...finance,debts:debts.map(x=>x.id===d.id?{...x,balance:restored,payments:payments.filter(pp=>pp.id!==p.id)}:x)}});
-                                }} style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:12,opacity:0.4,padding:0 }}>×</button>
+                                }} style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:13,opacity:0.4,padding:0 }}>×</button>
                               </div>
                             ))}
                           </div>
@@ -6545,19 +6651,19 @@ function FinanzasSection({ personal, onUpdate }) {
               })}
               <div style={{ display:"grid",gridTemplateColumns:"1fr 80px 50px 80px 110px 36px",gap:4,marginTop:8,alignItems:"center" }}>
                 <input value={debtName} onChange={e=>setDebtName(e.target.value)} placeholder="Acreedor..."
-                  style={{ background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 7px",color:INK,fontSize:11,outline:"none" }} />
+                  style={{ background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 7px",color:INK,fontSize:12,outline:"none" }} />
                 <input value={debtBal} onChange={e=>setDebtBal(e.target.value)} placeholder="Saldo" type="number"
-                  style={{ background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 7px",color:INK,fontSize:11,outline:"none" }} />
+                  style={{ background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 7px",color:INK,fontSize:12,outline:"none" }} />
                 <input value={debtRate} onChange={e=>setDebtRate(e.target.value)} placeholder="%" type="number"
-                  style={{ background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 7px",color:INK,fontSize:11,outline:"none" }} />
+                  style={{ background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 7px",color:INK,fontSize:12,outline:"none" }} />
                 <input value={debtPmt} onChange={e=>setDebtPmt(e.target.value)} placeholder="Cuota" type="number"
-                  style={{ background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 7px",color:INK,fontSize:11,outline:"none" }} />
+                  style={{ background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 7px",color:INK,fontSize:12,outline:"none" }} />
                 <input value={debtTarget||""} onChange={e=>setDebtTarget(e.target.value)} type="date" title="Fecha objetivo de pago"
-                  style={{ background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 7px",color:GRAY,fontSize:10,outline:"none" }} />
+                  style={{ background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 7px",color:GRAY,fontSize:12,outline:"none" }} />
                 <button onClick={()=>{ if(!debtName.trim()||!debtBal)return; onUpdate({finance:{...finance,debts:[...debts,{id:"d_"+Date.now(),name:debtName.trim(),balance:parseFloat(debtBal),rate:parseFloat(debtRate)||0,payment:parseFloat(debtPmt)||0,targetDate:debtTarget||""}]}}); setDebtName("");setDebtBal("");setDebtRate("");setDebtPmt("");setDebtTarget(""); }}
                   style={{ padding:"5px 8px",background:"#C62828",color:"#fff",border:"none",borderRadius:6,cursor:"pointer",fontWeight:700,fontSize:13 }}>+</button>
               </div>
-              <div style={{ color:GRAY,fontSize:10,marginTop:5 }}>Acreedor · Saldo · % tasa mensual · Cuota mensual · Fecha objetivo (opcional)</div>
+              <div style={{ color:GRAY,fontSize:12,marginTop:5 }}>Acreedor · Saldo · % tasa mensual · Cuota mensual · Fecha objetivo (opcional)</div>
             </div>
           </div>
 
@@ -6567,22 +6673,22 @@ function FinanzasSection({ personal, onUpdate }) {
               <span style={{ color:INK,fontWeight:700,fontSize:13 }}>Otros Pasivos</span>
               <span style={{ color:"#C62828",fontWeight:700,fontSize:13 }}>{fmtCOP(liabilities.reduce((s,l)=>s+(parseFloat(l.value)||0),0))}</span>
             </div>
-            {liabilities.length===0 && <div style={{ color:GRAY,fontSize:11,marginBottom:8 }}>Ej: impuestos pendientes, obligaciones sin cuota fija...</div>}
+            {liabilities.length===0 && <div style={{ color:GRAY,fontSize:12,marginBottom:8 }}>Ej: impuestos pendientes, obligaciones sin cuota fija...</div>}
             {liabilities.map(item=>(
               <div key={item.id} style={{ display:"flex",alignItems:"center",gap:8,marginBottom:6 }}>
-                <span style={{ flex:1,color:INK,fontSize:12 }}>{item.name}</span>
-                <span style={{ color:GRAY,fontSize:12 }}>{fmtCOP(item.value)}</span>
+                <span style={{ flex:1,color:INK,fontSize:13 }}>{item.name}</span>
+                <span style={{ color:GRAY,fontSize:13 }}>{fmtCOP(item.value)}</span>
                 <button onClick={()=>onUpdate({finance:{...finance,liabilities:liabilities.filter(l=>l.id!==item.id)}})}
                   style={{ background:"none",border:"none",color:GRAY,cursor:"pointer",fontSize:14,opacity:0.5 }}>×</button>
               </div>
             ))}
             <div style={{ display:"flex",gap:6,marginTop:8 }}>
               <input value={liabName} onChange={e=>setLiabName(e.target.value)} placeholder="Nombre..."
-                style={{ flex:1,background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 8px",color:INK,fontSize:11,outline:"none" }} />
+                style={{ flex:1,background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 8px",color:INK,fontSize:12,outline:"none" }} />
               <input value={liabVal} onChange={e=>setLiabVal(e.target.value)} placeholder="$ COP" type="number"
-                style={{ width:90,background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 8px",color:INK,fontSize:11,outline:"none" }} />
+                style={{ width:90,background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 8px",color:INK,fontSize:12,outline:"none" }} />
               <button onClick={()=>{ if(!liabName.trim()||!liabVal)return; onUpdate({finance:{...finance,liabilities:[...liabilities,{id:"l_"+Date.now(),name:liabName.trim(),value:parseFloat(liabVal)}]}}); setLiabName("");setLiabVal(""); }}
-                style={{ padding:"5px 10px",background:BLUE_GP,color:"#FFFFFF",border:"none",borderRadius:6,cursor:"pointer",fontWeight:700,fontSize:12 }}>+</button>
+                style={{ padding:"5px 10px",background:BLUE_GP,color:"#FFFFFF",border:"none",borderRadius:6,cursor:"pointer",fontWeight:700,fontSize:13 }}>+</button>
             </div>
           </div>
         </div>
@@ -6592,32 +6698,32 @@ function FinanzasSection({ personal, onUpdate }) {
       {tab==="vision" && (
         <div>
           <div style={{ display:"flex",gap:12,alignItems:"center",marginBottom:20,padding:"10px 14px",background:CARD,borderRadius:10,border:`1px solid ${BORDER}`,flexWrap:"wrap" }}>
-            <span style={{ color:GRAY,fontSize:11 }}>Meta:</span>
+            <span style={{ color:GRAY,fontSize:12 }}>Meta:</span>
             <span style={{ color:BLUE_GP,fontWeight:700 }}>$</span>
             <input value={visionUSD} onChange={e=>onUpdate({finance:{...finance,visionUSD:parseFloat(e.target.value)||250000}})} type="number"
               style={{ width:100,background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 8px",color:BLUE_GP,fontSize:13,fontWeight:700,outline:"none" }} />
             <span style={{ color:BLUE_GP,fontWeight:700 }}>USD</span>
-            <span style={{ color:GRAY,fontSize:11,marginLeft:8 }}>TRM:</span>
+            <span style={{ color:GRAY,fontSize:12,marginLeft:8 }}>TRM:</span>
             <input value={fxRate} onChange={e=>onUpdate({finance:{...finance,fxRate:parseFloat(e.target.value)||3200}})} type="number"
-              style={{ width:76,background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 8px",color:INK,fontSize:12,outline:"none" }} />
-            <span style={{ color:GRAY,fontSize:11 }}>COP/USD</span>
+              style={{ width:76,background:"#F3F6FB",border:`1px solid ${BORDER}`,borderRadius:6,padding:"5px 8px",color:INK,fontSize:13,outline:"none" }} />
+            <span style={{ color:GRAY,fontSize:12 }}>COP/USD</span>
           </div>
 
           <div style={{ background:"#F6F9FD", borderRadius:14, padding:"22px 24px", border:`1px solid ${BLUE_GP}33`, borderLeft:`4px solid ${BLUE_GP}`, marginBottom:20 }}>
             <div style={{ display:"flex", alignItems:"flex-start", gap:24, marginBottom:20, flexWrap:"wrap" }}>
               <div>
-                <div style={{ color:BLUE_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:6 }}>Posición actual</div>
+                <div style={{ color:BLUE_DIM, fontSize:11, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:6 }}>Posición actual</div>
                 <div style={{ color:INK, fontWeight:900, fontSize:36, lineHeight:1, letterSpacing:-1 }}>{fmtUSD(netWorthUSD)}</div>
-                <div style={{ color:GRAY, fontSize:12, marginTop:5 }}>de <span style={{ color:BLUE_GP, fontWeight:700 }}>{fmtUSD(visionUSD)} USD</span> objetivo</div>
+                <div style={{ color:GRAY, fontSize:13, marginTop:5 }}>de <span style={{ color:BLUE_GP, fontWeight:700 }}>{fmtUSD(visionUSD)} USD</span> objetivo</div>
               </div>
               {avgNetUSD>0 && monthsToGoal && (
                 <div style={{ background:"rgba(20,108,58,0.08)", borderRadius:10, padding:"12px 16px", border:`1px solid #146C3A33`, flex:1, minWidth:220 }}>
-                  <div style={{ color:GRAY, fontSize:9, fontWeight:700, letterSpacing:2, textTransform:"uppercase", marginBottom:6 }}>A tu ritmo actual</div>
+                  <div style={{ color:GRAY, fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", marginBottom:6 }}>A tu ritmo actual</div>
                   <div style={{ color:"#146C3A", fontWeight:900, fontSize:20, lineHeight:1 }}>{monthsToGoal} meses</div>
-                  <div style={{ color:GRAY, fontSize:10, marginTop:5 }}>
+                  <div style={{ color:GRAY, fontSize:12, marginTop:5 }}>
                     Ahorro neto: <span style={{ color:"#146C3A", fontWeight:700 }}>{fmtCOP(avgNet)}/mes</span>
                   </div>
-                  <div style={{ color:GRAY, fontSize:10, marginTop:2 }}>
+                  <div style={{ color:GRAY, fontSize:12, marginTop:2 }}>
                     CC {fmtCOP(avgCC)} · Gastos {fmtCOP(avgG)}
                   </div>
                 </div>
@@ -6626,14 +6732,50 @@ function FinanzasSection({ personal, onUpdate }) {
             <div style={{ background:"rgba(27,42,74,0.04)", borderRadius:8, height:10, overflow:"hidden", marginBottom:6 }}>
               <div style={{ height:"100%", borderRadius:8, background:`linear-gradient(90deg,${BLUE_DIM},${BLUE_GP},#146C3A)`, width:`${pctProgress}%`, transition:"width 0.6s ease" }} />
             </div>
-            <div style={{ display:"flex", justifyContent:"space-between", color:GRAY, fontSize:10 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", color:GRAY, fontSize:12 }}>
               <span>$0</span>
               <span style={{ color:BLUE_GP, fontWeight:700 }}>{pctProgress.toFixed(1)}% completado</span>
               <span>{fmtUSD(visionUSD)}</span>
             </div>
             {!avgNetUSD && (
-              <div style={{ color:GRAY, fontSize:11, marginTop:12, padding:"10px 14px", background:"#F3F6FB", borderRadius:8 }}>
+              <div style={{ color:GRAY, fontSize:12, marginTop:12, padding:"10px 14px", background:"#F3F6FB", borderRadius:8 }}>
                 Registrá ingresos y gastos en Mensual para ver la proyección real
+              </div>
+            )}
+          </div>
+
+          {/* Conexión con la meta mensual de Finanzas → Mensual y con Métricas Personales (2026-09-30) */}
+          <div style={{ background:"#FFFFFF", borderRadius:14, padding:"18px 20px", border:`1px solid ${BLUE_GP}44`, marginBottom:20 }}>
+            <div style={{ color:BLUE_GP, fontSize:12, fontWeight:700, letterSpacing:1.5, textTransform:"uppercase", marginBottom:10 }}>🔗 Con tu meta mensual de Finanzas</div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:12 }}>
+              <div>
+                <div style={{ color:INK, fontSize:13, marginBottom:4 }}>Si facturás</div>
+                <div style={{ color:BLUE_GP, fontWeight:900, fontSize:22 }}>{fmtCOP(scTarget)}<span style={{ fontSize:13 }}>/mes</span></div>
+                <div style={{ color:INK, fontSize:13, marginTop:4 }}>y gastás {fmtCOP(avgG)}/mes (promedio real) → te quedan <b style={{ color:metaNetCOP>0?"#146C3A":"#C62828" }}>{fmtCOP(metaNetCOP)}/mes</b></div>
+              </div>
+              <div>
+                <div style={{ color:INK, fontSize:13, marginBottom:4 }}>Llegás a {fmtUSD(visionUSD)} USD en</div>
+                <div style={{ color:"#146C3A", fontWeight:900, fontSize:22 }}>
+                  {monthsToGoalAtTarget===0 ? "¡Ya llegaste!" : monthsToGoalAtTarget ? `${monthsToGoalAtTarget} meses` : "—"}
+                </div>
+                {monthsToGoalAtTarget>0 && <div style={{ color:INK, fontSize:13, marginTop:4 }}>≈ {dateAt(monthsToGoalAtTarget)}{monthsToGoal ? ` · a tu ritmo actual: ${monthsToGoal} meses` : ""}</div>}
+                {monthsToGoalAtTarget===null && <div style={{ color:"#C62828", fontSize:13, marginTop:4 }}>Con esta meta los gastos se comen todo el ingreso.</div>}
+              </div>
+              <div>
+                <div style={{ color:INK, fontSize:13, marginBottom:4 }}>Para sostenerla necesitás</div>
+                <div style={{ color:INK, fontWeight:900, fontSize:22 }}>{Math.ceil(cascada.clientesRequeridos||0)} <span style={{ fontSize:13 }}>clientes</span></div>
+                <div style={{ color:INK, fontSize:13, marginTop:4 }}>
+                  ≈ {Math.round(cascada.mensajesPorDia||0)} mensajes/día · {(cascada.horasPorDia||0).toFixed(1)} h/día{" "}
+                  <button onClick={()=>setTab("metricas_personales")} style={{ background:"none", border:"none", padding:0, color:BLUE_GP, fontWeight:700, fontSize:13, cursor:"pointer", textDecoration:"underline" }}>ver Métricas</button>
+                </div>
+              </div>
+            </div>
+            {gap>0 && (
+              <div style={{ marginTop:12, paddingTop:10, borderTop:`1px solid ${BORDER}`, color:INK, fontSize:13 }}>
+                Meta mensual necesaria para llegar en 24 meses: <b>{fmtCOP(targetFor(24))}</b> · en 36 meses: <b>{fmtCOP(targetFor(36))}</b>
+                {scTarget>=targetFor(24) ? <span style={{ color:"#146C3A", fontWeight:700 }}> · tu meta alcanza para 24 meses ✓</span>
+                  : scTarget>=targetFor(36) ? <span style={{ color:"#146C3A", fontWeight:700 }}> · tu meta alcanza para 36 meses ✓</span>
+                  : <span style={{ color:"#C62828", fontWeight:700 }}> · tu meta no alcanza ni para 36 meses</span>}
               </div>
             )}
           </div>
@@ -6654,17 +6796,17 @@ function FinanzasSection({ personal, onUpdate }) {
                 color: gap<=0?"#146C3A":BLUE_GP },
             ].map(({overline,sub,val,detail,color})=>(
               <div key={overline} style={{ background:"#F6F9FD", borderRadius:12, padding:"16px", border:`1px solid ${BORDER}`, borderTop:`2px solid ${color}55` }}>
-                <div style={{ color:color, fontSize:9, fontWeight:700, letterSpacing:2, textTransform:"uppercase", marginBottom:6 }}>{overline}</div>
+                <div style={{ color:color, fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", marginBottom:6 }}>{overline}</div>
                 <div style={{ color, fontWeight:900, fontSize:16, lineHeight:1.2, marginBottom:4 }}>{val}</div>
-                {sub && <div style={{ color:GRAY, fontSize:10, marginBottom:2 }}>{sub}</div>}
-                {detail && <div style={{ color:GRAY, fontSize:9 }}>{detail}</div>}
+                {sub && <div style={{ color:GRAY, fontSize:12, marginBottom:2 }}>{sub}</div>}
+                {detail && <div style={{ color:GRAY, fontSize:11 }}>{detail}</div>}
               </div>
             ))}
           </div>
 
           <div style={{ background:CARD,borderRadius:12,padding:16,border:`1px solid ${BORDER}` }}>
             <div style={{ color:INK,fontWeight:700,fontSize:13,marginBottom:4 }}>Proyección 24 meses</div>
-            <div style={{ color:GRAY,fontSize:10,marginBottom:14 }}>
+            <div style={{ color:GRAY,fontSize:12,marginBottom:14 }}>
               Basado en ahorro neto de <span style={{ color:"#146C3A" }}>{fmtUSD(avgNetUSD)}/mes</span>
               {recent.length>0&&` · promedio últimos ${recent.length} meses con datos`}
             </div>
@@ -6682,12 +6824,12 @@ function FinanzasSection({ personal, onUpdate }) {
                     <div style={{ height:90,width:18,background:"#E7EDF6",borderRadius:4,overflow:"hidden",position:"relative" }}>
                       <div style={{ position:"absolute",bottom:0,width:"100%",borderRadius:4,background:hit?"#146C3A":i<11?BLUE_DIM:BLUE_GP,height:`${pct}%` }} />
                     </div>
-                    <span style={{ color:GRAY,fontSize:8,marginTop:3,textAlign:"center",lineHeight:1.2 }}>{label}</span>
+                    <span style={{ color:GRAY,fontSize:10,marginTop:3,textAlign:"center",lineHeight:1.2 }}>{label}</span>
                   </div>
                 );
               })}
             </div>
-            <div style={{ display:"flex",gap:14,marginTop:10,fontSize:10,color:GRAY }}>
+            <div style={{ display:"flex",gap:14,marginTop:10,fontSize:12,color:GRAY }}>
               <span style={{display:"flex",gap:4,alignItems:"center"}}><span style={{width:10,height:10,background:BLUE_DIM,borderRadius:2,display:"inline-block"}}/>Año 1</span>
               <span style={{display:"flex",gap:4,alignItems:"center"}}><span style={{width:10,height:10,background:BLUE_GP,borderRadius:2,display:"inline-block"}}/>Año 2</span>
               <span style={{display:"flex",gap:4,alignItems:"center"}}><span style={{width:10,height:10,background:"#146C3A",borderRadius:2,display:"inline-block"}}/>Meta</span>
@@ -6704,22 +6846,8 @@ function FinanzasSection({ personal, onUpdate }) {
         const updateCalc   = (patch) => onUpdate({ finance: { ...finance, metricasPersonales: { ...mp, calculadora: { ...calc, ...patch } } } });
         const updateOculta = (key, patch) => onUpdate({ finance: { ...finance, metricasPersonales: { ...mp, seisOcultas: { ...seis, [key]: { ...(seis[key]||{}), ...patch } } } } });
 
-        const metaMonto    = parseFloat(calc.metaMonto)    || 0;
-        const valorCliente = parseFloat(calc.valorCliente) || 0;
-        const tc  = (parseFloat(calc.tasaCierre)  || 0) / 100;
-        const sur = (parseFloat(calc.tasaShowUp)  || 0) / 100;
-        const ta  = (parseFloat(calc.tasaAgenda)  || 0) / 100;
-        const diasVac = parseFloat(calc.diasVacaciones) || 0;
-        const diasHabiles = Math.max(0, 365 - 104 - diasVac);
-        const mensajesPorTanda = parseFloat(calc.mensajesPorTanda) || 10;
-        const minutosPorTanda  = parseFloat(calc.minutosPorTanda)  || 20;
-
-        const clientesRequeridos = valorCliente>0 ? metaMonto/valorCliente : 0;
-        const llamadasRequeridas = tc>0  ? clientesRequeridos/tc  : 0;
-        const llamadasNecesarias = sur>0 ? llamadasRequeridas/sur : 0;
-        const mensajesEnPeriodo  = ta>0  ? llamadasNecesarias/ta  : 0;
-        const mensajesPorDia     = diasHabiles>0 ? mensajesEnPeriodo/diasHabiles : 0;
-        const horasPorDia        = mensajesPorTanda>0 ? (mensajesPorDia/mensajesPorTanda)*(minutosPorTanda/60) : 0;
+        // Cálculo compartido con Mensual y Visión $250K — ver `cascada` al inicio de FinanzasSection
+        const { metaMonto, valorCliente, diasPeriodo, clientesRequeridos, llamadasRequeridas, llamadasNecesarias, mensajesEnPeriodo, mensajesPorDia, horasPorDia } = cascada;
 
         const fmt0 = (v) => Number.isFinite(v) ? Math.round(v).toLocaleString("en-US") : "—";
         const fmt1 = (v) => Number.isFinite(v) ? v.toFixed(1) : "—";
@@ -6735,54 +6863,68 @@ function FinanzasSection({ personal, onUpdate }) {
 
         return (
           <div>
-            <div style={{ color:GRAY, fontSize:12, marginBottom:18, maxWidth:640 }}>
+            <div style={{ color:GRAY, fontSize:13, marginBottom:18, maxWidth:640 }}>
               Metodología de ingeniería inversa de metas: partiendo de cuánto querés facturar, calcula cuántos mensajes/llamadas necesitás por día para lograrlo — más el framework "Las 6 Ocultas" para sostener la meta en el tiempo. Fuente: Ramiro — "Naturaleza de las Metas".
             </div>
 
             <div style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:12, padding:18, marginBottom:20 }}>
-              <div style={{ color:BLUE_GP, fontWeight:700, fontSize:13, marginBottom:14 }}>Calculadora de Ingeniería Inversa</div>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12 }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, flexWrap:"wrap", marginBottom:14 }}>
+                <div style={{ color:BLUE_GP, fontWeight:700, fontSize:14 }}>Calculadora de Ingeniería Inversa</div>
+                <label style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer", color:INK, fontSize:13, fontWeight:600 }}>
+                  <input type="checkbox" checked={calcLinked} onChange={e=>updateCalc({linkFinanzas:e.target.checked})} />
+                  Conectada a Finanzas → Mensual
+                </label>
+              </div>
+              {calcLinked && (
+                <div style={{ background:"#E7EDF6", border:`1px solid ${BLUE_GP}44`, borderRadius:8, padding:"10px 12px", marginBottom:12, color:INK, fontSize:13, lineHeight:1.6 }}>
+                  🔗 Meta <b>{fmtCOP(scTarget)}/mes</b> · valor por cliente <b>{fmtCOP(scRevPC)}</b> (fee + canal) · Tasa de Cierre <b>{scTC}%</b> (1 de cada {salesConfig.meetingsPerClose||3} reuniones).
+                  {" "}Estos 3 datos se cambian en <button onClick={()=>setTab("mensual")} style={{ background:"none", border:"none", padding:0, color:BLUE_GP, fontWeight:700, fontSize:13, cursor:"pointer", textDecoration:"underline" }}>Mensual → Parámetros</button>.
+                </div>
+              )}
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))", gap:12 }}>
+                {!calcLinked && <>
                 <Input  label="Meta ($ a facturar)" value={calc.metaMonto} onChange={v=>updateCalc({metaMonto:v})} type="number" placeholder="ej. 100000" />
                 <Select label="Período de la meta" value={calc.metaPeriodo||"año"} onChange={v=>updateCalc({metaPeriodo:v})}
                   options={[{value:"año",label:"En un año"},{value:"mes",label:"En un mes"},{value:"trimestre",label:"En un trimestre"}]} />
                 <Input label="Valor promedio del cliente ($)"    value={calc.valorCliente}    onChange={v=>updateCalc({valorCliente:v})}    type="number" />
                 <Input label="Tasa de Cierre — TC (%)"           value={calc.tasaCierre}       onChange={v=>updateCalc({tasaCierre:v})}      type="number" />
+                </>}
                 <Input label="Tasa de Show Up — SUR (%)"         value={calc.tasaShowUp}       onChange={v=>updateCalc({tasaShowUp:v})}       type="number" />
                 <Input label="Tasa de Agenda — TA (%)"           value={calc.tasaAgenda}       onChange={v=>updateCalc({tasaAgenda:v})}       type="number" />
                 <Input label="Días de vacaciones/feriados al año" value={calc.diasVacaciones}  onChange={v=>updateCalc({diasVacaciones:v})}  type="number" />
                 <Input label="Mensajes por tanda"                value={calc.mensajesPorTanda} onChange={v=>updateCalc({mensajesPorTanda:v})} type="number" />
                 <Input label="Minutos por tanda"                 value={calc.minutosPorTanda}  onChange={v=>updateCalc({minutosPorTanda:v})}  type="number" />
               </div>
-              <div style={{ color:GRAY, fontSize:10, lineHeight:1.5, marginTop:8, fontStyle:"italic" }}>
+              <div style={{ color:GRAY, fontSize:12, lineHeight:1.5, marginTop:8, fontStyle:"italic" }}>
                 Una "tanda" es una ronda de mensajes seguidos (ej. 10 mensajes bien elaborados en 20 minutos). Estos 2 campos solo se usan para convertir "Mensajes/día" en "Horas/día en prospección" — ajustalos a tu ritmo real de escritura.
               </div>
 
-              <div style={{ color:GRAY, fontSize:9, fontWeight:700, letterSpacing:2, textTransform:"uppercase", margin:"18px 0 10px" }}>Resultado — cascada de la meta a la acción diaria</div>
+              <div style={{ color:GRAY, fontSize:11, fontWeight:700, letterSpacing:2, textTransform:"uppercase", margin:"18px 0 10px" }}>Resultado — cascada de la meta a la acción diaria</div>
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))", gap:10 }}>
                 {[
-                  { label:"Clientes requeridos",                   val: fmt0(clientesRequeridos) },
+                  { label:"Clientes requeridos",                   val: fmt0(Math.ceil(clientesRequeridos)) },
                   { label:"Llamadas efectivas requeridas (÷TC)",   val: fmt0(llamadasRequeridas) },
                   { label:"Llamadas Agendadas necesarias (÷SUR)",  val: fmt0(llamadasNecesarias) },
                   { label:"Mensajes en el período (÷TA)",          val: fmt0(mensajesEnPeriodo) },
-                  { label:"Días hábiles/año",                      val: fmt0(diasHabiles), dim:true },
+                  { label:"Días hábiles del período",              val: fmt0(diasPeriodo), dim:true },
                   { label:"Mensajes/día",                          val: fmt0(mensajesPorDia), highlight:true },
                   { label:"Horas/día en prospección",              val: fmt1(horasPorDia)+"h", highlight:true },
                 ].map(({label,val,highlight,dim})=>(
                   <div key={label} style={{ background:"#F6F9FD", border:`1px solid ${highlight?BLUE_DIM:BORDER}`, borderRadius:10, padding:"12px 14px" }}>
-                    <div style={{ color:GRAY, fontSize:9, fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:5 }}>{label}</div>
+                    <div style={{ color:GRAY, fontSize:11, fontWeight:700, letterSpacing:1, textTransform:"uppercase", marginBottom:5 }}>{label}</div>
                     <div style={{ color: highlight?BLUE_GP:(dim?GRAY:INK), fontWeight:800, fontSize:18 }}>{val}</div>
                   </div>
                 ))}
               </div>
               {(!metaMonto || !valorCliente) && (
-                <div style={{ color:GRAY, fontSize:11, marginTop:12, padding:"10px 14px", background:"#F3F6FB", borderRadius:8 }}>
+                <div style={{ color:GRAY, fontSize:12, marginTop:12, padding:"10px 14px", background:"#F3F6FB", borderRadius:8 }}>
                   Completá la meta y el valor de cliente para ver el resultado.
                 </div>
               )}
 
               <div style={{ marginTop:14, padding:"12px 14px", background:"#F3F6FB", border:`1px solid ${BORDER}`, borderRadius:8 }}>
-                <div style={{ color:GRAY, fontSize:9, fontWeight:700, letterSpacing:1.5, textTransform:"uppercase", marginBottom:8 }}>Cómo se lee la cascada</div>
-                <div style={{ color:GRAY, fontSize:11, lineHeight:1.7 }}>
+                <div style={{ color:GRAY, fontSize:11, fontWeight:700, letterSpacing:1.5, textTransform:"uppercase", marginBottom:8 }}>Cómo se lee la cascada</div>
+                <div style={{ color:GRAY, fontSize:12, lineHeight:1.7 }}>
                   <b style={{ color:INK }}>Clientes requeridos</b> = Meta ÷ Valor de cliente.{" "}
                   <b style={{ color:INK }}>Llamadas efectivas requeridas</b> = clientes que necesitás dividido tu Tasa de Cierre — son las llamadas que sí se presentan y con las que cerrás.{" "}
                   <b style={{ color:INK }}>Llamadas Agendadas necesarias</b> = esas llamadas efectivas divididas tu Show Up Rate — es la cantidad que tenés que lograr que la gente agende (mismo campo "Llamadas Agendadas" que ves en Proyección → Resumen Anual/Mensual), sabiendo que no todas se van a presentar.{" "}
@@ -6792,16 +6934,16 @@ function FinanzasSection({ personal, onUpdate }) {
             </div>
 
             <div style={{ color:BLUE_GP, fontWeight:700, fontSize:13, marginBottom:4 }}>Las 6 Ocultas — framework para sostener la meta</div>
-            <div style={{ color:GRAY, fontSize:11, marginBottom:14 }}>Definir una meta no alcanza por sí solo — responder estas 6 preguntas ayuda a entender su verdadera naturaleza.</div>
+            <div style={{ color:GRAY, fontSize:12, marginBottom:14 }}>Definir una meta no alcanza por sí solo — responder estas 6 preguntas ayuda a entender su verdadera naturaleza.</div>
             <div style={{ display:"grid", gap:10 }}>
               {OCULTAS.map(({key,label,sub}) => {
                 const o = seis[key] || { ref:"", notas:"" };
                 return (
                   <div key={key} style={{ background:CARD, border:`1px solid ${BORDER}`, borderRadius:10, padding:14 }}>
-                    <div style={{ color:INK, fontWeight:700, fontSize:12, marginBottom:2 }}>{label} <span style={{ color:GRAY, fontWeight:400, fontSize:11 }}>· {sub}</span></div>
-                    <div style={{ color:GRAY, fontSize:11, lineHeight:1.5, marginTop:6, marginBottom:8 }}>{o.ref}</div>
+                    <div style={{ color:INK, fontWeight:700, fontSize:13, marginBottom:2 }}>{label} <span style={{ color:GRAY, fontWeight:400, fontSize:12 }}>· {sub}</span></div>
+                    <div style={{ color:GRAY, fontSize:12, lineHeight:1.5, marginTop:6, marginBottom:8 }}>{o.ref}</div>
                     <textarea value={o.notas||""} onChange={e=>updateOculta(key,{notas:e.target.value})} placeholder="Notas propias sobre esta pregunta..."
-                      style={{ width:"100%", minHeight:44, background:"#F3F6FB", border:`1px solid ${BORDER}`, borderRadius:8, padding:"8px 10px", color:INK, fontSize:12, outline:"none", boxSizing:"border-box", resize:"vertical", fontFamily:"inherit" }} />
+                      style={{ width:"100%", minHeight:44, background:"#F3F6FB", border:`1px solid ${BORDER}`, borderRadius:8, padding:"8px 10px", color:INK, fontSize:13, outline:"none", boxSizing:"border-box", resize:"vertical", fontFamily:"inherit" }} />
                   </div>
                 );
               })}
