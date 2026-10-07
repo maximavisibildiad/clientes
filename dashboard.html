@@ -168,6 +168,50 @@
       box-shadow: 0 4px 18px rgba(41,102,165,0.38) !important;
       transform: translateY(-1px) !important;
     }
+
+    /* ── Bento animado (BENTO_2026_10_07) — Inicio y tarjetas de Clientes ──
+       Las animaciones usan las propiedades translate/scale (no transform) para no pisar los hover existentes. */
+    @keyframes bentoIn {
+      from { opacity: 0; translate: 0 16px; scale: 0.98; }
+      to   { opacity: 1; translate: 0 0;    scale: 1; }
+    }
+    @keyframes barGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    .gp-bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+    .gp-bento-card {
+      position: relative;
+      background: #FFFFFF;
+      border: 1px solid #D5DEEB;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 2px 12px rgba(27,42,74,0.09);
+      animation: bentoIn 0.55s cubic-bezier(.2,.8,.2,1) both;
+      animation-delay: calc(var(--i, 0) * 70ms);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      min-width: 0;
+    }
+    .gp-bento-card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(27,42,74,0.16); border-color: rgba(41,102,165,0.45); }
+    .gp-bento-card.clickable { cursor: pointer; }
+    .gp-bento-hero {
+      background: linear-gradient(155deg, #1B2A4A 0%, #1F355C 55%, #234272 100%);
+      border-color: #1B2A4A;
+      color: #FFFFFF;
+      overflow: hidden;
+    }
+    .gp-bento-hero::after {
+      content: ""; position: absolute; right: -60px; top: -60px; width: 220px; height: 220px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(111,163,216,0.22) 0%, transparent 70%); pointer-events: none;
+    }
+    .gp-ring-fill { transition: stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1); }
+    .gp-bar-fill { transform-origin: left center; animation: barGrow 0.9s cubic-bezier(.2,.8,.2,1) both; }
+    .gp-rise { animation: bentoIn 0.5s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 60ms); }
+    .s-4 { grid-column: span 4; } .s-5 { grid-column: span 5; } .s-7 { grid-column: span 7; } .s-12 { grid-column: span 12; }
+    .r-2 { grid-row: span 2; }
+    @media (max-width: 1100px) { .s-4 { grid-column: span 6; } .s-5, .s-7 { grid-column: span 12; } .r-2 { grid-row: span 1; } }
+    @media (max-width: 700px)  { .gp-bento > * { grid-column: span 12 !important; } }
+    @media (prefers-reduced-motion: reduce) {
+      .gp-bento-card, .gp-rise, .gp-bar-fill { animation: none !important; }
+      .gp-ring-fill { transition: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -232,7 +276,7 @@ function storageSetTs(ts) {
   try { localStorage.setItem(STORAGE_KEY + "_ts", ts.toString()); } catch(_) {}
 }
 
-// ─── GEMA TASKS (240 activas, 2026-09-28: +n:313-314 proyección BASE, n:17-19 deprecadas — antes 241: 202 de siempre + n:274-276 restauradas + 23 [USA] n:277-299 + 13 n:300-312 (4 [USA] + 9 de todos los mercados) agregadas 2026-09-25 — 65 archivadas + 6 consolidadas en 4 + 3 repuestas [pipeline/tags/pixel], 2026-07-31) ──
+// ─── GEMA TASKS (267 activas, 2026-10-03: +n:345-351 fase Producción del Agente de IA, −n:334 deprecada; antes 261, 2026-10-01: +n:340-344 proceso obligatorio de la Oferta; 231 Colombia, 247 EE.UU.; antes 256, +n:339 recordatorios SMS [USA]; −9 duplicadas deprecadas; 227 para Colombia, 242 para EE.UU. — 11 de WhatsApp/Colombia marcadas market:"CO" (n:21, 60, 80, 110-115, 234, 273) — antes 264, 2026-09-30: +n:315-338 panorama/reorden de fases — 236 para Colombia, 261 para EE.UU.; antes 240, 2026-09-28: +n:313-314 proyección BASE, n:17-19 deprecadas — antes 241: 202 de siempre + n:274-276 restauradas + 23 [USA] n:277-299 + 13 n:300-312 (4 [USA] + 9 de todos los mercados) agregadas 2026-09-25 — 65 archivadas + 6 consolidadas en 4 + 3 repuestas [pipeline/tags/pixel], 2026-07-31) ──
 // n:262-264 = [GP] agregadas 2026-07-22, ver data/changelog.md — cubren el hueco de
 // clientes SIN equipo comercial propio (dueño/socio es su propio vendedor), caso
 // origen: Alexander Odontólogo.
@@ -255,9 +299,8 @@ const GEMA_TASKS = [
   { n:15, week:"Semana 1", area:"Comercial", title:"[TUYO] Pedir requerimientos de arranque (data/alcance_primeras_4_semanas_base.md, Sección 1 — seguimiento personal si n:13 no tuvo respuesta).", owner:"JP" },
   { n:265, week:"Semana 1", area:"Administrativo", title:"[GP] Pedir Información del Cliente — datos de contacto, NIT, ciudad (data/informacion_cliente_base.md).", owner:"JP" },
   { n:20, week:"Semana 1", area:"Administrativo", title:"[GEMA V4] Seteo de Facturación Mensual: Definición del día de corte para conciliación.", owner:"COO" },
-  { n:21, week:"Semana 1", area:"Comercial", title:"[TUYO] Abrir Whatsapp web del cliente (Auditar forma de atender, falencias y objeciones).", owner:"JP" },
+  { n:21, week:"Semana 1", area:"Comercial", title:"[TUYO] Abrir Whatsapp web del cliente (Auditar forma de atender, falencias y objeciones).", owner:"JP", market:"CO" },
   { n:28, week:"Semana 1", area:"Administrativo", title:"[TUYO] Creacion de empresa en drive con todas las carpetas.", owner:"JP" },
-  { n:30, week:"Semana 1", area:"Administrativo", title:"[GEMA V4] Creación de carpeta raíz en Drive con permisos restringidos.", owner:"COO" },
   { n:34, week:"Semana 1", area:"Administrativo", title:"[REVISAR 2026-07-31] [GEMA V4] Asignación de líderes: Tráfico, Comercial y Estrategia.", owner:"COO" },
   { n:35, week:"Semana 1", area:"Administrativo", title:"[REVISAR 2026-07-31] [GEMA V4] Apertura de canal oficial de comunicación (WhatsApp/Slack) con el founder.", owner:"COO" },
   { n:38, week:"Semana 1", area:"Administrativo", title:"[GEMA V4] Presentación de metas financieras y aprobación de presupuesto con el cliente.", owner:"COO" },
@@ -273,8 +316,7 @@ const GEMA_TASKS = [
   { n:53, week:"Semana 1", area:"Tráfico y Sistemas", title:"[GEMA V4] Auditoría del Meta Business Manager (BM) principal del cliente.", owner:"CAIO" },
   { n:54, week:"Semana 1", area:"Tráfico y Sistemas", title:"[TUYO] Verificar negocio en Facebook.", owner:"JP" },
   { n:55, week:"Semana 1", area:"Administrativo", title:"[REVISAR 2026-07-31] [TUYO] Verificar que hayan enviando Rut y camara y comercio (Subir documentos).", owner:"JP" },
-  { n:56, week:"Semana 1", area:"Administrativo", title:"[GEMA V4] Verificación comercial del negocio en Meta (Documentos legales).", owner:"COO" },
-  { n:60, week:"Semana 1", area:"Tráfico y Sistemas", title:"[REVISAR 2026-07-31] [CONSOLIDADA — antes n:60-63] Conectar WhatsApp Business API: activar caso de uso + vincular número oficial + generar token de acceso permanente + probar envío vía Graph API. Pendiente: confirmar si esto es manual o ya lo hace GHL automáticamente al conectar el número (S1-01).", owner:"CAIO" },
+  { n:60, week:"Semana 1", area:"Tráfico y Sistemas", title:"[REVISAR 2026-07-31] [CONSOLIDADA — antes n:60-63] Conectar WhatsApp Business API: activar caso de uso + vincular número oficial + generar token de acceso permanente + probar envío vía Graph API. Pendiente: confirmar si esto es manual o ya lo hace GHL automáticamente al conectar el número (S1-01).", owner:"CAIO", market:"CO" },
   { n:67, week:"Semana 1", area:"Tráfico y Sistemas", title:"[TUYO] Crear Fan Page FB con: Nombre, Nombre de usuario, Descripción, Categorías, Web.", owner:"JP" },
   { n:68, week:"Semana 1", area:"Tráfico y Sistemas", title:"[REVISAR 2026-07-31] [TUYO] Dar administracion de fan page a Diseño y comercial.", owner:"JP" },
   { n:69, week:"Semana 1", area:"Tráfico y Sistemas", title:"[TUYO] Conectar Whatsapp a fanpage.", owner:"JP" },
@@ -287,7 +329,7 @@ const GEMA_TASKS = [
   { n:76, week:"Semana 1", area:"Tráfico y Sistemas", title:"[TUYO] Conectar whatsapp como contacto en instagram y en fan page.", owner:"JP" },
   { n:77, week:"Semana 1", area:"Tráfico y Sistemas", title:"[TUYO] crear google my business: con fotos reales, descripción, categoría, maps, web.", owner:"JP" },
   { n:79, week:"Semana 1", area:"Tráfico y Sistemas", title:"[TUYO] colocar el numero de celular principal en el excel accesos rr.ss.", owner:"JP" },
-  { n:80, week:"Semana 1", area:"Comercial", title:"[TUYO] verificar 2da linea de atencion de whatsapp para evitar baneos.", owner:"JP" },
+  { n:80, week:"Semana 1", area:"Comercial", title:"[TUYO] verificar 2da linea de atencion de whatsapp para evitar baneos.", owner:"JP", market:"CO" },
   { n:82, week:"Semana 1", area:"Administrativo", title:"[TUYO] Guardar accesos en la app de accesos.", owner:"JP" },
   { n:83, week:"Semana 2", area:"Estrategia", title:"[TUYO] Reunion creacion oferta irresistible.", owner:"JP" },
   { n:84, week:"Semana 2", area:"Estrategia", title:"[GEMA V4] Auditoría de la oferta B2C basada en el Diagnóstico Comercial.", owner:"JP" },
@@ -296,9 +338,6 @@ const GEMA_TASKS = [
   { n:90, week:"Semana 2", area:"Estrategia", title:"[TUYO] Programar grabacion de VSL.", owner:"JP" },
   { n:275, week:"Semana 2", area:"Estrategia", title:"[GP] Producir el ISL/VSL real de cada línea o categoría con el system prompt del Director de Arte y cargarlo y probarlo en WF_NUTRICION_LINEA — para los anuncios y para el proceso interno del bot (ver TAREA S1-07B, proceso_0_servicios.md).", owner:"CAIO" },
   { n:267, week:"Semana 2", area:"Estrategia", title:"[GP] Producir mínimo 1 imagen por línea de negocio para lanzar el MVP — el MVP sale con imágenes como ads primero, mientras se gestiona la grabación y edición del video para el Full Launch (agregado 2026-07-30).", owner:"JP" },
-  { n:91, week:"Semana 2", area:"Estrategia", title:"[REVISAR 2026-07-31] [GEMA V4] Redacción de Guion VSL (Hook, Contexto, Mecanismo, Filtro).", owner:"JP" },
-  { n:92, week:"Semana 2", area:"Estrategia", title:"[GEMA V4] Redacción de 5 Guiones UGC (9:16) con requerimientos de B-roll.", owner:"JP" },
-  { n:93, week:"Semana 2", area:"Estrategia", title:"[REVISAR 2026-07-31] [GEMA V4] Aprobación interna de guiones por Dirección Comercial.", owner:"JP" },
   { n:94, week:"Semana 2", area:"Comercial", title:"[GEMA V4] Envío de guiones al founder con tutorial de grabación.", owner:"AM" },
   { n:95, week:"Semana 2", area:"Comercial", title:"[GEMA V4] Seguimiento agresivo de grabación (Recordatorio 48h).", owner:"AM" },
   { n:96, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GEMA V4] Recepción y auditoría de calidad de videos crudos.", owner:"Media Buyer" },
@@ -310,17 +349,16 @@ const GEMA_TASKS = [
   { n:102, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] hacer entrega de los cometarios al diseñador y colocarlos en el excel.", owner:"JP" },
   { n:103, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GEMA V4] Aprobación final del paquete creativo para Tráfico.", owner:"JP" },
   { n:104, week:"Semana 1", area:"Comercial", title:"[TUYO] crear crm y colocar los accesos en el excel accesos rr.ss. (movido de Semana 2 a Semana 1, 2026-07-30 — la creación del CRM arranca desde el diagnóstico, no después).", owner:"JP" },
-  { n:107, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] Conectar WhatsApp Api al CRM.", owner:"JP" },
   { n:108, week:"Semana 2", area:"Tráfico y Sistemas", title:"[REVISAR 2026-07-31] [TUYO] conectar facebook al crm.", owner:"JP" },
   { n:109, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] conectar instagram al crm.", owner:"JP" },
   { n:271, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GP] Crear pipeline en GHL con las etapas exactas de 01_FLUJO_CRM.md del cliente (mapeo del SOP maestro de 11 stages) — repone la acción real que n:105/106 describían mal (Kommo, ver TAREA S1-02, proceso_0_servicios.md). Añadida 2026-07-31 al detectar el hueco tras archivar.", owner:"CAIO" },
   { n:272, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GP] Configurar tags en GHL (fuente, servicio, temperatura, calificación, pérdida) y documentarlos en 04_Sistema_GHL/tags.md del cliente (ver TAREA S1-03, proceso_0_servicios.md). Añadida 2026-07-31.", owner:"CAIO" },
-  { n:110, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] Revisar el perfil de Whatsapp (Foto, Descripcion, Mapa, Web, Apagar bienvenida).", owner:"JP" },
-  { n:111, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] configurar whatsapp/ horarios.", owner:"JP" },
-  { n:112, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] configurar whatsapp/ inf.", owner:"JP" },
-  { n:113, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] configurar whatsapp/ direccion.", owner:"JP" },
-  { n:114, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] configurar whatsapp/ descripcion de la empresa.", owner:"JP" },
-  { n:115, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] configurar whatsapp/ vincular red social.", owner:"JP" },
+  { n:110, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] Revisar el perfil de Whatsapp (Foto, Descripcion, Mapa, Web, Apagar bienvenida).", owner:"JP", market:"CO" },
+  { n:111, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] configurar whatsapp/ horarios.", owner:"JP", market:"CO" },
+  { n:112, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] configurar whatsapp/ inf.", owner:"JP", market:"CO" },
+  { n:113, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] configurar whatsapp/ direccion.", owner:"JP", market:"CO" },
+  { n:114, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] configurar whatsapp/ descripcion de la empresa.", owner:"JP", market:"CO" },
+  { n:115, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] configurar whatsapp/ vincular red social.", owner:"JP", market:"CO" },
   { n:117, week:"Semana 2", area:"Comercial", title:"[GEMA V4] Inyección de manejo de objeciones B2C específicas del nicho.", owner:"CAIO" },
   { n:118, week:"Semana 2", area:"Comercial", title:"[GEMA V4] Carga de testimonios y casos de éxito en secuencias de seguimiento.", owner:"CAIO" },
   { n:119, week:"Semana 2", area:"Comercial", title:"[TUYO] crear bot de bienvenida.", owner:"JP" },
@@ -344,7 +382,6 @@ const GEMA_TASKS = [
   { n:144, week:"Semana 3", area:"Estrategia", title:"[TUYO] Presentacion de estrategia preliminar a la empresa.", owner:"JP" },
   { n:145, week:"Semana 3", area:"Administrativo", title:"[REVISAR 2026-07-31] [TUYO] Buscar vacante comercial (Si es necesario pautar).", owner:"JP" },
   { n:147, week:"Semana 3", area:"Estrategia", title:"[TUYO] Creacion de speech de venta con todas las variables.", owner:"JP" },
-  { n:148, week:"Semana 3", area:"Estrategia", title:"[TUYO] Creacion de speech presencial con objeciones.", owner:"JP" },
   { n:274, week:"Semana 3", area:"Estrategia", title:"[GP] Personalizar el manual de recordatorio de cita (data/manual_recordatorio_dia_cita.md) para este cliente — dirección o punto de referencia real y duración real de la cita; es requisito para TODO cliente, tenga o no comercial propio (ver TAREA S1-08B, proceso_0_servicios.md).", owner:"JP" },
   { n:269, week:"Semana 3", area:"Estrategia", title:"[GP] Personalizar el speech del doctor de 3 capas (data/manual_speech_consultorio.md) para este cliente — enfocado en cierre, el doctor debe cerrar sí o sí (agregado 2026-07-30).", owner:"JP" },
   { n:149, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Creación de usuarios y permisos en CRM para vendedores.", owner:"CAIO" },
@@ -357,7 +394,6 @@ const GEMA_TASKS = [
   { n:155, week:"Semana 3", area:"Comercial", title:"[TUYO] estructura de bots.", owner:"JP" },
   { n:156, week:"Semana 3", area:"Administrativo", title:"[REVISAR 2026-07-31] [TUYO] manual de herramientas y cómo usarlas.", owner:"JP" },
   { n:157, week:"Semana 3", area:"Comercial", title:"[TUYO] manual de servicio o producto.", owner:"JP" },
-  { n:158, week:"Semana 3", area:"Comercial", title:"[TUYO] speech de venta (Documentación oficial).", owner:"JP" },
   { n:159, week:"Semana 3", area:"Administrativo", title:"[REVISAR 2026-07-31] [TUYO] manual de financieras.", owner:"JP" },
   { n:160, week:"Semana 3", area:"Comercial", title:"[TUYO] paso a paso de cierre de venta.", owner:"JP" },
   { n:161, week:"Semana 3", area:"Comercial", title:"[TUYO] paso a paso post cierre de venta.", owner:"JP" },
@@ -379,7 +415,6 @@ const GEMA_TASKS = [
   { n:268, week:"Semana 3", area:"Comercial", title:"[GP] Crear speech/secuencia de reactivación para leads con cita agendada que no asistieron (no-show) — máximo 3 toques, objetivo único: reagendar, no volver a presentar la línea desde cero (agregado 2026-07-30).", owner:"JP" },
   { n:182, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Definición de estructura de llamada de cierre/valoración — 2 speeches de contactabilidad (quien eligió categoría / quien no ha elegido), cada uno con tiempos y número de intentos definidos (agregado 2026-07-30).", owner:"AM" },
   { n:183, week:"Semana 3", area:"Comercial", title:"[REVISAR 2026-07-31] [GEMA V4] Capacitación en técnicas de urgencia y escasez real.", owner:"AM" },
-  { n:184, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Configuración de plantillas de respuesta rápida.", owner:"CAIO" },
   { n:185, week:"Semana 3", area:"Comercial", title:"[REVISAR 2026-07-31] [GEMA V4] Prueba técnica de conocimientos comerciales al equipo.", owner:"AM" },
   { n:186, week:"Semana 3", area:"Comercial", title:"[REVISAR 2026-07-31] [GEMA V4] Feedback individual de desempeño pre-lanzamiento.", owner:"AM" },
   { n:189, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Ejecución del Dry-Run: Prueba completa Meta -> IA -> Humano.", owner:"AM" },
@@ -389,7 +424,7 @@ const GEMA_TASKS = [
   { n:196, week:"Semana 3", area:"Tráfico y Sistemas", title:"[TUYO] Recepcion de estrategia de trafico.", owner:"JP" },
   { n:197, week:"Semana 3", area:"Tráfico y Sistemas", title:"[GEMA V4] Conexión de Fanpage e IG al Business Manager verificado.", owner:"CAIO" },
   { n:198, week:"Semana 3", area:"Tráfico y Sistemas", title:"[GEMA V4] Verificación de Cuenta Publicitaria y método de pago del cliente.", owner:"CAIO" },
-  { n:273, week:"Semana 3", area:"Tráfico y Sistemas", title:"[GP] Instalar Meta Pixel real vía Events Manager e integrarlo en GHL (NO en landing page — GP es 100% click-to-WhatsApp); verificar PageView + evento Lead en Test Events — repone la acción real que n:199 describía mal (landing page, ver TAREA S1-05, proceso_0_servicios.md). Añadida 2026-07-31 al detectar el hueco tras archivar.", owner:"CAIO" },
+  { n:273, week:"Semana 3", area:"Tráfico y Sistemas", title:"[GP] Instalar Meta Pixel real vía Events Manager e integrarlo en GHL (NO en landing page — GP es 100% click-to-WhatsApp); verificar PageView + evento Lead en Test Events — repone la acción real que n:199 describía mal (landing page, ver TAREA S1-05, proceso_0_servicios.md). Añadida 2026-07-31 al detectar el hueco tras archivar.", owner:"CAIO", market:"CO" },
   { n:200, week:"Semana 3", area:"Tráfico y Sistemas", title:"[REVISAR 2026-07-31] [GEMA V4] Configuración de Eventos de Conversión (Prioridad: Agendamiento).", owner:"CAIO" },
   { n:201, week:"Semana 3", area:"Tráfico y Sistemas", title:"[REVISAR 2026-07-31] [GEMA V4] Creación de Públicos de Intereses B2C específicos.", owner:"Media Buyer" },
   { n:203, week:"Semana 3", area:"Tráfico y Sistemas", title:"[GEMA V4] Creación de Públicos de Retargeting (Omnipresencia).", owner:"Media Buyer" },
@@ -419,7 +454,7 @@ const GEMA_TASKS = [
   { n:231, week:"Semana 4+", area:"Comercial", title:"[REVISAR 2026-07-31] [GEMA V4] Clínica de ventas quincenal correctiva.", owner:"AM" },
   { n:232, week:"Semana 4+", area:"Comercial", title:"[GEMA V4] Supervisión de Pipeline: Limpieza de leads estancados.", owner:"AM" },
   { n:233, week:"Semana 4+", area:"Comercial", title:"[GEMA V4] Refuerzo de guiones según nuevas objeciones detectadas.", owner:"AM" },
-  { n:234, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Seteo de recordatorios automáticos de citas por WhatsApp — 24h antes y el mismo día (movido de Semana 4+ a Semana 3, 2026-07-30 — tiene que estar activo desde el Día 31, no un mes después del lanzamiento).", owner:"CAIO" },
+  { n:234, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Seteo de recordatorios automáticos de citas por WhatsApp — 24h antes y el mismo día (movido de Semana 4+ a Semana 3, 2026-07-30 — tiene que estar activo desde el Día 31, no un mes después del lanzamiento).", owner:"CAIO", market:"CO" },
   { n:235, week:"Semana 4+", area:"Comercial", title:"[GEMA V4] Evaluación de calidad de notas de voz del vendedor.", owner:"AM" },
   { n:236, week:"Semana 4+", area:"Administrativo", title:"[REVISAR 2026-07-31] [GEMA V4] Sesión de motivación y alineación de incentivos comerciales.", owner:"COO" },
   { n:237, week:"Semana 4+", area:"Tráfico y Sistemas", title:"[GEMA V4] Solicitud de nuevos creativos (Evitar fatiga).", owner:"Media Buyer" },
@@ -468,7 +503,7 @@ const GEMA_TASKS = [
   { n:299, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GP] [USA] Estrategia publicitaria del cliente con la MISMA estructura de 5 campañas: C1/C4/C5 igual (Reconocimiento); C2 y C3 con objetivo Clientes potenciales (sitio web o formulario instantáneo; Interacción → Mensajes solo si es DM); copies T2/T4 con CTA al formulario en vez de WhatsApp; Sección 10 = mensaje de confirmación de opt-in + primer SMS en vez de la plantilla de WhatsApp (plantilla_estrategia_publicitaria.md, variante EE.UU.).", owner:"Media Buyer", market:"USA" },
   // ─── [GP] agregadas 2026-09-25 (segunda tanda, aprobadas por JP con sus ajustes: "dale") ───
   // n:300-303 = fase USA-2 (solo EE.UU.). n:304-307 = proyección en dos momentos (todos los mercados). n:308-311 = inducción comercial (todos los mercados).
-  { n:300, week:"Semana 1", area:"Estrategia", title:"[GP] [USA] Después de que el cliente devolvió el Brief y de hacer el kick-off (Día 1), enviarle las 9 preguntas obligatorias del negocio (data/parametros_negocio_usa_base.md) adaptadas a su giro, en un solo mensaje por el mismo chat que ya usa — no se integran al Brief: son las fundamentales para que el agente de IA funcione y para armar la oferta.", owner:"CAIO", market:"USA" },
+  { n:300, week:"Semana 1", area:"Estrategia", title:"[GP] [USA] Después de que el cliente devolvió el Brief y de hacer el kick-off (Día 3), enviarle las 9 preguntas obligatorias del negocio (data/parametros_negocio_usa_base.md) adaptadas a su giro, en un solo mensaje por el mismo chat que ya usa — no se integran al Brief: son las fundamentales para que el agente de IA funcione y para armar la oferta.", owner:"CAIO", market:"USA" },
   { n:301, week:"Semana 1", area:"Estrategia", title:"[GP] [USA] Guardar las respuestas textuales en 04_Sistema_GHL/parametros_negocio.md — ninguna queda en blanco: cada una termina en un dato exacto o en 'no aplica' con el porqué; la lista de precios (o la explicación de cada precio) va a 02_Insumos_Cliente/servicios_y_precios.md; el ticket promedio (pregunta 9) queda como estimado a confirmar y sale de lo realmente facturado, no del precio 'desde'; repreguntar solo lo que falta.", owner:"CAIO", market:"USA" },
   { n:302, week:"Semana 1", area:"Estrategia", title:"[GP] [USA] Escribir en pasos numerados el protocolo de calificación (pregunta 8) y confirmarlo con el cliente: qué información pide antes de agendar, qué tamaño de trabajo acepta o rechaza, cómo distingue una urgencia de un servicio programado y la zona de operación (8a: ciudades/ZIP y qué se responde a quien está fuera de zona) — sin esto no arranca la tarea de escribir y probar el agente IA (S1-06).", owner:"CAIO", market:"USA" },
   { n:303, week:"Semana 1", area:"Estrategia", title:"[GP] [USA] Cruzar las 9 respuestas contra los 7 elementos de la oferta (garantía → Seguro, tiempo → Tiempo, precios → Precio y Método, protocolo y zona → Polarizar); los servicios de ticket alto se comunican 'desde $X' (la visita da el estimado, nunca 'precio estándar'); si falta un elemento, avisar a JP ANTES de crear la oferta.", owner:"CAIO", market:"USA" },
@@ -483,7 +518,57 @@ const GEMA_TASKS = [
   { n:312, week:"Semana 2", area:"Estrategia", title:"[GP] Antes de crear la oferta, revisar en el Brief las respuestas P.9.5 y P.9.6: la lista de precios por servicio (o la explicación de cada precio) y cuáles servicios se comunican 'desde $X' porque la visita o valoración da el estimado; guardarlo en 02_Insumos_Cliente/servicios_y_precios.md y, si falta la lista, pedirla ANTES de armar el elemento Precio.", owner:"JP" },
   { n:313, week:"Semana 1", area:"Administrativo", title:"[GP] Proyección BASE (Día -14): con dato el mínimo para la BASE (pauta, ventas, ticket, insumo, costos fijos, equipo, fee/comisión de GP) y el resto de los 17 datos del Brief marcado 🟡/⛔ sin benchmark, armar ACTUAL + ESCALA A con la estacionalidad y, si atiende en 2+ ciudades, la tabla por ciudad (data/verificacion_margenes_proyeccion_base.md, Momento 1).", owner:"JP" },
   { n:314, week:"Semana 1", area:"Administrativo", title:"[GP] Generar los 3 entregables de la proyección, de una: resumen proyeccion_financiera.md + Excel en celdas con marca GP (7 pestañas, generado con data/gen_proyeccion_financiera.py) + versión interactiva como Artifact de Claude (aspecto de la propuesta de Siembra Vida con paleta GP navy/azul).", owner:"JP" },
+  // n:315-338 [GP] agregadas 2026-09-30 — panorama completo + reorden de fases (data/mejora_proceso_entrega_servicio.md, entrada 2026-09-30)
+  { n:315, week:"Semana 1", area:"Comercial", title:"[GP] Sesión de Claridad (llamada de 30 min, outputs/guia_diagnostico_llamada.md). Verificar los 4 criterios de viabilidad: margen mayor al 60%, mínimo 1 asistente o comercial, pauta mínima igual al fee de GP y capacidad de invertir más. Verificar el filtro Polarizar: factura $10M COP/mes o más, sin techo (más de $100M se agenda normal: es un caso excelente y JP llega con la proyección del cuello de botella), tiene 1 asistente en WhatsApp e Instagram activo. Registrar el diagnóstico real, el estado (FIT / FIT CONDICIONAL / NO FIT), la objeción principal, el siguiente paso y el origen. Sin FIT no se pasa al Diagnóstico de Viabilidad.", owner:"JP", market:"CO" },
+  { n:316, week:"Semana 1", area:"Comercial", title:"[GP] [USA] Sesión de Claridad (llamada de 30 min, outputs/guia_diagnostico_llamada.md). Verificar los 4 criterios de viabilidad: margen mayor al 60%, mínimo 1 asistente o comercial, pauta mínima igual al fee de GP y capacidad de invertir más. Confirmar que el negocio tiene sus documentos completos: CP-575 o 147C del IRS y Certificate/Articles of Organization, ambos en PDF (el número de EIN sin el archivo no alcanza). Registrar el diagnóstico real, el estado (FIT / FIT CONDICIONAL / NO FIT), la objeción principal, el siguiente paso y el origen. Sin documentos completos no hay FIT.", owner:"JP", market:"USA" },
+  { n:317, week:"Semana 1", area:"Administrativo", title:"[GP] Crear al cliente en el dashboard (Clientes → + Nuevo cliente) y completar el perfil: teléfono, email, valor del contrato, mercado, y Fecha inicio = día de la firma + pago (Día 0, ancla el cronograma). Verificar que aparecen las 4 semanas y que el progreso está en 0% (TAREA S0-00). Responsable: Administrativa cuando exista el rol; mientras tanto, JP.", owner:"JP" },
+  { n:318, week:"Semana 1", area:"Administrativo", title:"[GP] Crear la sub-cuenta del cliente en GHL (marca blanca) con nombre del negocio, email, teléfono y zona horaria, y anotar su ID en 04_Sistema_GHL/accesos.md. Se hace el Día 3, antes del kick-off; el kick-off solo confirma que existe (TAREA S0-07). Responsable: Administrativa cuando exista el rol; mientras tanto, JP.", owner:"JP" },
+  { n:319, week:"Semana 1", area:"Administrativo", title:"[GP] Kick-off de 90 min, grabado (TAREA S0-05, Día 3-5): 15 min de accesos + datos de la sub-cuenta (nombre exacto, zona horaria, líneas activas y horarios), anotados en accesos.md · 2 min para confirmar la marca blanca · 5 min para recorrer la pestaña Metodología compartiendo pantalla · 35 min para profundizar en cómo opera el negocio · 10 min de expectativas (30 y 90 días, horario de atención, dudas del contrato). El Anexo 1 no se explica aquí; lo maneja JP. Después: expectativas_cliente.md y notas_profundizacion.md en Drive, y la grabación en 06_Grabaciones_Sesion/. Si el cliente deja algo pendiente, tiene 48h; después se escala a JP. Responsable: Administrativa cuando exista el rol; mientras tanto, JP.", owner:"JP" },
+  { n:320, week:"Semana 1", area:"Estrategia", title:"[GP] Oferta, paso 1: separar las líneas de negocio reales de los niveles de precio de una misma línea, y confirmarlo con el cliente antes de armar nada (data/proceso_creacion_oferta_irresistible.md, Paso 1).", owner:"JP" },
+  { n:321, week:"Semana 1", area:"Estrategia", title:"[GP] Oferta, paso 2: completar los 7 elementos por línea (Resultado, Tiempo, Método, Secretos, Seguro, Polarizar, Precio). El Precio incluye el financiamiento solo si hay afiliación activa con una financiera (D7); nunca se nombra una financiera sin afiliación. Fijar el vocabulario del cliente (ej. 'valoración', nunca 'diagnóstico'). Validar la garantía con el cliente. Redactar el mensaje corto y el largo de cada línea. Nada queda en blanco: lo que falte va como [COMPLETAR] y se pregunta.", owner:"JP" },
+  { n:322, week:"Semana 1", area:"Estrategia", title:"[GP] Oferta, paso 3: Banco de Recursos por línea (mínimo 5 hooks, 5 ganchos, conectores y 5 CTAs) + análisis en Meta Ad Library (negocio + 3 competidores) + 5 guiones de ads en video por línea, palabra por palabra: 1 Alcance (que eduque), 1 Retargeting Alcance (explica y vende), 2 Venta Directa y 1 Retargeting Venta Directa (con la oferta de la línea y su precio si lo tiene, dicho en voz, con autoridad, y cierre 'lo mejor es la visita/valoración — haz clic para agendarla'); sin formato podcast (JP 2026-10-01; antes '16 repartidos según presupuesto'). Cada guion lleva su formato de filmación, sin repetir formato dentro de la línea.", owner:"JP" },
+  { n:323, week:"Semana 1", area:"Estrategia", title:"[GP] Oferta, paso 4: 2 guiones de VSL de las 2 líneas más importantes (video de ~1 min, guion largo de venta, distinto del guion corto de ad) sobre el dolor, deseo y objeción de la Ficha ISL/VSL de la línea.", owner:"JP" },
+  { n:324, week:"Semana 1", area:"Estrategia", title:"[GP] Oferta, paso 5b: Claude produce la imagen MVP de cada guion de video (9:16, réplica del guion con su precio si lo tiene y su CTA) con data/render_imagenes_mvp.js: logo del cliente en 03_Ads/_marca/ y los colores del logo; estilo PROMO para Venta Directa y su retargeting, PREMIUM para Alcance; EE.UU. en inglés y español; fotos reales en 03_Ads/_fotos/ cuando el cliente las mande. Claude las revisa y se las abre a JP para aprobar en el chat. Los system prompts de imagen quedan como alternativa. Solo si hay financiamiento activo (D7): 1 ad de crédito por sub-categoría, con su precio real. Nunca personas generadas por IA.", owner:"JP" },
+  { n:352, week:"Semana 1", area:"Estrategia", title:"[GP] Oferta, paso 5c — la milla extra: Claude produce 2 videos de anuncio con IA de las 2 líneas principales (hook disruptivo, edición Editorial cinematográfico, voz en off en el idioma del anuncio) con data/render_video_ads_ia.js; EE.UU. en inglés y español; se le abren a JP para aprobar en el chat. Regalo de GP a todo cliente.", owner:"JP" },
+  { n:325, week:"Semana 1", area:"Estrategia", title:"[GP] Oferta, paso 6: ISL de categorías de cada línea (4:5, paso 2 del bot, con precio y foto antes/después real) + el system prompt de imagen de cada uno. Un ISL sin su prompt no cuenta como hecho.", owner:"JP" },
+  { n:326, week:"Semana 1", area:"Estrategia", title:"[GP] Oferta, paso 7: los 8 toques de seguimiento (estándar desde 2026-10-03, obligatorio por cliente): fijar la cadencia (días; base D+1, D+2, D+4, D+6, D+8, D+10, D+14, D+21) y proponer a JP qué tipo de contenido va en cada toque (Recordatorio, Autoridad, Oferta, Recordación). El Toque 4 suma la línea del plan de referidos y el Toque 8 es el plan de referidos (data/plantilla_plan_referidos.md). Si hay financiamiento activo, va en los toques 1-2. Cada toque sale con su copy real Y su imagen (data/render_imagenes_mvp.js, logo del cliente; sale en 04_Toques_Seguimiento/imagenes/) — un toque sin imagen no cuenta como hecho. Un toque de Autoridad sin testimonio real queda [COMPLETAR].", owner:"JP" },
+  { n:327, week:"Semana 1", area:"Estrategia", title:"[GP] Oferta, paso 8: piezas del plan de referidos con data/plantilla_plan_referidos.md y data/render_imagenes_mvp.js (salen en 05_Plan_Referidos/imagenes/), siempre con el logo del cliente: Pieza 1 'Recomendá y ganá' (física para la valoración + versión digital para los toques) y Pieza 2 'Ya sos paciente' (física, para la postventa). Solo con la recompensa definida por el cliente (% en efectivo, % en saldo, fecha de pago); nunca se promete un beneficio sin decidir.", owner:"JP" },
+  { n:328, week:"Semana 1", area:"Estrategia", title:"[GP] Oferta, cierre: verificar que existen todas las piezas, guardadas en 03_Ads/ con sus subcarpetas (5 guiones por línea, 2 VSL, prompts de imagen de cada guion, ads de crédito si aplica, ISL de categorías con prompt, toques con copy y prompt, imagen de referidos si aplica). Lo que falte queda marcado ⛔ con qué falta exactamente. JP aprueba; sin 'aprobado' no se graba ni se lanza nada.", owner:"JP" },
+  { n:329, week:"Semana 2", area:"Estrategia", title:"[GP] Construir con prompts/modulo_estrategia_general_cliente.md el organigrama del flujo comercial: tráfico y equipo de hoy, evento de conversión exacto, atribución del anuncio y mapeo del SOP maestro de 11 stages, ubicando en el flujo las piezas ya aprobadas en la Oferta (ISL, VSL, toques). JP lo aprueba. De ahí salen 01_FLUJO_CRM.md y 00_ESTRATEGIA_CICLO_CLIENTE.md. Si el flujo cambia un paso del bot, las piezas afectadas vuelven a la Oferta.", owner:"JP" },
+  { n:330, week:"Semana 2", area:"Estrategia", title:"[GP] Revisar que la Guía de Producción y Edición y el pedido de grabación (generados en la Oferta: 03_Ads/07_ y 03_Ads/06_) coincidan con el flujo final; si la Estrategia General cambia un paso del bot o una pieza, se ajusta el JSON de 03_Ads/_fuente/ y se regeneran antes del día de grabación.", owner:"JP" },
+  { n:331, week:"Semana 2", area:"Estrategia", title:"[GP] Diseñar en el Flujo CRM la etapa de referidos para 2 personas (data/plantilla_plan_referidos.md): (1) quien no agendó: el plan en el Toque 4 y en un Toque 8 al final del seguimiento, solo si no tiene cita ni respondió (plantillas nuevas de WhatsApp), y en la llamada del Día 5 si contesta y no agenda; (2) quien agendó: Pieza 1 en la valoración, compre o no, y Pieza 2 en la postventa (Stage 10: consentimiento de imagen → fotos/video → testimonio → referidos). Campo 'Referido por' + etiqueta referido.", owner:"JP" },
+  { n:332, week:"Semana 2", area:"Comercial", title:"[GP] Guía de financiamiento (solo si hay financiamiento activo, D7) con data/plantilla_guia_financiamiento.md: tabla por financiera confirmada en la plataforma del cliente (qué pide, si se hace a distancia, quién aprueba el desembolso, cuándo paga, comisión), orden por velocidad de pago, saldo pendiente del cliente en cada una y formas de pago (total, financiera, abono, 30/70 — el procedimiento se hace con el 100% pagado). Alimenta la llamada de contactabilidad y los ads de crédito; ninguno se usa sin esta guía confirmada.", owner:"JP" },
+  { n:333, week:"Semana 2", area:"Comercial", title:"[GP] Speech del plan de referidos + speech de crédito. Referidos: Toques 4 y 8, llamada del Día 5 si contesta y no agenda, valoración (Pieza 1) y postventa (Pieza 2), con el incentivo del cliente y el registro en GHL. Crédito: empatía → filtro (¿reportado? ¿al día? ¿sin historial?) → financieras en orden → separar el espacio con el bloque real del procedimiento → si ninguna aprueba, pago 30/70 (data/plantilla_guia_financiamiento.md).", owner:"JP" },
+  { n:335, week:"Semana 3", area:"Tráfico y Sistemas", title:"[GP] Lanzar el primer anuncio con pauta limitada el Día 21, solo con el Gate MVP en ✅ (TAREA MVP-01). Usar las imágenes aprobadas en la Oferta. Objetivo Mensajes (WhatsApp o Instagram DM), audiencia amplia sin intereses, excluir las zonas fuera de cobertura, $30.000-$50.000 COP al día, sin UTMs. Queda lista cuando llega el primer lead real al pipeline. Del Día 21 al 28, semáforo diario (prompts/media_buyer.md); esos datos alimentan el Gate Full.", owner:"Media Buyer", market:"CO" },
+  { n:336, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GP] Estrategia publicitaria antes del lanzamiento: documento de 10 secciones (data/plantilla_estrategia_publicitaria.md) + cuadro de 5 pestañas (data/gen_cuadro_estrategia_publicitaria.py), con la paleta real del cliente y todas sus líneas. Los copies usan los guiones aprobados en la Oferta y el mensaje automático es el real del bot, nunca uno inventado. El retargeting se activa solo cuando la audiencia de interacción pasa de 500 personas.", owner:"Media Buyer", market:"CO" },
+  { n:337, week:"Semana 2", area:"Comercial", title:"[GP] Guía de obligaciones diarias del comercial (data/manual_obligaciones_diarias_comercial.md): qué hace cada día quien atiende, % real de grabación de llamadas exigido y dónde se guardan, y nombre real de quien ejecuta el día a día. Referencia real: Clientes/Christian Marino/04_Sistema_GHL/12_GUIA_OBLIGACIONES_DIARIAS_COMERCIAL_MARINO.md.", owner:"JP" },
+  { n:338, week:"Semana 2", area:"Comercial", title:"[GP] Cuadro Diario Comercial del cliente (data/gen_cuadro_diario_comercial.py): resumen del día + detalle por lead, con las etapas y líneas reales del cliente, más 4 columnas por lead: origen (anuncio / referido / base vieja / reactivación), financiera usada, aprobado/negado y forma de pago. Referencia real: Clientes/Christian Marino/04_Sistema_GHL/09_CUADRO_DIARIO_COMERCIAL.xlsx. Se produce aquí y se enseña a llenar en la capacitación (S1-09, bloque 4).", owner:"JP" },
+  { n:339, week:"Semana 3", area:"Comercial", title:"[GP] [USA] Configurar los recordatorios automáticos de cita por SMS (24h antes y el mismo día) — solo a contactos con el Checkbox 1 marcado y con el A2P en 'Verified'; equivalente de EE.UU. de la n:234 (WhatsApp, solo Colombia).", owner:"CAIO", market:"USA" },
+  // n:340-344 [GP] 2026-10-01 — proceso obligatorio de la Oferta (proceso_creacion_oferta_irresistible.md, tabla de 10 pasos)
+  { n:340, week:"Semana 1", area:"Estrategia", title:"[GP] Oferta, referencias: sacar con data/capturar_biblioteca_meta.js (Chrome automático, country=ALL) los anuncios de referencia de la Biblioteca de Meta que trae JP o que se encuentren del mismo giro, y registrar en el LÉEME de 03_Ads qué se migra (estructura: cajas de precio, lista de incluidos, CTA) y qué no (financiamiento, descuentos, marcas, servicios que el cliente no presta).", owner:"JP" },
+  { n:341, week:"Semana 1", area:"Estrategia", title:"[GP] Oferta, generar: escribir todo el contenido en 03_Ads/_fuente/produccion_oferta.json y producir las piezas con data/gen_produccion_oferta.py y los Word con data/gen_docx_ads_cliente.py (paleta del cliente) — nunca editar los .md a mano. Sale: guiones (solo guiones), VSL, imágenes MVP, ISL, toques, referidos, pedido de grabación, guía de producción y edición, textos y banco, y el LÉEME.", owner:"JP" },
+  { n:342, week:"Semana 1", area:"Estrategia", title:"[GP] Oferta, sincronizar: la misma oferta en el agente de IA (sección 'Oferta que el agente comunica' en sus parámetros), en el sitio o landing a donde llegan los anuncios (bloque de ofertas publicado y verificado en vivo) y en el tracker del cliente.", owner:"JP" },
+  { n:343, week:"Semana 1", area:"Tráfico y Sistemas", title:"[GP] [USA] Si se cambió el sitio (durante o después de la verificación A2P — no afecta el registro si sigue en línea): verificar en vivo que formulario, 2 checkboxes, Privacy Policy, Terms, pie de página con el nombre legal y dominio siguen intactos; volver a correr el Compliance Review de GHL (8/8 · 7/7 · 7/7) SOLO si el cambio tocó alguna de esas piezas; y que los mensajes de ejemplo de marketing del registro usen las mismas ofertas del sitio (guía 14).", owner:"CAIO", market:"USA" },
+  { n:344, week:"Semana 1", area:"Estrategia", title:"[GP] Oferta, enviar al cliente los 4 documentos — pedido de grabación por procedimiento y servicio, guiones de anuncios, guiones de VSL y guía de producción y edición — con su mensaje: qué grabar y qué fotos, preguntas pendientes y fechas (fotos ~2 semanas antes del Gate MVP, videos antes del Gate MVP). Los demás archivos son internos; nunca decir 'nosotros editamos'.", owner:"JP" },
+  { n:345, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GP] Antes de construir el agente de IA: verificar en pantalla el número conectado, la verificación de Meta, la Disponibilidad real del calendario del profesional, las plantillas con botones y el inventario de workflows; instanciar el agente de bugs del doctor y pasar su checklist anti-repetición (prompts/guias/13, etapa 0).", owner:"CAIO" },
+  { n:346, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GP] Crear las etiquetas del agente y configurar el agente 'Basado en flujo' en Deshabilitado (dormir con mensaje de flujo OFF, manual ON) + texto global (guía 13, etapas 1-3).", owner:"CAIO" },
+  { n:347, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GP] Construir los workflows del agente: uno de contenido por línea (imagen sin caption + plantilla con botones), cita/urgencia/escalación con aviso por WhatsApp y tarea al asesor, WF-FINANCIAMIENTO si hay financiamiento activo (etiqueta interes-financiamiento → aviso + tarea 'Llamar hoy — crédito', sin apagar al agente) y las tareas del recordatorio de cita (guía 13, etapas 4-5).", owner:"CAIO" },
+  { n:348, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GP] Construir el workflow de entrada en Borrador con las tareas automáticas del asesor (Día 0 a los 30 min, Día 2, 5 y 10, solo si no tiene cita) y la etiqueta de toques a las 24 h (guía 13, etapa 6).", owner:"CAIO" },
+  { n:349, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GP] Construir el árbol del agente (líneas + dolor + quiere agendar + no claro, elección con etiqueta, agendar con 2 horarios reales) y hacer el corte (guía 13, etapas 7-8).", owner:"CAIO" },
+  { n:350, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GP] Probar el agente con los 8 mensajes de la guía 13 (etapa 9) y personalizar la guía del equipo (data/guia_equipo_agente_ia_base.md → 06_Agente_IA/08_Tareas_Comercial, .md + .docx) para la Capacitación.", owner:"CAIO" },
+  { n:351, week:"Semana 3", area:"Comercial", title:"[GP] En la Capacitación, entregar y explicar al asesor la guía de uso del Agente de IA: qué hacer con cada aviso, que las tareas de llamada se crean solas (no a mano), que si escribe en la conversación el agente se calla, y cómo reportar un error con captura.", owner:"CAIO" },
 ];
+// ─── GEMA TASKS DEPRECADAS (2026-10-01) — duplicadas o contradichas por las tareas del panorama completo (data/mejora_proceso_entrega_servicio.md, entrada 2026-10-01) ───
+// [DEPRECADA 2026-10-03 — reemplazada por la fase agente_ia (n:345-350): describía el bot de calificación viejo sin agendamiento] { n:334, week:"Semana 2", area:"Tráfico y Sistemas", title:"[GP] Escribir el system prompt del agente IA desde el Bloque 5 de 00_ESTRATEGIA_CICLO_CLIENTE.md: quién es, que filtra y no vende, primera pregunta de calificación, ramas por servicio, datos que captura, respuestas a objeciones y cuándo pasa al humano. Cargarlo en GHL → Agentes IA y repetir la prueba con un lead simulado hasta que, en una corrida sin ajustes, el agente responda en el tono correcto y pregunte lo correcto, el lead quede en 'Calificado' y el dueño reciba la notificación (TAREA S1-06). Si el agente IA todavía no se puede activar en la cuenta, el primer contacto se hace con workflows y plantillas de WhatsApp (prompts/guias/13_creacion_agente_ia_whatsapp.md): respuesta automática en menos de 5 minutos, preguntas de calificación y paso al humano; eso no bloquea el Gate MVP.", owner:"CAIO" },
+// [DEPRECADA 2026-10-01 — duplica n:28 (crear carpetas del cliente en Drive)] { n:30, week:"Semana 1", area:"Administrativo", title:"[GEMA V4] Creación de carpeta raíz en Drive con permisos restringidos.", owner:"COO" },
+// [DEPRECADA 2026-10-01 — duplica n:54 (verificar el negocio en Meta)] { n:56, week:"Semana 1", area:"Administrativo", title:"[GEMA V4] Verificación comercial del negocio en Meta (Documentos legales).", owner:"COO" },
+// [DEPRECADA 2026-10-01 — duplica n:60 (conectar la API de WhatsApp)] { n:107, week:"Semana 2", area:"Tráfico y Sistemas", title:"[TUYO] Conectar WhatsApp Api al CRM.", owner:"JP" },
+// [DEPRECADA 2026-10-01 — duplica n:147 (speech de venta)] { n:158, week:"Semana 3", area:"Comercial", title:"[TUYO] speech de venta (Documentación oficial).", owner:"JP" },
+// [DEPRECADA 2026-10-01 — duplica n:269 (speech presencial/consultorio de 3 capas)] { n:148, week:"Semana 3", area:"Estrategia", title:"[TUYO] Creacion de speech presencial con objeciones.", owner:"JP" },
+// [DEPRECADA 2026-10-01 — duplica n:123-130 (respuestas rápidas)] { n:184, week:"Semana 3", area:"Comercial", title:"[GEMA V4] Configuración de plantillas de respuesta rápida.", owner:"CAIO" },
+// [DEPRECADA 2026-10-01 — contradice n:322 (16 guiones de ads, no 5 UGC)] { n:92, week:"Semana 2", area:"Estrategia", title:"[GEMA V4] Redacción de 5 Guiones UGC (9:16) con requerimientos de B-roll.", owner:"JP" },
+// [DEPRECADA 2026-10-01 — duplica n:323 (2 guiones de VSL)] { n:91, week:"Semana 2", area:"Estrategia", title:"[REVISAR 2026-07-31] [GEMA V4] Redacción de Guion VSL (Hook, Contexto, Mecanismo, Filtro).", owner:"JP" },
+// [DEPRECADA 2026-10-01 — duplica n:328 (cierre de la Oferta con aprobación de JP)] { n:93, week:"Semana 2", area:"Estrategia", title:"[REVISAR 2026-07-31] [GEMA V4] Aprobación interna de guiones por Dirección Comercial.", owner:"JP" },
 // ─── GEMA TASKS DEPRECADAS (2026-09-28) — superadas por la proyección BASE de 17 datos y 12 meses (n:313-314) ───
 // { n:17, week:"Semana 1", area:"Administrativo", title:"[REVISAR 2026-07-31] [GEMA V4] Ingeniería Financiera I: Cálculo de LTV vs. CAC histórico del cliente.", owner:"COO" },
 // { n:18, week:"Semana 1", area:"Tráfico y Sistemas", title:"[GEMA V4] Ingeniería Financiera II: Definición del CPA máximo permitido para pauta.", owner:"JP" },
@@ -597,14 +682,14 @@ const MVP_STEPS = [
   { n:1,  title:"Diagnóstico",             desc:"Brief Comercial + Información del Cliente devueltos · Requerimientos de Arranque confirmados (accesos, Authenticator, 2 líneas WhatsApp, logo/paleta) · acceso y validación completa de BM + conexión de API · creación de CRM arranca desde acá, no después · fechas de todas las reuniones requeridas y de grabación/entrega de material bloqueadas en calendario desde el inicio, para salir en el tiempo que es",
     descUSA:"Brief Comercial + Información del Cliente devueltos · Requerimientos de Arranque confirmados (accesos, Authenticator, número de GHL dedicado + registro A2P 10DLC en lugar de las 2 líneas de WhatsApp, CP-575/147C y Certificate en PDF, logo/paleta o manual de marca) · acceso y validación completa de BM + conexión de API · creación de CRM arranca desde acá, no después · fechas de todas las reuniones requeridas y de grabación/entrega de material bloqueadas en calendario desde el inicio, para salir en el tiempo que es" },
   { n:2,  title:"Proyección financiera",   desc:"Proyección verificada (S1-00): 17 datos sin ⛔ · capacidad escrita · 3 escenarios · pauta mínima confirmada · 3 entregables" },
-  { n:3,  title:"Creación de oferta",      desc:"Punto 0 (líneas, sub-categorías, precio, mensaje diferenciador) · Ficha ISL/VSL por línea con base visual clara (dolor, deseo, objeción, formato) · specs del Director de Arte · mínimo 1 imagen por línea de negocio — el MVP sale con imágenes como ads primero, mientras producción y edición de video se entrega a GP para el Full Launch · Banco de Recursos (mín. 5 hooks/ganchos/CTAs por línea)" },
-  { n:4,  title:"Estrategia general",      desc:"Organigrama completo — Estrategia y Ciclo del Cliente: tráfico actual, equipo comercial real, evento de conversión exacto, atribución del anuncio, mapeo del SOP de 11 stages, con análisis de responde/no responde en cada punto del flujo" },
-  { n:5,  title:"Estrategia comercial",    desc:"Scripts del proceso comercial completo: saludo por línea de negocio y procedimiento · seguimientos etapa general (nurturing) y etapa no-show · speech de contactabilidad — 2 versiones (eligió categoría / no ha elegido) con tiempos y número de intentos por llamada · speech de agenda (recordatorio mismo día) · recordatorios de cita por WhatsApp (24h antes y mismo día) · speech del doctor 3 capas, orientado a cierre · inducción del equipo comercial (visión, lead nuevo, lead de seguimiento, notas/tareas/calendario, cierre con financiamiento, obligaciones diarias y proceso visual del cliente)",
-    descUSA:"Scripts del proceso comercial completo: saludo por línea de negocio y procedimiento · seguimientos etapa general (nurturing) y etapa no-show · speech de contactabilidad — 2 versiones (eligió categoría / no ha elegido) con tiempos y número de intentos por llamada · speech de agenda (recordatorio mismo día) · recordatorios de cita por SMS (24h antes y mismo día — solo a contactos con el Checkbox 1 marcado y con A2P 'Verified') · speech del doctor 3 capas, orientado a cierre · inducción del equipo comercial (visión, lead nuevo, lead de seguimiento, notas/tareas/calendario, cierre con financiamiento, obligaciones diarias y proceso visual del cliente)" },
+  { n:3,  title:"Oferta irresistible + producción",      desc:"7 elementos por línea (líneas reales vs. niveles de precio, precio con financiamiento solo si hay afiliación activa, vocabulario del cliente, garantía validada) · Banco de Recursos + 5 guiones de ads en video por línea (1 Alcance, 1 Retargeting Alcance, 2 Venta Directa, 1 Retargeting Venta Directa) · 2 VSL de las 2 líneas más importantes · system prompts de imagen de cada guion de video, con precio y CTA (el MVP sale con imágenes; ads de crédito si hay financiamiento) · ISL de categorías con su prompt · toques de seguimiento con copy y prompt (incluido el que invita a recomendar) · imagen del plan de referidos si hay programa · aprobación de JP antes de grabar" },
+  { n:4,  title:"Estrategia general",      desc:"Organigrama completo — Estrategia y Ciclo del Cliente: tráfico actual, equipo comercial real, evento de conversión exacto, atribución del anuncio, mapeo del SOP de 11 stages, con análisis de responde/no responde en cada punto del flujo · Guía de Producción y Edición lista antes de grabar · etapa de referidos (toque de recomendación en el seguimiento + postventa)" },
+  { n:5,  title:"Estrategia comercial",    desc:"Un speech por tarea, cada mejora va a su speech: contactabilidad — 2 versiones (eligió categoría / no ha elegido) con tiempos y número de intentos por llamada · speech de agenda + recordatorios de cita por WhatsApp (24h antes y mismo día) · no-show (máximo 3 toques, solo para reagendar) · guía de financiamiento (si hay financiamiento activo) · speech del doctor 3 capas, orientado a cierre · speech del plan de referidos · guía de obligaciones diarias · cuadro diario comercial · inducción del equipo comercial",
+    descUSA:"Un speech por tarea, cada mejora va a su speech: contactabilidad — 2 versiones (eligió categoría / no ha elegido) con tiempos y número de intentos por llamada · speech de agenda + recordatorios de cita por SMS (24h antes y mismo día — solo a contactos con el Checkbox 1 marcado y con A2P 'Verified') · no-show (máximo 3 toques, solo para reagendar) · guía de financiamiento (si hay financiamiento activo) · speech del doctor 3 capas, orientado a cierre · speech del plan de referidos · guía de obligaciones diarias · cuadro diario comercial · inducción del equipo comercial" },
   { n:6,  title:"CRM + guiones de venta",  desc:"Pipeline con las etapas del Flujo CRM ya definido · tags configurados · los scripts de Estrategia Comercial (paso 5) cargados donde corresponda" },
-  { n:7,  title:"Entrenamiento comercial", desc:"Guía escrita de uso del CRM + video tutorial de uso (notas y tareas) · cómo agendar en el calendario · qué se carga a diario y qué se carga semanal · cómo usar cada guion · si hay comercial propio: cuadro diario + reunión semanal fija" },
-  { n:8,  title:"Lanzamiento de campaña",  desc:"Gate MVP verificado (bot <5min, pipeline activo, 1er workflow nurturing, canales conectados, pixel instalado) · primer anuncio activo, objetivo Mensajes — sin UTMs (el tráfico va directo a WhatsApp, no a una web con link rastreable) · atribución vía Pixel + tag de fuente en GHL",
-    descUSA:"Gate MVP verificado (bot <5min, pipeline activo, 1er workflow nurturing, canales conectados — Instagram + SMS con A2P 'Verified' —, pixel instalado en el sitio de captura si la conversión es en el sitio) · primer anuncio activo, objetivo Clientes potenciales (ubicación de conversión: sitio web con UTMs o formulario instantáneo; Interacción → Mensajes solo si el destino es DM) · la pauta hacia sitio o formulario no se activa hasta que el A2P esté 'Verified' · atribución vía Pixel + tag de fuente en GHL" },
+  { n:7,  title:"Capacitación del sistema y GHL", desc:"Guía escrita de uso del CRM + video tutorial de uso (notas y tareas) · cómo agendar en el calendario · qué se carga a diario y qué se carga semanal · cómo usar cada guion · si hay comercial propio: cuadro diario + reunión semanal fija" },
+  { n:8,  title:"Lanzamiento de campaña",  desc:"Gate MVP verificado (bot <5min, pipeline activo, 1er toque de seguimiento, canales conectados, pixel instalado) · primer anuncio activo, objetivo Mensajes — sin UTMs (el tráfico va directo a WhatsApp, no a una web con link rastreable) · atribución vía Pixel + tag de fuente en GHL",
+    descUSA:"Gate MVP verificado (bot <5min, pipeline activo, 1er toque de seguimiento, canales conectados — Instagram + SMS con A2P 'Verified' —, pixel instalado en el sitio de captura si la conversión es en el sitio) · primer anuncio activo, objetivo Clientes potenciales (ubicación de conversión: sitio web con UTMs o formulario instantáneo; Interacción → Mensajes solo si el destino es DM) · la pauta hacia sitio o formulario no se activa hasta que el A2P esté 'Verified' · atribución vía Pixel + tag de fuente en GHL" },
 ];
 
 const FULL_STEPS = [
@@ -621,7 +706,8 @@ const FULL_STEPS = [
 // ─── LAUNCH PHASES (cronograma) ───────────────────────────────────────────────
 const LAUNCH_PHASES = [
   // Pre-lanzamiento (antes de startDate)
-  { id:"claridad",    group:"pre",  type:"ext", name:"Sesión de Claridad",                    offset:-21, defaultOwner:"Closer",   color:"#2966A5", note:"Primer contacto — mapear dolor real y encaje antes de cotizar · Mínimo para marcar done: prospecto identificado + dolor real mapeado + encaje de ICP confirmado (facturación $10-100M, filtro Polarizar)" },
+  { id:"claridad",    group:"pre",  type:"ext", name:"Sesión de Claridad",                    offset:-21, defaultOwner:"Closer",   color:"#2966A5", note:"Primer contacto — mapear dolor real y encaje antes de cotizar · Mínimo para marcar done: prospecto identificado + dolor real mapeado + encaje de ICP confirmado (facturación desde $10M COP/mes, sin techo — más de $100M se agenda normal, JP 2026-10-01 — filtro Polarizar)",
+    noteUSA:"Primer contacto — mapear dolor real y encaje antes de cotizar · Mínimo para marcar done: prospecto identificado + dolor real mapeado + 4 criterios de viabilidad verificados + documentos legales completos en PDF (CP-575 o 147C del IRS + Certificate/Articles of Organization) — sin documentos completos no hay FIT (JP 2026-10-01)" },
   { id:"diagnostico", group:"pre",  type:"ext", name:"Diagnóstico de Viabilidad",              offset:-18, defaultOwner:"Closer",   color:"#2966A5", note:"Brief Comercial (Anexo 2) + Información del Cliente completos — sin esto no se cotiza. Incluye informe de ventas 6 meses, lista de precios vigente y objetivo mensual de ventas — ver Anexo 1, Requerimientos Obligatorios · Mínimo para marcar done: Brief Comercial + Información del Cliente completos + Requerimientos de Arranque confirmados",
     noteUSA:"Brief Comercial (Anexo 2) + Información del Cliente completos — sin esto no se cotiza. Incluye informe de ventas 6 meses, lista de precios vigente y objetivo mensual de ventas — ver Anexo 1, Requerimientos Obligatorios · Mínimo para marcar done: Brief Comercial + Información del Cliente completos + Requerimientos de Arranque confirmados — en EE.UU. incluyen CP-575/147C y Certificate en PDF (fase USA-1) en lugar de las 2 líneas de WhatsApp Business" },
   { id:"proyeccion",  group:"pre",  type:"ext", name:"Proyección Financiera",                  offset:-14, defaultOwner:"Traffic",  color:"#2966A5", note:"Obligatoria: proyección BASE sobre la palabra del cliente — los 17 datos del Brief marcados ✅/🟡/⛔ (sin benchmark), ACTUAL + ESCALA A con la estacionalidad de sus meses y la versión interactiva; si atiende en 2+ ciudades, tabla por ciudad · Mínimo para marcar done: los 17 datos marcados + ACTUAL y ESCALA A + versión interactiva lista · Se verifica con documentos en S1-00 (Día 6-7)" },
@@ -630,35 +716,39 @@ const LAUNCH_PHASES = [
   { id:"acuerdo",     group:"pre",  type:"ext", name:"Claridad del Acuerdo",                   offset:-7,  defaultOwner:"Legal",    color:"#2966A5", note:"Contrato + documentos de arranque enviados — sin ambigüedad en comisiones/garantía · Mínimo para marcar done: todos los documentos de arranque enviados + cliente confirmó recibido por escrito" },
   { id:"firma",       group:"pre",  type:"ext", name:"Firma del Acuerdo",                      offset:-3,  defaultOwner:"Legal",    color:"#2966A5", note:"Contrato firmado + pago de setup confirmado — dispara el Día 0 · Mínimo para marcar done: contrato firmado (PDF/foto/DocuSign) guardado en Drive + transferencia verificada en cuenta GP" },
   // Semana 1 (startDate = Día 0)
-  { id:"arranque",    group:"sem1", type:"ext", name:"Sesión de Arranque",                     offset:0,   defaultOwner:"Administrativo",   color:"#2966A5", note:"Kick-off 60 min — expectativas, accesos, horarios (= Etapa 2 'Sesión de Claridad' de Anexo 1: objetivos, alcance, responsables, métricas base) · Mínimo para marcar done: call de 60 min realizada + expectativas_cliente.md completado y guardado en Drive",
-    noteUSA:"Kick-off 60 min — expectativas, accesos, horarios (= Etapa 2 'Sesión de Claridad' de Anexo 1: objetivos, alcance, responsables, métricas base) · Accesos en EE.UU.: Meta Business Manager + cuenta de Ads + Instagram + número de GHL dedicado (no se piden líneas de WhatsApp Business) · Mínimo para marcar done: call de 60 min realizada + expectativas_cliente.md completado y guardado en Drive" },
-  { id:"usa_parametros", group:"sem1", type:"ext", name:"USA-2 · Preguntas obligatorias del negocio (oferta + agente)", offset:1, defaultOwner:"CAIO", color:"#2966A5", market:"USA", note:"Solo clientes de EE.UU. — las 9 preguntas obligatorias de data/parametros_negocio_usa_base.md: quién atiende las visitas, persona bilingüe, garantía por servicio, precios (lista de precios o explicación de cada precio; los servicios más costosos van 'desde $X' porque la visita da el estimado), tiempos de ejecución, precio de referencia, duración de la cita, protocolo real de calificación con zona de operación y ticket promedio real · Se envían el Día 1, después del Brief y del kick-off · Mínimo para marcar done: las 9 respondidas por el cliente con dato exacto (o 'no aplica' con el porqué) + cruzadas contra los 7 elementos de la oferta (Resultado, Tiempo, Método, Secretos, Seguro, Polarizar, Precio) — sin esto no arranca 'Creación Oferta Irresistible y Guiones' ni el agente IA" },
   { id:"usa_sitio",   group:"sem1", type:"int", name:"USA-3 · Sitio web de captura (marca del cliente)", offset:1, defaultOwner:"CAIO", color:"#2966A5", market:"USA", note:"Solo clientes de EE.UU. — el sitio es la página de captura del negocio, no solo un requisito del registro A2P · Mínimo para marcar done: 5 páginas críticas publicadas con la marca real del cliente (manual de marca, o su logo si no tiene manual — nunca navy/blue de GP ni una paleta inventada) + Privacy Policy y Terms verbatim de guias/14 + formulario en la Home con 2 checkboxes sin marcar (Required OFF) + verificado en incógnito (0 links a leadconnectorhq.com, sin 'Powered by HighLevel')" },
-  { id:"estrategia",  group:"sem1", type:"int", name:"Sesión Estrategia General",              offset:2,   defaultOwner:"Traffic",  color:"#2966A5", note:"Requiere Contexto + ICP + Servicios y Catálogo completos (pestaña Metodología) — Etapa 3 'Diagnóstico Integral' de Anexo 1 (2-3h): operación comercial, atención/cierre, marketing, finanzas, cuellos de botella · Mínimo para marcar done: organigrama del flujo comercial construido y aprobado por JP" },
+  { id:"arranque",    group:"sem1", type:"ext", name:"Sesión de Arranque",                     offset:3,   defaultOwner:"Administrativo",   color:"#2966A5", note:"Kick-off de 90 min grabado (TAREA S0-05, Día 3-5) — lo ejecuta Administrativo (mientras no exista el rol, JP): accesos + datos de la sub-cuenta GHL, marca blanca, recorrido de la pestaña Metodología, profundización del negocio y expectativas (= Etapa 2 'Sesión de Claridad' de Anexo 1: objetivos, alcance, responsables, métricas base) · Mínimo para marcar done: call de 90 min realizada y grabada + accesos en accesos.md + expectativas_cliente.md y notas_profundizacion.md guardados en Drive",
+    noteUSA:"Kick-off de 90 min grabado (TAREA S0-05, Día 3-5) — lo ejecuta Administrativo (mientras no exista el rol, JP): accesos + datos de la sub-cuenta GHL, marca blanca, recorrido de la pestaña Metodología, profundización del negocio y expectativas (= Etapa 2 'Sesión de Claridad' de Anexo 1: objetivos, alcance, responsables, métricas base) · Accesos en EE.UU.: Meta Business Manager + cuenta de Ads + Instagram + número de GHL dedicado (no se piden líneas de WhatsApp Business) · Mínimo para marcar done: call de 90 min realizada y grabada + accesos en accesos.md + expectativas_cliente.md y notas_profundizacion.md guardados en Drive" },
+  { id:"usa_parametros", group:"sem1", type:"ext", name:"USA-2 · Preguntas obligatorias del negocio (oferta + agente)", offset:3, defaultOwner:"CAIO", color:"#2966A5", market:"USA", note:"Solo clientes de EE.UU. — las 9 preguntas obligatorias de data/parametros_negocio_usa_base.md: quién atiende las visitas, persona bilingüe, garantía por servicio, precios (lista de precios o explicación de cada precio; los servicios más costosos van 'desde $X' porque la visita da el estimado), tiempos de ejecución, precio de referencia, duración de la cita, protocolo real de calificación con zona de operación y ticket promedio real · Se envían el Día 3, después del Brief y del kick-off · Mínimo para marcar done: las 9 respondidas por el cliente con dato exacto (o 'no aplica' con el porqué) + cruzadas contra los 7 elementos de la oferta (Resultado, Tiempo, Método, Secretos, Seguro, Polarizar, Precio) — sin esto no arranca 'Creación Oferta Irresistible y Guiones' ni el agente IA" },
   { id:"usa_verificaciones", group:"sem1", type:"ext", name:"USA-4 · Verificaciones obligatorias: A2P 10DLC + Google Business Profile", offset:3, defaultOwner:"CAIO", color:"#2966A5", market:"USA", note:"Solo clientes de EE.UU. — dos trámites de terceros que corren en paralelo: registro A2P 10DLC (Twilio, 4-7 días hábiles) y verificación de Google Business Profile (hasta 5 días hábiles) · Mínimo para marcar done: A2P en estado 'Verified' + Google Business Profile 'Verified' y completo al 100% + link de reseñas guardado + 1 solicitud de reseña real enviada por el canal permitido (SMS solo con A2P 'Verified' y a quien marcó el Checkbox 1) — el número de GHL no se conecta al agente ni se activa ningún workflow de SMS antes del 'Verified'" },
-  { id:"oferta",      group:"sem1", type:"int", name:"Creación Oferta Irresistible y Guiones", offset:4,   defaultOwner:"Gerencia",   color:"#2966A5", note:"Requiere la Sesión de Estrategia General aprobada · Mínimo para marcar done: oferta + guiones (hook/desarrollo/CTA) aprobados por JP",
-    noteUSA:"Requiere la Sesión de Estrategia General aprobada + las 9 respuestas de las preguntas obligatorias del negocio (fase USA-2) cruzadas con los 7 elementos de la oferta — Tiempo, Seguro, Método, Precio y Polarizar salen de ahí, no de suposiciones · Mínimo para marcar done: oferta + guiones (hook/desarrollo/CTA) aprobados por JP" },
+  { id:"oferta",      group:"sem1", type:"int", name:"Creación Oferta Irresistible + Producción", offset:4, defaultOwner:"Gerencia",   color:"#2966A5", note:"Va antes de la Estrategia General (JP 2026-09-30) — 7 elementos por línea (precio con financiamiento solo si hay afiliación activa, vocabulario del cliente fijado, garantía validada) + toda la producción: Banco de Recursos y 5 guiones de ads en video por línea (1 Alcance, 1 Retargeting Alcance, 2 Venta Directa, 1 Retargeting Venta Directa), 2 VSL de las 2 líneas más importantes, system prompts de imagen de cada guion (y ads de crédito si hay financiamiento), ISL de categorías con su prompt, toques de seguimiento con copy y prompt (incluido el toque que invita a recomendar), imagen del plan de referidos si hay programa · Mínimo para marcar done: todas las piezas completas, cada imagen con su prompt, lo que falte marcado ⛔ + aprobación de JP (sin 'aprobado' no se graba ni se lanza)",
+    noteUSA:"Va antes de la Estrategia General (JP 2026-09-30) y requiere las 9 respuestas de las preguntas obligatorias del negocio (fase USA-2) cruzadas con los 7 elementos — Tiempo, Seguro, Método, Precio y Polarizar salen de ahí, no de suposiciones — 7 elementos por línea (precio con financiamiento solo si hay afiliación activa, vocabulario del cliente fijado, garantía validada) + toda la producción: Banco de Recursos y 5 guiones de ads en video por línea (1 Alcance, 1 Retargeting Alcance, 2 Venta Directa, 1 Retargeting Venta Directa), 2 VSL de las 2 líneas más importantes, system prompts de imagen de cada guion (y ads de crédito si hay financiamiento), ISL de categorías con su prompt, toques de seguimiento con copy y prompt (incluido el toque que invita a recomendar), imagen del plan de referidos si hay programa · Mínimo para marcar done: todas las piezas completas, cada imagen con su prompt, lo que falte marcado ⛔ + aprobación de JP (sin 'aprobado' no se graba ni se lanza)" },
   { id:"verificacion", group:"sem1", type:"ext", name:"Proyección Verificada (S1-00)",          offset:6,   defaultOwner:"CAIO",     color:"#2966A5", note:"Abrir la carta con el cliente: 17 datos sin ⛔, capacidad del comercial y del profesional, tabla por ciudad si aplica, 3 entregables actualizados · Mínimo para marcar done: criterio de avance de S1-00 · 90 min si opera en 2+ ciudades" },
   { id:"reuniones_ok",group:"sem1", type:"ext", name:"Reuniones de Arranque ejecutadas — Día 7", offset:6,  defaultOwner:"Director", color:"#2966A5", note:"Todas las reuniones agendadas deben ocurrir dentro de los primeros 7 días · Mínimo para marcar done: 0 reuniones agendadas sin ejecutar al Día 7" },
+  { id:"estrategia",  group:"sem1", type:"int", name:"Sesión Estrategia General + Guía de Producción + Referidos", offset:8,   defaultOwner:"Traffic",  color:"#2966A5", note:"Va después de la Oferta aprobada (JP 2026-09-30). Requiere Contexto + ICP + Servicios y Catálogo completos (pestaña Metodología) — Etapa 3 'Diagnóstico Integral' de Anexo 1: organigrama del flujo comercial con las piezas de la Oferta ubicadas en el flujo, Guía de Producción y Edición + guion de grabación, y etapa de referidos (toque de recomendación en el seguimiento + postventa) · Si el flujo cambia un paso del bot, las piezas afectadas vuelven a la Oferta · Mínimo para marcar done: organigrama y 01_FLUJO_CRM aprobados por JP + guía de producción lista antes de grabar + etapa de referidos diseñada" },
   // Semana 2
-  { id:"ads",         group:"sem2", type:"ext", name:"Grabación Ads",                          offset:7,   defaultOwner:"Producción",   color:"#A24A07", note:"Requiere brief de creativos aprobado — mínimo 3 piezas · Mínimo para marcar done: 3 creativos aprobados y guardados en Drive, cumpliendo los parámetros de calidad del Anexo 1" },
-  { id:"metodologia", group:"sem2", type:"int", name:"Creación Metodología Base",              offset:10,  defaultOwner:"Director", color:"#A24A07", note:"Completar la pestaña Metodología con los guiones ya definidos en Semana 1 — Etapa 5 'Método Comercial' de Anexo 1 (1.5h): flujo comercial WhatsApp, KPIs, modelo operativo · Mínimo para marcar done: las 13 secciones de la pestaña Metodología completas, sin placeholders + inducción del equipo comercial instanciada (visión, lead nuevo, lead de seguimiento, notas/tareas/calendario, cierre con financiamiento, obligaciones diarias y proceso visual — data/induccion_equipo_comercial_base.md)",
+  { id:"ads",         group:"sem2", type:"ext", name:"Grabación Ads",                          offset:10,   defaultOwner:"Producción",   color:"#A24A07", note:"Requiere la Oferta aprobada por JP y la Guía de Producción — mínimo 3 piezas · Mínimo para marcar done: 3 creativos aprobados y guardados en Drive, cumpliendo los parámetros de calidad del Anexo 1" },
+  { id:"estrategia_comercial", group:"sem2", type:"int", name:"Estrategia Comercial — un speech por tarea", offset:11, defaultOwner:"Director", color:"#A24A07", note:"Los speeches se crean uno por uno y cada mejora va al speech que corresponde: contactabilidad, recordatorio de cita, no-show, guía de financiamiento (si hay financiamiento activo), speech de consultorio, speech del plan de referidos, guía de obligaciones diarias y cuadro diario comercial · No reemplaza la Metodología Base · Mínimo para marcar done: cada speech que aplica personalizado con los datos reales del cliente, en 05_Comercial/scripts/ y revisado por JP" },
+  { id:"metodologia", group:"sem2", type:"int", name:"Creación Metodología Base",              offset:12,  defaultOwner:"Director", color:"#A24A07", note:"Completar la pestaña Metodología con los guiones ya definidos en Semana 1 — Etapa 5 'Método Comercial' de Anexo 1 (1.5h): flujo comercial WhatsApp, KPIs, modelo operativo · Mínimo para marcar done: las 13 secciones de la pestaña Metodología completas, sin placeholders + inducción del equipo comercial instanciada (visión, lead nuevo, lead de seguimiento, notas/tareas/calendario, cierre con financiamiento, obligaciones diarias y proceso visual — data/induccion_equipo_comercial_base.md)",
     noteUSA:"Completar la pestaña Metodología con los guiones ya definidos en Semana 1 — Etapa 5 'Método Comercial' de Anexo 1 (1.5h): flujo comercial por SMS (calificación por SMS + llamada en paralelo; el seguimiento respeta el techo de 3-5 SMS/mes por lead declarado en el registro A2P), KPIs, modelo operativo · Mínimo para marcar done: las 13 secciones de la pestaña Metodología completas, sin placeholders + inducción del equipo comercial instanciada (visión, lead nuevo, lead de seguimiento, notas/tareas/calendario, cierre con financiamiento, obligaciones diarias y proceso visual — data/induccion_equipo_comercial_base.md)" },
-  { id:"isl",         group:"sem2", type:"int", name:"Creación ISL/VSL",                       offset:11,  defaultOwner:"Traffic",  color:"#A24A07", note:"Producir el ISL/VSL de cada línea con el system prompt del Director de Arte (data/system_prompt_director_arte_isl.md) y cargarlo en su destino real — anuncios y/o proceso interno del bot (TAREA S1-07B) · Mínimo para marcar done: al menos 1 pieza por línea/categoría producida, con cada destino que aplique (ads y/o bot) cargado y probado" },
   { id:"crm",         group:"sem2", type:"int", name:"Automatizar CRM",                        offset:12,  defaultOwner:"Director", color:"#A24A07", note:"Pipeline + tags + tasks + workflows en GHL, según el Flujo CRM ya definido · Mínimo para marcar done: canales conectados (test de mensaje en IG y WhatsApp) + pipeline con las etapas correctas + tags configurados",
     noteUSA:"Pipeline + tags + tasks + workflows en GHL, según el Flujo CRM ya definido · Mínimo para marcar done: canales conectados (test de mensaje en Instagram y por SMS — el número de GHL se conecta SOLO con el registro A2P en estado 'Verified', fase USA-4) + pipeline con las etapas correctas + tags configurados" },
+  { id:"estrategia_pub", group:"sem2", type:"int", name:"Estrategia Publicitaria", offset:13, defaultOwner:"Traffic", color:"#A24A07", note:"Antes del lanzamiento (JP 2026-09-30), con los guiones aprobados en la Oferta y el mensaje automático real del bot; el retargeting se activa cuando la audiencia de interacción pasa de 500 personas: cuadro de 5 pestañas (Campañas/Públicos/Copys/Proyección/Cómo llenarlo, gen_cuadro_estrategia_publicitaria.py) + documento narrativo de 10 secciones (plantilla_estrategia_publicitaria.md), paleta real del cliente · Mínimo para marcar done: las 10 secciones del documento completas + el cuadro con fórmulas de proyección ROAS cargado",
+    noteUSA:"Antes del lanzamiento (JP 2026-09-30), con los guiones aprobados en la Oferta y el mensaje automático real del bot; el retargeting se activa cuando la audiencia de interacción pasa de 500 personas: cuadro de 5 pestañas (Campañas/Públicos/Copys/Proyección/Cómo llenarlo, gen_cuadro_estrategia_publicitaria.py) + documento narrativo de 10 secciones (plantilla_estrategia_publicitaria.md, variante EE.UU.: misma estructura de 5 campañas; C2 y C3 con objetivo Clientes potenciales — ubicación de conversión sitio web o formulario instantáneo, Interacción → Mensajes solo si el destino es DM —; copies con CTA al formulario; Sección 10 = confirmación de opt-in + primer SMS), paleta real del cliente · Mínimo para marcar done: las 10 secciones del documento completas + el cuadro con fórmulas de proyección ROAS cargado" },
+  { id:"agente_ia", group:"sem2", type:"int", name:"Producción del Agente de IA", offset:13, defaultOwner:"CAIO", color:"#A24A07", note:"Va después de Automatizar CRM (necesita pipeline, etiquetas y calendario) y antes de Capacitación. Con el QUÉ definido en la Estrategia General (carpeta 06_Agente_IA del cliente) se construye en GHL con la guía 13 (10 etapas) · Mínimo para marcar done: los 8 mensajes de prueba pasan sin ajustes, checklist anti-repetición sin ⛔ y guía del equipo lista para la Capacitación",
+    noteUSA:"Va después de Automatizar CRM y antes de Capacitación. Mismo proceso de la guía 13 sobre SMS: el número se conecta solo con el A2P en estado 'Verified' · Mínimo para marcar done: los 8 mensajes de prueba pasan sin ajustes por SMS, checklist anti-repetición sin ⛔ y guía del equipo lista para la Capacitación" },
   // Semana 3 — Lanzamiento
-  { id:"closers",     group:"sem3", type:"ext", name:"Entrenamiento Closers",                  offset:14,  defaultOwner:"Director", color:"#146C3A", note:"1-3 días de inducción con paso a paso — Etapa 6 'Ejecución del Método Comercial por WhatsApp' de Anexo 1: 2 sesiones de 1h en la semana (guiones, objeciones, protocolos, tiempos de respuesta, gestión de leads, seguimiento y cierre) · Mínimo para marcar done: scripts en Drive + las 2 sesiones realizadas + cliente confirma que entendió el proceso",
+  { id:"closers",     group:"sem3", type:"ext", name:"Capacitación del sistema y GHL",         offset:14,  defaultOwner:"Director", color:"#146C3A", note:"1-3 días de inducción con paso a paso — Etapa 6 'Ejecución del Método Comercial por WhatsApp' de Anexo 1: 2 sesiones de 1h en la semana (guiones, objeciones, protocolos, tiempos de respuesta, gestión de leads, seguimiento y cierre) · Mínimo para marcar done: scripts en Drive + las 2 sesiones realizadas + cliente confirma que entendió el proceso",
     noteUSA:"1-3 días de inducción con paso a paso — Etapa 6 'Ejecución del Método Comercial por SMS' de Anexo 1: 2 sesiones de 1h en la semana (guiones, objeciones, protocolos, tiempos de respuesta, gestión de leads, seguimiento y cierre; incluye cómo se ve y se opera un lead que llega por SMS en GHL — visualmente distinto al hilo de WhatsApp — y la persona de atención bilingüe) · Mínimo para marcar done: scripts en Drive + las 2 sesiones realizadas + cliente confirma que entendió el proceso" },
-  { id:"gate_mvp",    group:"sem3", type:"int", name:"Gate MVP — primer anuncio con pauta limitada", offset:21, defaultOwner:"Traffic",  color:"#146C3A", note:"Requiere el checklist de 5 ítems (TAREA MVP-00): bot <5 min, pipeline, primer workflow de nurturing, canales conectados, pixel · Mínimo para marcar done: 5 ítems en ✅ + primer anuncio activo con pauta limitada (TAREA MVP-01)" },
-  { id:"campanas",    group:"sem3", type:"int", name:"Lanzamiento Campañas — Gate Full",       offset:28,  defaultOwner:"Traffic",  color:"#146C3A", note:"Requiere Gate Full: creativos + pixel + pipeline + nurturing + agente IA, todos listos · A más tardar Día 31 si el cliente demoró la entrega · Mínimo para marcar done: los 7 ítems del checklist de lanzamiento (TAREA S2-00) en ✅",
-    noteUSA:"Requiere Gate Full: creativos + pixel + pipeline + nurturing + agente IA, todos listos · A más tardar Día 31 si el cliente demoró la entrega · EE.UU.: destino = sitio de captura con Pixel + evento Lead, o formulario instantáneo; el agente IA opera por SMS y la pauta hacia sitio o formulario NO se activa hasta que el A2P esté 'Verified' (fase USA-4) — una campaña con destino DM sí puede correr antes · Mínimo para marcar done: los 7 ítems del checklist de lanzamiento (TAREA S2-00) en ✅" },
+  { id:"gate_mvp",    group:"sem3", type:"int", name:"Gate MVP — primer anuncio con pauta limitada", offset:21, defaultOwner:"Traffic",  color:"#146C3A", note:"Requiere el checklist de 5 ítems (TAREA MVP-00): bot <5 min (agente IA o plantillas de WhatsApp), pipeline, primer toque de seguimiento, canales conectados, pixel · Mínimo para marcar done: 5 ítems en ✅ + primer anuncio activo con pauta limitada (TAREA MVP-01)" },
+  { id:"campanas",    group:"sem3", type:"int", name:"Lanzamiento Campañas — Gate Full",       offset:28,  defaultOwner:"Traffic",  color:"#146C3A", note:"Requiere Gate Full: creativos + pixel + pipeline + toques de seguimiento + agente IA (o plantillas de WhatsApp si el agente no se puede activar), todos listos · A más tardar Día 31 si el cliente demoró la entrega · Mínimo para marcar done: todos los ítems que aplican del checklist de lanzamiento (TAREA S2-00) en ✅",
+    noteUSA:"Requiere Gate Full: creativos + pixel + pipeline + toques de seguimiento + agente IA por SMS, todos listos · A más tardar Día 31 si el cliente demoró la entrega · EE.UU.: destino = sitio de captura con Pixel + evento Lead, o formulario instantáneo; el agente IA opera por SMS y la pauta hacia sitio o formulario NO se activa hasta que el A2P esté 'Verified' (fase USA-4) — una campaña con destino DM sí puede correr antes · Mínimo para marcar done: todos los ítems que aplican del checklist de lanzamiento (TAREA S2-00) en ✅" },
   // [DEPRECADA 2026-09-28 — JP: "elimina eso de lanzamiento maquinaria"; sus 3 tareas de QA (n:139-141) pasan a gate_mvp, donde ya se exige el loop probado]
   // { id:"maquinaria",  group:"sem3", type:"ext", name:"Lanzamiento Maquinaria",                 offset:19,  defaultOwner:"Director", color:"#146C3A", note:"Confirmar que el loop completo corrió sin errores antes de escalar presupuesto · Mínimo para marcar done: 2 corridas de prueba consecutivas sin errores" },
+  // [DEPRECADA 2026-09-30 — JP: la producción del ISL/VSL va dentro de "Creación Oferta Irresistible + Producción", antes de grabar; la fase suelta quedaba después de la grabación]
+  // { id:"isl",         group:"sem2", type:"int", name:"Creación ISL/VSL",                       offset:11,  defaultOwner:"Traffic",  color:"#A24A07", note:"Producir el ISL/VSL de cada línea con el system prompt del Director de Arte (data/system_prompt_director_arte_isl.md) y cargarlo en su destino real — anuncios y/o proceso interno del bot (TAREA S1-07B) · Mínimo para marcar done: al menos 1 pieza por línea/categoría producida, con cada destino que aplique (ads y/o bot) cargado y probado" },
   // Post-lanzamiento
   { id:"reporte_dia", group:"post", type:"int", name:"Reporte Diario Comercial — proceso activo", offset:22, defaultOwner:"Setter", color:"#7C3AED", note:"Mensajes recibidos · Llamadas realizadas · Preguntas frecuentes del día · Mínimo para marcar done: registro diario sin días sin registrar" },
-  { id:"estrategia_pub", group:"post", type:"int", name:"Estrategia Publicitaria — cuenta madura", offset:25, defaultOwner:"Traffic", color:"#7C3AED", note:"Cuando la campaña de validación pasa a verde: cuadro de 5 pestañas (Campañas/Públicos/Copys/Proyección/Cómo llenarlo, gen_cuadro_estrategia_publicitaria.py) + documento narrativo de 10 secciones (plantilla_estrategia_publicitaria.md), paleta real del cliente · Mínimo para marcar done: las 10 secciones del documento completas + el cuadro con fórmulas de proyección ROAS cargado",
-    noteUSA:"Cuando la campaña de validación pasa a verde: cuadro de 5 pestañas (Campañas/Públicos/Copys/Proyección/Cómo llenarlo, gen_cuadro_estrategia_publicitaria.py) + documento narrativo de 10 secciones (plantilla_estrategia_publicitaria.md, variante EE.UU.: misma estructura de 5 campañas; C2 y C3 con objetivo Clientes potenciales — ubicación de conversión sitio web o formulario instantáneo, Interacción → Mensajes solo si el destino es DM —; copies con CTA al formulario; Sección 10 = confirmación de opt-in + primer SMS), paleta real del cliente · Mínimo para marcar done: las 10 secciones del documento completas + el cuadro con fórmulas de proyección ROAS cargado" },
   { id:"reunion_kpi", group:"post", type:"ext", name:"Reunión Semanal Revisión KPIs",          offset:28,  defaultOwner:"Director", color:"#7C3AED", note:"Recurrente cada semana · CPL · Contactabilidad · Cierre · ROAS · Mínimo para marcar done: reunión ejecutada + los 4 KPIs revisados" },
   { id:"resumen1",    group:"post", type:"int", name:"Resumen Operativo — 1 semana",           offset:28,  defaultOwner:"Legal",    color:"#7C3AED", note:"Va con reunión interna antes · Mínimo para marcar done: resumen entregado al cliente con reunión interna previa" },
   { id:"resumen3",    group:"post", type:"int", name:"Resumen Operativo — 3 semanas",          offset:42,  defaultOwner:"Legal",    color:"#7C3AED", note:"Va con reunión interna antes · Mínimo para marcar done: resumen de 3 semanas entregado + ajustes documentados" },
@@ -669,31 +759,39 @@ const LAUNCH_PHASES = [
 // reales — NUNCA por coincidencia de área o semana (eso genera falsos positivos, ver
 // data/changelog.md 2026-08-27 (s)). Solo entran acá las fases donde el título de la tarea es
 // literalmente la misma actividad que la fase describe. Las fases que no aparecen en este objeto
-// (claridad, acuerdo, arranque, estrategia, reuniones_ok, metodologia, isl,
+// (reuniones_ok y resumen1 — acuerdo, metodologia y resumen3 vinculadas 2026-10-01 con tareas literales de la fase; [REVISAR] y monitoreo continuo sin vincular a propósito; claridad, arranque y estrategia vinculadas 2026-09-30 a n:315-319 y n:329-331; isl deprecada 2026-09-30 —
 // resumen1, resumen3, estrategia_pub) se quedan 100% manuales (revision se vinculó 2026-09-25 a n:307) a propósito — no había una tarea
 // puntual que correspondiera con precisión, mejor dejarlas sin auto-marcar que inventar una
 // relación dudosa. Se usa en toggleDone: al marcar una fase de esta lista como lista, las tareas
 // listadas se marcan automáticamente — nunca al revés (desmarcar la fase no desmarca tareas).
 const PHASE_TASKS = {
-  diagnostico:  [8, 265, 15],
+  claridad:     [315, 316],
+  diagnostico:  [8, 265, 15, 7, 12, 13, 14, 21, 266],
   proyeccion:   [313, 314],
   verificacion: [304, 305, 306],
+  acuerdo:      [4, 2, 20, 42],
   firma:        [1, 3, 6],
-  oferta:       [83, 84, 91, 92, 93, 100, 312],
-  ads:          [89, 90, 94, 95, 96],
-  crm:          [104, 107, 108, 109, 271, 272, 60],
-  closers:      [149, 150, 169, 171, 172, 173, 174, 177, 179, 180, 183, 185, 186, 189, 190],
-  gate_mvp:     [139, 140, 141],
-  campanas:     [208, 209, 210, 296, 297, 298],
+  arranque:     [317, 318, 319, 28, 10, 40, 48, 50, 51, 52, 53, 54, 79, 80, 82],
+  oferta:       [83, 84, 100, 312, 267, 275, 320, 321, 322, 323, 324, 352, 325, 326, 327, 328, 340, 341, 342, 343, 344],
+  estrategia:   [9, 329, 330, 331],
+  estrategia_comercial: [182, 274, 268, 332, 269, 333, 337, 338, 147, 160, 161, 162, 143, 157],
+  ads:          [89, 90, 94, 95, 96, 97, 99, 102, 103],
+  metodologia:  [308, 309, 310, 311],
+  crm:          [104, 108, 109, 271, 272, 60, 110, 111, 112, 113, 114, 115, 117, 118, 119, 120, 122, 123, 124, 125, 126, 127, 128, 129, 130, 133, 155, 234, 255, 339],
+  closers:      [276, 270, 181, 149, 150, 169, 171, 172, 173, 174, 177, 179, 180, 183, 185, 186, 189, 190, 351],
+  gate_mvp:     [139, 140, 141, 335, 273, 197, 198],
+  agente_ia:    [345, 346, 347, 348, 349, 350],
+  campanas:     [208, 209, 210, 296, 297, 298, 195, 196, 144, 205, 206, 212, 213],
   // Fases solo de EE.UU. (2026-09-25): tareas market:"USA" — en clientes de Colombia esos n no existen y no se marca nada
   usa_parametros: [300, 301, 302, 303],
-  revision:     [307],
+  revision:     [307, 38],
   usa_docs:     [277, 278, 279, 280, 281],
   usa_sitio:    [282, 283, 284, 285, 286],
   usa_verificaciones: [287, 288, 289, 290, 291, 292, 293, 294, 295],
-  estrategia_pub: [299],
-  reporte_dia:  [262, 263],
-  reunion_kpi:  [223, 224, 264],
+  estrategia_pub: [299, 336],
+  reporte_dia:  [262, 263, 229, 221, 222, 232],
+  reunion_kpi:  [223, 224, 264, 227, 233, 235],
+  resumen3:     [246, 249],
   informe1m:    [242, 243],
 };
 const LAUNCH_GROUPS = [
@@ -727,7 +825,7 @@ const FINANCE_CATEGORIES =["Arriendo","Alimentación","Transporte","Entretenimie
 // orden y contenido del código, más lo que JP creó desde la UI con un id que el código no tiene.
 // Fases/pasos que se sacaron del código a propósito: se filtran también de lo guardado (si no, mergeGlobalList las
 // conserva como si JP las hubiera creado desde la UI). Las creadas por JP tienen ids propios (uid) y nunca caen acá.
-const RETIRED_GLOBAL_IDS = new Set(["maquinaria"]); // 2026-09-28 — JP: "elimina eso de lanzamiento maquinaria"
+const RETIRED_GLOBAL_IDS = new Set(["maquinaria", "isl"]); // 2026-09-28 — JP: "elimina eso de lanzamiento maquinaria" · 2026-09-30 — "isl" pasa a la fase de Oferta Irresistible
 function mergeGlobalList(saved, fresh, fields) {
   if (!saved || !saved.length) return fresh;
   saved = saved.filter(s => !RETIRED_GLOBAL_IDS.has(s.id));
@@ -868,8 +966,10 @@ function getInitialData(savedOverride) {
     const freshTaskMap = new Map(defaults.globalTasks.map(t => [t.id, t]));
     const savedTasks = saved.globalTasks || [];
     const savedIds = new Set(savedTasks.map(t => t.id));
+    // 2026-10-01: una tarea del código (id "gt_N") que ya no está en GEMA_TASKS fue deprecada/archivada → se retira
+    // también de los datos guardados (antes quedaba visible para siempre). Las creadas desde la UI (id propio) se conservan.
     const mergedTasks = [
-      ...savedTasks.map(t => {
+      ...savedTasks.filter(t => !(String(t.id).startsWith("gt_") && !freshTaskMap.has(t.id))).map(t => {
         const fresh = freshTaskMap.get(t.id);
         return fresh ? { ...t, owner: fresh.owner, title: fresh.title, area: fresh.area, week: fresh.week } : t;
       }),
@@ -991,7 +1091,7 @@ function Pill({ active, onClick, children }) {
 function ProgressBar({ pct, color=ACCENT, height=4 }) {
   return (
     <div style={{ background:"rgba(213,222,235,0.8)", borderRadius:8, height, overflow:"hidden" }}>
-      <div style={{ width:`${pct}%`, height:"100%", background:`linear-gradient(90deg, ${color}cc, ${color})`, borderRadius:8, transition:"width 0.4s ease", boxShadow:`0 0 6px ${color}44` }} />
+      <div className="gp-bar-fill" style={{ width:`${pct}%`, height:"100%", background:`linear-gradient(90deg, ${color}cc, ${color})`, borderRadius:8, transition:"width 0.4s ease", boxShadow:`0 0 6px ${color}44` }} />
     </div>
   );
 }
@@ -3908,13 +4008,13 @@ function ClientsList({ clients, onSelect, onCreate, onDelete, teamPin }) {
       {/* ── CARDS VIEW ── */}
       {view === "cards" && (
         <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:14 }}>
-          {filtered.map(c => {
+          {filtered.map((c, idx) => {
             const pct = overallPct(c.tasks);
             const isDone = pct === 100;
             const stage = getStage(pct);
             return (
-              <div key={c.id}
-                style={{ position:"relative", background:CARD, borderRadius:14, padding:"18px 16px", cursor:"pointer",
+              <div key={c.id} className="gp-rise"
+                style={{ "--i": idx, position:"relative", background:CARD, borderRadius:16, padding:"18px 16px", cursor:"pointer",
                   border:`1px solid ${hoveredId===c.id?ACCENT+"66":isDone?GREEN+"44":BORDER}`,
                   borderTop:`2px solid ${hoveredId===c.id?ACCENT:isDone?GREEN:BORDER}`,
                   boxShadow: hoveredId===c.id ? "0 6px 24px rgba(27,42,74,0.18)" : "0 2px 10px rgba(27,42,74,0.09)",
@@ -9808,6 +9908,40 @@ function IssuesPanel({ issues, team, roles, onChange }) {
   );
 }
 
+// ─── BENTO: números y anillo animados (BENTO_2026_10_07) ───────────────────────
+function CountUp({ value, ms = 900 }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const target = Number(value) || 0;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setN(target); return; }
+    let raf, start;
+    const step = (ts) => {
+      if (!start) start = ts;
+      const p = Math.min(1, (ts - start) / ms);
+      setN(Math.round(target * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value, ms]);
+  return <>{n}</>;
+}
+
+function ProgressRing({ pct, size = 132, stroke = 11 }) {
+  const [shown, setShown] = useState(0);
+  useEffect(() => { const t = setTimeout(() => setShown(pct), 120); return () => clearTimeout(t); }, [pct]);
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display:"block" }} aria-hidden="true">
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth={stroke} />
+      <circle className="gp-ring-fill" cx={size/2} cy={size/2} r={r} fill="none" stroke="#8EC0F0" strokeWidth={stroke}
+        strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - shown / 100)}
+        transform={`rotate(-90 ${size/2} ${size/2})`} />
+    </svg>
+  );
+}
+
 function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues, onUpdateClient }) {
   const [addingTo, setAddingTo] = useState(null);   // client id con form abierto
   const [quickTitle, setQuickTitle] = useState("");
@@ -9854,210 +9988,225 @@ function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues, onUpdate
   const openIssues = (data.issues||[]).filter(i=>i.status!=="listo");
   const urgentIssues = openIssues.filter(i=>i.priority==="rojo");
 
-  const statCards = [
-    { overline:"Portafolio",  label:"Clientes Activos",    value: data.clients.length,              color: ACCENT,      icon:"👥", action: onGoToClients },
-    { overline:"Ejecución",   label:"Tareas Completadas",  value: `${doneTasks.length}/${allTasks.length}`, color: GREEN, icon:"✓" },
-    { overline:"Avance",      label:"Progreso Global",     value: `${pct}%`,                        color: pct>70?GREEN:pct>40?ACCENT:RED, icon:"📈" },
-    { overline:"Agenda",      label:"Reuniones Próximas",  value: upcoming.length,                  color: "#2966A5", icon:"📅" },
-    { overline:"Alertas",     label:"Tareas Abiertas",     value: openIssues.length,                color: urgentIssues.length>0?"#C62828":urgentIssues.length===0&&openIssues.length===0?GREEN:ACCENT, icon: urgentIssues.length>0?"🔴":"🚦" },
+  const weekDone = data.clients.reduce((s, c) => s + (c.tasks || []).filter(t => t.done && t.doneAt && (Date.now() - t.doneAt) < 7 * 24 * 60 * 60 * 1000).length, 0);
+  const maxPending = Math.max(1, ...Object.values(byOwner).map(o => o.pending));
+  const urgentTasks = data.clients.flatMap(c =>
+    (c.tasks||[]).filter(t => t.urgent && !t.done).map(t => ({ ...t, clientName: c.name, clientId: c.id }))
+  );
+  const tiles = [
+    { overline:"Portafolio", label:"Clientes activos",     value: data.clients.length, color: ACCENT, icon:"👥", action: onGoToClients },
+    { overline:"Agenda",     label:"Reuniones próximas",   value: upcoming.length,     color: ACCENT, icon:"📅" },
+    { overline:"Alertas",    label:"Tareas abiertas",      value: openIssues.length,   color: urgentIssues.length>0?RED:openIssues.length===0?GREEN:ACCENT, icon: urgentIssues.length>0?"🔴":"🚦" },
+    { overline:"Esta semana",label:"Tareas completadas",   value: weekDone,            color: GREEN,  icon:"✓" },
   ];
+  const Head = ({ overline, title, color = ACCENT_DIM, extra }) => (
+    <div style={{ marginBottom:16, display:"flex", justifyContent:"space-between", alignItems:"flex-end", gap:8 }}>
+      <div>
+        <div style={{ color, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:5 }}>{overline}</div>
+        <div style={{ color:INK, fontWeight:800, fontSize:16, letterSpacing:-0.3 }}>{title}</div>
+      </div>
+      {extra}
+    </div>
+  );
+  let i = 0;   // orden de entrada escalonada de las tarjetas
 
   return (
     <div style={{ maxWidth:1100 }}>
-      <div style={{ marginBottom:28, display:"flex", alignItems:"flex-end", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
-        <div>
+      <div style={{ marginBottom:24, display:"flex", alignItems:"flex-end", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
+        <div className="gp-rise">
           <div style={{ color:ACCENT_DIM, fontSize:10, fontWeight:700, letterSpacing:3, textTransform:"uppercase", marginBottom:6 }}>Dashboard</div>
           <h2 style={{ color:INK, fontSize:24, fontWeight:800, letterSpacing:-0.5, lineHeight:1 }}>Centro de Comando</h2>
         </div>
         <div style={{ color:GRAY, fontSize:12, textTransform:"capitalize", textAlign:"right" }}>{today}</div>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:14, marginBottom:28 }}>
-        {statCards.map(card => (
-          <div key={card.label} onClick={card.action}
-            style={{ padding:"20px 18px", background:CARD, borderRadius:14, cursor:card.action?"pointer":"default",
-              border:`1px solid ${BORDER}`, borderTop:`2px solid ${card.color}55`,
-              transition:"border-color 0.2s, transform 0.2s, box-shadow 0.2s",
-              boxShadow:"0 2px 12px rgba(27,42,74,0.113)" }}
-            onMouseEnter={e=>{ e.currentTarget.style.borderColor=card.color+"88"; e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow=`0 6px 24px rgba(27,42,74,0.18), 0 0 0 1px ${card.color}22`; }}
-            onMouseLeave={e=>{ e.currentTarget.style.borderColor=BORDER; e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow="0 2px 12px rgba(27,42,74,0.113)"; }}>
-            <div style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:32, height:32, borderRadius:8, background:`${card.color}14`, marginBottom:14, fontSize:16 }}>{card.icon}</div>
-            <div style={{ color:card.color, fontSize:9, fontWeight:700, letterSpacing:2, textTransform:"uppercase", marginBottom:4 }}>{card.overline}</div>
-            <div style={{ fontSize:29, fontWeight:900, color:card.color, lineHeight:1, letterSpacing:-1 }}>{card.value}</div>
-            <div style={{ fontSize:11, color:GRAY, marginTop:6, fontWeight:500 }}>{card.label}</div>
+      <div className="gp-bento">
+        {/* Héroe: avance global */}
+        <div className="gp-bento-card gp-bento-hero s-4 r-2" style={{ "--i": i++, display:"flex", flexDirection:"column", justifyContent:"space-between", gap:18 }}>
+          <div>
+            <div style={{ color:"#B9D3EE", fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:5 }}>Avance global</div>
+            <div style={{ color:"#FFFFFF", fontWeight:800, fontSize:16, letterSpacing:-0.3 }}>Progreso del portafolio</div>
           </div>
-        ))}
-      </div>
-
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
-        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-          <div style={{ padding:20, background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, boxShadow:"0 2px 12px rgba(27,42,74,0.09)" }}>
-            <div style={{ marginBottom:16 }}>
-              <div style={{ color:ACCENT_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:5 }}>Agenda</div>
-              <div style={{ color:INK, fontWeight:800, fontSize:16, letterSpacing:-0.3 }}>Próximas Reuniones</div>
+          <div style={{ position:"relative", alignSelf:"center" }}>
+            <ProgressRing pct={pct} />
+            <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+              <div style={{ fontSize:34, fontWeight:900, letterSpacing:-1, lineHeight:1, color:"#FFFFFF" }}><CountUp value={pct} />%</div>
+              <div style={{ fontSize:10, color:"#B9D3EE", marginTop:4, fontWeight:600 }}>completado</div>
             </div>
-            {upcoming.length === 0
-              ? <div style={{ color:GRAY, fontSize:12, padding:"12px 0" }}>No hay reuniones agendadas próximas.</div>
-              : <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                  {upcoming.map(({ client, meeting, date }) => (
-                    <div key={meeting.id} onClick={()=>onSelectClient(client.id)}
-                      style={{ background:"rgba(27,42,74,0.04)", border:`1px solid ${BORDER}`, borderLeft:`3px solid #2966A555`, borderRadius:9,
-                        padding:"10px 13px", cursor:"pointer", display:"flex", justifyContent:"space-between",
-                        alignItems:"center", transition:"all 0.15s" }}
-                      onMouseEnter={e=>{ e.currentTarget.style.borderLeftColor="#2966A5"; e.currentTarget.style.background="rgba(27,42,74,0.07)"; }}
-                      onMouseLeave={e=>{ e.currentTarget.style.borderLeftColor="#2966A555"; e.currentTarget.style.background="rgba(27,42,74,0.04)"; }}>
-                      <div style={{ minWidth:0 }}>
-                        <div style={{ color:INK, fontWeight:600, fontSize:13, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
-                          {meeting.title}
-                        </div>
-                        <div style={{ color:GRAY, fontSize:11, marginTop:2 }}>📌 {client.name}</div>
-                      </div>
-                      <div style={{ textAlign:"right", flexShrink:0, marginLeft:12 }}>
-                        <div style={{ color:"#2966A5", fontWeight:700, fontSize:12 }}>{fmtDate(date)}</div>
-                        {meeting.desc && <div style={{ color:GRAY, fontSize:10, marginTop:1 }}>{meeting.desc.slice(0,30)}{meeting.desc.length>30?"…":""}</div>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-            }
           </div>
-
-          <div style={{ padding:20, background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, boxShadow:"0 2px 12px rgba(27,42,74,0.09)" }}>
-            <div style={{ marginBottom:16 }}>
-              <div style={{ color:GREEN, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:5 }}>Esta semana</div>
-              <div style={{ color:INK, fontWeight:800, fontSize:16, letterSpacing:-0.3 }}>Victorias Recientes</div>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", borderTop:"1px solid rgba(255,255,255,0.14)", paddingTop:14 }}>
+            <div>
+              <div style={{ fontSize:22, fontWeight:900, letterSpacing:-0.5, color:"#FFFFFF", lineHeight:1 }}><CountUp value={doneTasks.length} /></div>
+              <div style={{ fontSize:10, color:"#B9D3EE", marginTop:4 }}>tareas hechas</div>
             </div>
-            {recentlyDone.length === 0
-              ? <div style={{ color:GRAY, fontSize:12, padding:"12px 0" }}>No hay tareas completadas esta semana.</div>
-              : recentlyDone.map(t => (
-                <div key={t.id} style={{ padding:"7px 0", borderBottom:`1px solid rgba(213,222,235,0.6)`, display:"flex", alignItems:"flex-start", gap:8 }}>
-                  <span style={{ color:GREEN, fontSize:11, marginTop:1, flexShrink:0 }}>✓</span>
-                  <div>
-                    <div style={{ color:INK, fontSize:12, lineHeight:1.4 }}>{t.title}</div>
-                    <div style={{ color:GRAY, fontSize:10, marginTop:1 }}>{t.clientName} · {t.week}</div>
-                  </div>
-                </div>
-              ))
-            }
+            <div style={{ textAlign:"right" }}>
+              <div style={{ fontSize:22, fontWeight:900, letterSpacing:-0.5, color:"#FFFFFF", lineHeight:1 }}><CountUp value={allTasks.length - doneTasks.length} /></div>
+              <div style={{ fontSize:10, color:"#B9D3EE", marginTop:4 }}>por hacer</div>
+            </div>
           </div>
         </div>
 
-        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-          <div style={{ padding:20, background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, boxShadow:"0 2px 12px rgba(27,42,74,0.09)" }}>
-            <div style={{ marginBottom:16 }}>
-              <div style={{ color:ACCENT_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:5 }}>Equipo</div>
-              <div style={{ color:INK, fontWeight:800, fontSize:16, letterSpacing:-0.3 }}>Carga de Trabajo</div>
+        {/* Indicadores */}
+        {tiles.map(card => (
+          <div key={card.label} onClick={card.action} className={"gp-bento-card s-4" + (card.action ? " clickable" : "")}
+            style={{ "--i": i++, borderTop:`2px solid ${card.color}` }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+              <div style={{ color:card.color, fontSize:9, fontWeight:700, letterSpacing:2, textTransform:"uppercase" }}>{card.overline}</div>
+              <div style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:32, height:32, borderRadius:9, background:`${card.color}14`, fontSize:15 }}>{card.icon}</div>
             </div>
-            {Object.keys(byOwner).length === 0
-              ? <div style={{ color:GREEN, fontSize:12, padding:"12px 0", display:"flex", alignItems:"center", gap:6 }}>
-                  <span style={{ color:GREEN }}>✓</span> Todo al día — sin tareas pendientes.
+            <div style={{ fontSize:38, fontWeight:900, color:card.color, lineHeight:1, letterSpacing:-1.2, marginTop:10 }}><CountUp value={card.value} /></div>
+            <div style={{ fontSize:11.5, color:GRAY, marginTop:6, fontWeight:500 }}>{card.label}{card.action ? " →" : ""}</div>
+          </div>
+        ))}
+
+        {/* Prioridad: solo si hay urgentes */}
+        {urgentTasks.length > 0 && (
+          <div className="gp-bento-card s-12" style={{ "--i": i++, border:`1px solid rgba(198,40,40,0.3)`, borderLeft:`3px solid ${RED}` }}>
+            <Head overline="Prioridad" color={RED} title={<>⚡ Pendientes Urgentes <span style={{ fontSize:12, fontWeight:500, color:GRAY }}>({urgentTasks.length})</span></>} />
+            {urgentTasks.map(t => {
+              const badge = ROLE_BADGE[t.owner] || { color:"#2966A5", bg:"rgba(41,102,165,0.08)", border:"rgba(41,102,165,0.4)" };
+              return (
+                <div key={t.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 0", borderBottom:`1px solid rgba(213,222,235,0.5)` }}>
+                  <span style={{ fontSize:10, fontWeight:700, color:RED, flexShrink:0 }}>⚡</span>
+                  <span onClick={()=>onSelectClient(t.clientId)} style={{ fontSize:11, color:GRAY, flexShrink:0, cursor:"pointer", minWidth:72 }}>{t.clientName}</span>
+                  <span style={{ flex:1, fontSize:12, color:INK, lineHeight:1.3 }}>{t.title.replace(/^\[(TUYO|GEMA V4)\]\s*/,"")}</span>
+                  <span style={{ fontSize:10, padding:"1px 6px", borderRadius:4, border:`1px solid ${badge.border}`, color:badge.color, background:badge.bg, flexShrink:0 }}>{t.owner}</span>
                 </div>
-              : Object.entries(byOwner).sort((a,b)=>b[1].pending-a[1].pending).map(([owner, info]) => (
-                <div key={owner} style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
-                  padding:"9px 0", borderBottom:`1px solid rgba(213,222,235,0.6)` }}>
-                  <div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Estado de clientes */}
+        <div className="gp-bento-card s-7" style={{ "--i": i++ }}>
+          <Head overline="Portafolio" title="Estado de Clientes" />
+          {data.clients.length === 0
+            ? <div style={{ color:GRAY, fontSize:12, padding:"12px 0" }}>
+                No hay clientes.{" "}
+                <button onClick={onGoToClients}
+                  style={{ background:"none", border:"none", color:ACCENT, cursor:"pointer", fontSize:12, fontWeight:600, textDecoration:"none" }}>
+                  Crear primer cliente →
+                </button>
+              </div>
+            : data.clients.map(c => {
+              const ct = c.tasks || [];
+              const cd = ct.filter(t => t.done).length;
+              const cp = ct.length ? Math.round(cd / ct.length * 100) : 0;
+              const barColor = cp>70?GREEN:cp>40?ACCENT:RED;
+              const isOpen = addingTo === c.id;
+              return (
+                <div key={c.id} style={{ padding:"10px 0", borderBottom:`1px solid rgba(213,222,235,0.6)` }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6, alignItems:"center" }}>
+                    <span onClick={()=>onSelectClient(c.id)}
+                      style={{ color:INK, fontSize:12.5, fontWeight:600, cursor:"pointer", flex:1 }}
+                      onMouseEnter={e=>e.currentTarget.style.opacity="0.7"}
+                      onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+                      {c.name}
+                    </span>
+                    <span style={{ color:barColor, fontSize:12, fontWeight:800, marginRight:8 }}><CountUp value={cp} />%</span>
+                    <button
+                      onClick={e=>{ e.stopPropagation(); if(isOpen){setAddingTo(null);setQuickTitle("");}else{setAddingTo(c.id);setQuickTitle("");} }}
+                      style={{ padding:"1px 7px", background:isOpen?"rgba(41,102,165,0.1)":"transparent", border:`1px solid ${isOpen?ACCENT:BORDER}`, borderRadius:5, color:isOpen?ACCENT:GRAY, fontSize:13, cursor:"pointer", fontWeight:700, lineHeight:1.4 }}>
+                      {isOpen ? "✕" : "+"}
+                    </button>
+                  </div>
+                  <ProgressBar pct={cp} color={barColor} height={5} />
+                  <div style={{ color:GRAY, fontSize:10, marginTop:4 }}>{cd} de {ct.length} tareas</div>
+                  {isOpen && (
+                    <div onClick={e=>e.stopPropagation()}
+                      style={{ display:"flex", gap:5, marginTop:8, alignItems:"center" }}>
+                      <input
+                        autoFocus
+                        value={quickTitle}
+                        onChange={e=>setQuickTitle(e.target.value)}
+                        onKeyDown={e=>{ if(e.key==="Enter") submitQuickTask(c,e); if(e.key==="Escape"){setAddingTo(null);setQuickTitle("");} }}
+                        placeholder="Nueva tarea..."
+                        style={{ flex:1, background:"#F3F6FB", border:`1px solid ${BORDER}`, borderRadius:5, padding:"4px 7px", color:INK, fontSize:11, outline:"none" }}
+                      />
+                      <select value={quickOwner} onChange={e=>setQuickOwner(e.target.value)}
+                        style={{ background:"#F3F6FB", border:`1px solid ${BORDER}`, borderRadius:5, padding:"4px 5px", color:GRAY, fontSize:10, outline:"none" }}>
+                        {["JP","COO","CAIO","Media Buyer","AM"].map(o=><option key={o} value={o}>{o}</option>)}
+                      </select>
+                      <button onClick={e=>submitQuickTask(c,e)}
+                        style={{ padding:"4px 9px", background:quickTitle.trim()?GREEN:"#E7EDF6", color:quickTitle.trim()?"#FFFFFF":GRAY, border:"none", borderRadius:5, cursor:"pointer", fontWeight:700, fontSize:11 }}>
+                        ✓
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          }
+        </div>
+
+        {/* Carga del equipo */}
+        <div className="gp-bento-card s-5" style={{ "--i": i++ }}>
+          <Head overline="Equipo" title="Carga de Trabajo" />
+          {Object.keys(byOwner).length === 0
+            ? <div style={{ color:GREEN, fontSize:12, padding:"12px 0", display:"flex", alignItems:"center", gap:6 }}>
+                <span style={{ color:GREEN }}>✓</span> Todo al día — sin tareas pendientes.
+              </div>
+            : Object.entries(byOwner).sort((a,b)=>b[1].pending-a[1].pending).map(([owner, info]) => (
+              <div key={owner} style={{ padding:"9px 0", borderBottom:`1px solid rgba(213,222,235,0.6)` }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                  <div style={{ minWidth:0 }}>
                     <span style={{ color:INK, fontSize:13, fontWeight:600 }}>{owner}</span>
-                    <div style={{ color:GRAY, fontSize:10, marginTop:2 }}>
+                    <div style={{ color:GRAY, fontSize:10, marginTop:2, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
                       {[...info.clients].slice(0,2).join(", ")}{info.clients.size>2?` +${info.clients.size-2}`:""}
                     </div>
                   </div>
-                  <span style={{ background:"rgba(41,102,165,0.1)", color:ACCENT, fontSize:12, fontWeight:800,
-                    padding:"3px 12px", borderRadius:20, border:"1px solid rgba(41,102,165,0.2)" }}>{info.pending}</span>
+                  <span style={{ color:ACCENT, fontSize:15, fontWeight:900, letterSpacing:-0.3 }}><CountUp value={info.pending} /></span>
                 </div>
-              ))
-            }
-          </div>
-
-          {/* Panel de Prioridades */}
-          {(() => {
-            const urgent = data.clients.flatMap(c =>
-              (c.tasks||[]).filter(t => t.urgent && !t.done).map(t => ({ ...t, clientName: c.name, clientId: c.id }))
-            );
-            if (urgent.length === 0) return null;
-            return (
-              <div style={{ padding:20, background:CARD, border:`1px solid rgba(198,40,40,0.3)`, borderLeft:`3px solid #C62828`, borderRadius:14, boxShadow:"0 2px 12px rgba(27,42,74,0.09)", marginBottom:16 }}>
-                <div style={{ marginBottom:12 }}>
-                  <div style={{ color:"#C62828", fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:5 }}>Prioridad</div>
-                  <div style={{ color:INK, fontWeight:800, fontSize:16, letterSpacing:-0.3 }}>⚡ Pendientes Urgentes <span style={{ fontSize:12, fontWeight:500, color:GRAY }}>({urgent.length})</span></div>
-                </div>
-                {urgent.map(t => {
-                  const badge = ROLE_BADGE[t.owner] || { color:"#2966A5", bg:"rgba(41,102,165,0.08)", border:"rgba(41,102,165,0.4)" };
-                  return (
-                    <div key={t.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 0", borderBottom:`1px solid rgba(213,222,235,0.5)` }}>
-                      <span style={{ fontSize:10, fontWeight:700, color:"#C62828", flexShrink:0 }}>⚡</span>
-                      <span onClick={()=>onSelectClient(t.clientId)} style={{ fontSize:11, color:GRAY, flexShrink:0, cursor:"pointer", minWidth:72 }}>{t.clientName}</span>
-                      <span style={{ flex:1, fontSize:12, color:INK, lineHeight:1.3 }}>{t.title.replace(/^\[(TUYO|GEMA V4)\]\s*/,"")}</span>
-                      <span style={{ fontSize:10, padding:"1px 6px", borderRadius:4, border:`1px solid ${badge.border}`, color:badge.color, background:badge.bg, flexShrink:0 }}>{t.owner}</span>
-                    </div>
-                  );
-                })}
+                <ProgressBar pct={Math.round(info.pending / maxPending * 100)} color={ACCENT} height={4} />
               </div>
-            );
-          })()}
+            ))
+          }
+        </div>
 
-          <div style={{ padding:20, background:CARD, border:`1px solid ${BORDER}`, borderRadius:14, boxShadow:"0 2px 12px rgba(27,42,74,0.09)" }}>
-            <div style={{ marginBottom:16 }}>
-              <div style={{ color:"#7C3AED", fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:5 }}>Portafolio</div>
-              <div style={{ color:INK, fontWeight:800, fontSize:16, letterSpacing:-0.3 }}>Estado de Clientes</div>
-            </div>
-            {data.clients.length === 0
-              ? <div style={{ color:GRAY, fontSize:12, padding:"12px 0" }}>
-                  No hay clientes.{" "}
-                  <button onClick={onGoToClients}
-                    style={{ background:"none", border:"none", color:ACCENT, cursor:"pointer", fontSize:12, fontWeight:600, textDecoration:"none" }}>
-                    Crear primer cliente →
-                  </button>
+        {/* Victorias */}
+        <div className="gp-bento-card s-7" style={{ "--i": i++ }}>
+          <Head overline="Esta semana" color={GREEN} title="Victorias Recientes" />
+          {recentlyDone.length === 0
+            ? <div style={{ color:GRAY, fontSize:12, padding:"12px 0" }}>No hay tareas completadas esta semana.</div>
+            : recentlyDone.map(t => (
+              <div key={t.id} style={{ padding:"7px 0", borderBottom:`1px solid rgba(213,222,235,0.6)`, display:"flex", alignItems:"flex-start", gap:8 }}>
+                <span style={{ color:GREEN, fontSize:11, marginTop:1, flexShrink:0 }}>✓</span>
+                <div>
+                  <div style={{ color:INK, fontSize:12, lineHeight:1.4 }}>{t.title}</div>
+                  <div style={{ color:GRAY, fontSize:10, marginTop:1 }}>{t.clientName} · {t.week}</div>
                 </div>
-              : data.clients.map(c => {
-                const ct = c.tasks || [];
-                const cd = ct.filter(t => t.done).length;
-                const cp = ct.length ? Math.round(cd / ct.length * 100) : 0;
-                const barColor = cp>70?GREEN:cp>40?ACCENT:RED;
-                const isOpen = addingTo === c.id;
-                return (
-                  <div key={c.id} style={{ padding:"9px 0", borderBottom:`1px solid rgba(213,222,235,0.6)` }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6, alignItems:"center" }}>
-                      <span onClick={()=>onSelectClient(c.id)}
-                        style={{ color:INK, fontSize:12, fontWeight:600, cursor:"pointer", flex:1 }}
-                        onMouseEnter={e=>e.currentTarget.style.opacity="0.7"}
-                        onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
-                        {c.name}
-                      </span>
-                      <span style={{ color:barColor, fontSize:11, fontWeight:700, marginRight:8 }}>{cp}%</span>
-                      <button
-                        onClick={e=>{ e.stopPropagation(); if(isOpen){setAddingTo(null);setQuickTitle("");}else{setAddingTo(c.id);setQuickTitle("");} }}
-                        style={{ padding:"1px 7px", background:isOpen?"rgba(41,102,165,0.1)":"transparent", border:`1px solid ${isOpen?ACCENT:BORDER}`, borderRadius:5, color:isOpen?ACCENT:GRAY, fontSize:13, cursor:"pointer", fontWeight:700, lineHeight:1.4 }}>
-                        {isOpen ? "✕" : "+"}
-                      </button>
-                    </div>
-                    <ProgressBar pct={cp} color={barColor} height={3} />
-                    <div style={{ color:GRAY, fontSize:10, marginTop:3 }}>{cd} de {ct.length} tareas</div>
-                    {isOpen && (
-                      <div onClick={e=>e.stopPropagation()}
-                        style={{ display:"flex", gap:5, marginTop:8, alignItems:"center" }}>
-                        <input
-                          autoFocus
-                          value={quickTitle}
-                          onChange={e=>setQuickTitle(e.target.value)}
-                          onKeyDown={e=>{ if(e.key==="Enter") submitQuickTask(c,e); if(e.key==="Escape"){setAddingTo(null);setQuickTitle("");} }}
-                          placeholder="Nueva tarea..."
-                          style={{ flex:1, background:"#F3F6FB", border:`1px solid ${BORDER}`, borderRadius:5, padding:"4px 7px", color:INK, fontSize:11, outline:"none" }}
-                        />
-                        <select value={quickOwner} onChange={e=>setQuickOwner(e.target.value)}
-                          style={{ background:"#F3F6FB", border:`1px solid ${BORDER}`, borderRadius:5, padding:"4px 5px", color:GRAY, fontSize:10, outline:"none" }}>
-                          {["JP","COO","CAIO","Media Buyer","AM"].map(o=><option key={o} value={o}>{o}</option>)}
-                        </select>
-                        <button onClick={e=>submitQuickTask(c,e)}
-                          style={{ padding:"4px 9px", background:quickTitle.trim()?GREEN:"#E7EDF6", color:quickTitle.trim()?"#FFFFFF":GRAY, border:"none", borderRadius:5, cursor:"pointer", fontWeight:700, fontSize:11 }}>
-                          ✓
-                        </button>
+              </div>
+            ))
+          }
+        </div>
+
+        {/* Agenda */}
+        <div className="gp-bento-card s-5" style={{ "--i": i++ }}>
+          <Head overline="Agenda" title="Próximas Reuniones" />
+          {upcoming.length === 0
+            ? <div style={{ color:GRAY, fontSize:12, padding:"12px 0" }}>No hay reuniones agendadas próximas.</div>
+            : <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                {upcoming.map(({ client, meeting, date }) => (
+                  <div key={meeting.id} onClick={()=>onSelectClient(client.id)}
+                    style={{ background:"rgba(27,42,74,0.04)", border:`1px solid ${BORDER}`, borderLeft:`3px solid #2966A555`, borderRadius:9,
+                      padding:"10px 13px", cursor:"pointer", display:"flex", justifyContent:"space-between",
+                      alignItems:"center", transition:"all 0.15s" }}
+                    onMouseEnter={e=>{ e.currentTarget.style.borderLeftColor="#2966A5"; e.currentTarget.style.background="rgba(27,42,74,0.07)"; }}
+                    onMouseLeave={e=>{ e.currentTarget.style.borderLeftColor="#2966A555"; e.currentTarget.style.background="rgba(27,42,74,0.04)"; }}>
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ color:INK, fontWeight:600, fontSize:13, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                        {meeting.title}
                       </div>
-                    )}
+                      <div style={{ color:GRAY, fontSize:11, marginTop:2 }}>📌 {client.name}</div>
+                    </div>
+                    <div style={{ textAlign:"right", flexShrink:0, marginLeft:12 }}>
+                      <div style={{ color:"#2966A5", fontWeight:700, fontSize:12 }}>{fmtDate(date)}</div>
+                      {meeting.desc && <div style={{ color:GRAY, fontSize:10, marginTop:1 }}>{meeting.desc.slice(0,30)}{meeting.desc.length>30?"…":""}</div>}
+                    </div>
                   </div>
-                );
-              })
-            }
-          </div>
+                ))}
+              </div>
+          }
         </div>
       </div>
 
