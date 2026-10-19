@@ -13,6 +13,7 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1085,6 +1086,73 @@ function fbToJs(v) {
   for (const k of keys) out[k] = fbToJs(v[k]);
   return out;
 }
+
+// ── SYNC_PURO_INICIO (lógica pura de sincronización; la prueban agentes/data/verificar_dashboard_sync.js — sin JSX ni window)
+// Spec: docs/superpowers/specs/2026-10-16-dashboard-firebase-seguro-design.md §3.2-3.3.
+const SYNC_MARGEN_MS = 2000;
+// Decide qué hacer al comparar la copia local con la nube. Nunca sube vacío sobre una nube con clientes.
+function decidirSubida({ localClients, nubeClients, nubeExiste, localTs, nubeTs }) {
+  if (!nubeExiste || nubeClients === 0) return localClients > 0 ? "confirmar_primera" : "nada";
+  if (localClients === 0) return "bajar";
+  if (nubeTs > localTs + SYNC_MARGEN_MS) return "bajar";
+  if (localTs > nubeTs) return localClients < nubeClients ? "confirmar_menos" : "subir";
+  return "nada";
+}
+// Aplica el buzón gp_ops: solo marca (✅ o ➖), nunca desmarca ni cambia la fecha de lo ya hecho.
+function aplicarOps(data, ops, ahoraIso) {
+  const OK = ["✅", "➖"];
+  let cambios = 0;
+  const nota = (o) => "por el router: " + String(o.evidencia || "");
+  const clients = (data.clients || []).map(c => {
+    const oc = ops && (ops[c.id] || (c.servicioSlug && ops[c.servicioSlug]));
+    if (!oc) return c;
+    let lp = c.launchPhases || {}, tasks = c.tasks || [], tocado = false;
+    Object.entries(oc.fases || {}).forEach(([id, o]) => {
+      const f = lp[id];
+      if (!o || !OK.includes(o.estado) || !f || f.done) return;
+      lp = { ...lp, [id]: { ...f, done: true, date: o.fecha || String(ahoraIso).slice(0, 10), note: (f.note ? f.note + " · " : "") + nota(o) } };
+      cambios++; tocado = true;
+    });
+    Object.entries(oc.tareas || {}).forEach(([n, o]) => {
+      if (!o || !OK.includes(o.estado)) return;
+      const i = tasks.findIndex(t => String(t.n) === String(n));
+      if (i < 0 || tasks[i].done) return;
+      tasks = tasks.map((t, j) => j === i ? { ...t, done: true, doneAt: o.fecha || String(ahoraIso).slice(0, 10), note: (t.note ? t.note + " · " : "") + nota(o) } : t);
+      cambios++; tocado = true;
+    });
+    return tocado ? { ...c, launchPhases: lp, tasks } : c;
+  });
+  return { data: cambios ? { ...data, clients } : data, cambios };
+}
+// Altas del router (gp_ops/_altas/<slug> = {nombre, mercado, dia0}): crea el cliente que falta o enlaza el que ya
+// existe con el mismo nombre. Nunca borra ni renombra. `crear(slug, alta)` arma el cliente nuevo (makeClient).
+function aplicarAltas(data, altas, crear) {
+  const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const clients = [...(data.clients || [])];
+  let cambios = 0;
+  Object.entries(altas || {}).forEach(([slug, a]) => {
+    if (!a || !a.nombre || clients.some(c => c.servicioSlug === slug)) return;
+    const i = clients.findIndex(c => !c.servicioSlug && norm(c.name) === norm(a.nombre));
+    if (i >= 0) {
+      const c = clients[i], p = c.profile || {};
+      clients[i] = { ...c, servicioSlug: slug, profile: { ...p, startDate: p.startDate || a.dia0 || null } };
+    } else {
+      clients.push(crear(slug, a));
+    }
+    cambios++;
+  });
+  return { data: cambios ? { ...data, clients } : data, cambios };
+}
+// Devuelve las claves de respaldo que sobran (las más viejas), dejando las `max` más nuevas.
+function podarRespaldos(claves, max = 10) {
+  const orden = [...new Set(claves)].sort();
+  return orden.slice(0, Math.max(0, orden.length - max));
+}
+// Clave de respaldo con milisegundos (dos respaldos del mismo minuto no se pisan); ordena cronológicamente.
+function claveRespaldo(fecha) {
+  return fecha.toISOString().replace(/[:.]/g, "-");
+}
+// ── SYNC_PURO_FIN
 
 // ─── FIREBASE SYNC ────────────────────────────────────────────────────────────
 const FB_CONFIG = {
@@ -9215,6 +9283,22 @@ function SettingsTab({ data, onChange }) {
     URL.revokeObjectURL(url);
   };
 
+  const handleRestaurarNube = () => {
+    if (typeof firebase === "undefined" || !window.__gpUsuario) { setImportMsg("Error: inicia sesión para restaurar desde la nube."); setTimeout(()=>setImportMsg(""), 4000); return; }
+    firebase.database().ref("gp_dashboard_respaldos").once("value").then(sn => {
+      const todos = sn.val() || {};
+      const actual = JSON.stringify(fbToJs(data.clients || []));
+      const claves = Object.keys(todos).sort().filter(k => JSON.stringify(fbToJs((todos[k] || {}).clients || [])) !== actual);
+      if (!claves.length) throw new Error("sin respaldos");
+      const ultima = claves[claves.length - 1];  // el más reciente que sea distinto de lo que hay ahora
+      if (!window.confirm(`¿Restaurar el respaldo de la nube del ${ultima.slice(0, 16).replace("T", " ").replace(/ (\d\d)-(\d\d)$/, " $1:$2")}?`)) return;
+      const { _ts, ...resto } = todos[ultima];
+      onChange(fbToJs(resto));
+      setImportMsg("✓ Respaldo de la nube restaurado.");
+      setTimeout(()=>setImportMsg(""), 4000);
+    }).catch(() => { setImportMsg("Error: no hay respaldos en la nube."); setTimeout(()=>setImportMsg(""), 4000); });
+  };
+
   const handleImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -9281,6 +9365,10 @@ function SettingsTab({ data, onChange }) {
             ↑ Importar datos
             <input type="file" accept=".json" onChange={handleImport} style={{ display:"none" }} />
           </label>
+          <button onClick={handleRestaurarNube}
+            style={{ padding:"8px 18px", background:"transparent", color:INK, border:`1px solid ${BORDER}`, borderRadius:8, cursor:"pointer", fontWeight:600, fontSize:13 }}>
+            ↺ Restaurar respaldo de la nube
+          </button>
         </div>
         {importMsg && <div style={{ marginTop:8, color:GREEN, fontSize:11 }}>{importMsg}</div>}
       </div>
@@ -10335,60 +10423,93 @@ function MetodoGrowthPartner() {
   const saveTimer = useRef(null);
   const lastSaveTs = useRef(0);
   const firebaseInitDone = useRef(false); // protege auto-save de disparar antes de que Firebase responda
+  const nubeClientes = useRef(null);   // cuántos clientes tenía la nube en la última lectura (candado "menos clientes")
+  const bloqueoSubida = useRef(false); // JP rechazó la primera subida: esta copia no sube hasta recargar
+  const ultimoRespaldo = useRef(0);
+  const datosMontaje = useRef(undefined); // los datos con que montó: guardarlos tal cual no es una edición
+  const desdeNube = useRef(false);     // lo que bajó de la nube no se vuelve a subir ni renueva la fecha
   const [teamUnlocked, setTeamUnlocked] = useState(false);
   const [teamPinInput, setTeamPinInput] = useState("");
   const [teamPinError, setTeamPinError] = useState(false);
 
-  // Firebase: carga inicial + polling cada 30 segundos
+  // ─── Sincronización segura con la nube (spec 2026-10-16 §3.2-3.3) ─────
+  // Solo con un usuario permitido (PuertaAcceso). Candados: no subir vacío, confirmar la primera subida y las de menos
+  // clientes, respaldo en gp_dashboard_respaldos antes de reemplazar. El buzón gp_ops solo marca, nunca desmarca.
+  const respaldarNube = (forzar) => {
+    const fdb = firebase.database();
+    if (!forzar && Date.now() - ultimoRespaldo.current < 3600000) return Promise.resolve();
+    return fdb.ref("gp_dashboard").once("value").then(sn => {
+      const v = sn.val();
+      if (!v || !v.clients) return;
+      ultimoRespaldo.current = Date.now();
+      return fdb.ref("gp_dashboard_respaldos").once("value").then(r => {
+        const previos = r.val() || {};
+        const claves = Object.keys(previos).sort();
+        const sinTs = (x) => { const { _ts, ...resto } = x || {}; return JSON.stringify(resto); };
+        if (claves.length && sinTs(previos[claves[claves.length - 1]]) === sinTs(v)) return;  // igual al último: no se duplica
+        const clave = claveRespaldo(new Date());
+        return fdb.ref("gp_dashboard_respaldos/" + clave).set(v)
+          .then(() => Promise.all(podarRespaldos([...claves, clave], 10).map(k => fdb.ref("gp_dashboard_respaldos/" + k).remove())));
+      });
+    });
+  };
+  const subirNube = (datos, ts, forzarRespaldo) => respaldarNube(forzarRespaldo)
+    .then(() => getFbRef().set({ ...datos, _ts: ts }))
+    .then(() => { nubeClientes.current = (datos.clients || []).length; });
+  const aplicarBuzon = () => firebase.database().ref("gp_ops").once("value").then(sn => {
+    const ops = sn.val();
+    if (!ops) return;
+    const o = fbToJs(ops);
+    setData(d => {
+      // Altas del router: crea o enlaza los clientes del registro (con las tareas de su mercado y las fases vigentes).
+      const crear = (slug, a) => {
+        const c = makeClient(a.nombre, "Meta Ads", d.globalTasks, a.mercado === "USA" ? "Estados Unidos" : "Colombia");
+        const conSlug = { ...c, servicioSlug: slug, profile: { ...c.profile, startDate: a.dia0 || null } };
+        return syncPhasesToClients([conSlug], d.globalLaunchPhases || [])[0];
+      };
+      const ra = aplicarAltas(d, o._altas, crear);
+      const r = aplicarOps(ra.data, o, new Date().toISOString());
+      if (ra.cambios || r.cambios) desdeNube.current = false;  // altas y marcas nuevas sí se suben
+      return ra.cambios || r.cambios ? r.data : d;
+    });
+  }).catch(() => {});
+
   useEffect(() => {
     const ref = getFbRef();
-    if (!ref) { setFbStatus("error"); return; }
+    if (!ref || !window.__gpUsuario) { setFbStatus("error"); return; }
 
     const syncFromFirebase = (isInitial = false) => {
       ref.once("value").then(snap => {
         const fbRaw = snap.val();
-        const localTs = storageGetTs();
-
-        if (fbRaw && fbRaw.clients) {
-          const { _ts: fbTs, ...rest } = fbRaw;
-          const fbTime = fbTs || 0;
-          const clean = fbToJs(rest);
-
-          if (fbTime > localTs + 2000) {
-            // Firebase es más nuevo → usar Firebase
-            firebaseInitDone.current = true;
-            setData(getInitialData(clean));
-            storageSet(clean);
-            storageSetTs(fbTime);
-            lastSaveTs.current = fbTime;
-          } else if (isInitial && localTs >= fbTime) {
-            // Local es más nuevo o igual → mantener local y empujar a Firebase
-            firebaseInitDone.current = true;
-            const localData = storageGet();
-            if (localData && localData.clients) {
-              const ts = localTs || Date.now();
-              lastSaveTs.current = ts;
-              ref.set({ ...localData, _ts: ts }).catch(() => {});
-            }
-          } else if (!isInitial && fbTime > lastSaveTs.current + 2000) {
-            // Polling: Firebase tiene datos del socio
-            setData(getInitialData(clean));
-            storageSet(clean);
-            storageSetTs(fbTime);
-            lastSaveTs.current = fbTime;
-          } else if (isInitial) {
-            firebaseInitDone.current = true;
-          }
-        } else if (isInitial) {
-          // Firebase vacío → subir datos locales
-          firebaseInitDone.current = true;
+        const { _ts: fbTsRaw, ...rest } = fbRaw || {};
+        const fbTs = fbTsRaw || 0;
+        const clean = fbRaw ? fbToJs(rest) : null;
+        const nubeN = clean && Array.isArray(clean.clients) ? clean.clients.length : 0;
+        nubeClientes.current = nubeN;
+        const bajar = () => {
+          desdeNube.current = true;
+          setData(getInitialData(clean)); storageSet(clean); storageSetTs(fbTs); lastSaveTs.current = fbTs;
+        };
+        if (!isInitial) {
+          if (nubeN > 0 && fbTs > lastSaveTs.current + SYNC_MARGEN_MS) bajar();
+        } else {
           const localData = storageGet();
-          if (localData && localData.clients) {
-            const ts = localTs || Date.now();
-            lastSaveTs.current = ts;
-            ref.set({ ...localData, _ts: ts }).catch(() => {});
+          const localTs = storageGetTs();
+          const localN = localData && Array.isArray(localData.clients) ? localData.clients.length : 0;
+          const ts = localTs || Date.now();
+          const accion = decidirSubida({ localClients: localN, nubeClients: nubeN, nubeExiste: !!(fbRaw && fbRaw.clients), localTs, nubeTs: fbTs });
+          if (accion === "bajar") bajar();
+          else if (accion === "subir") { lastSaveTs.current = ts; subirNube(localData, ts, true).catch(() => setFbStatus("error")); }
+          else if (accion === "confirmar_primera") {
+            if (window.confirm(`¿Subir esta copia con ${localN} clientes como la principal?`)) { lastSaveTs.current = ts; subirNube(localData, ts, true).catch(() => setFbStatus("error")); }
+            else bloqueoSubida.current = true;
+          } else if (accion === "confirmar_menos") {
+            if (window.confirm(`La nube tiene ${nubeN} clientes y esta copia ${localN}. ¿Reemplazar la nube con esta copia?`)) { lastSaveTs.current = ts; subirNube(localData, ts, true).catch(() => setFbStatus("error")); }
+            else { try { localStorage.setItem("gp_metodo_v4_descartada", JSON.stringify(localData)); } catch (_) {} bajar(); }
           }
+          firebaseInitDone.current = true;
         }
+        aplicarBuzon();
         setFbStatus("ok");
       }).catch(() => setFbStatus("error"));
     };
@@ -10402,17 +10523,27 @@ function MetodoGrowthPartner() {
   // Protegido: no escribe a Firebase hasta que la sincronización inicial de Firebase haya terminado
   // Esto evita que un dispositivo con localStorage vacío pise datos reales antes de recibirlos
   useEffect(() => {
+    if (datosMontaje.current === undefined) datosMontaje.current = data;
     clearTimeout(saveTimer.current);
     setSaved(false);
     saveTimer.current = setTimeout(() => {
+      if (data === datosMontaje.current) { storageSet(data); setSaved(true); return; } // montar no es editar: se guarda la versión al día del código, sin renovar la fecha ni subir
+      if (window.__gpUsuario && !firebaseInitDone.current) return; // con sesión: esperar la sincronización inicial
+      const vieneDeNube = desdeNube.current;
+      desdeNube.current = false;
       const ts = Date.now();
       storageSet(data);
-      storageSetTs(ts);
-      if (!firebaseInitDone.current) return; // esperar a Firebase antes de escribir
+      if (!vieneDeNube) storageSetTs(ts);
+      if (vieneDeNube) { setSaved(true); return; } // lo que bajó de la nube no se vuelve a subir
+      if (!firebaseInitDone.current || bloqueoSubida.current || !window.__gpUsuario) return; // esperar a Firebase y al login
       const ref = getFbRef();
       if (ref) {
+        const n = (data.clients || []).length;
+        const enNube = nubeClientes.current || 0;
+        if (n === 0 && enNube > 0) return;  // nunca subir vacío sobre una nube con clientes
+        if (n < enNube && !window.confirm(`La nube tiene ${enNube} clientes y esta copia ${n}. ¿Reemplazar la nube con esta copia?`)) return;
         lastSaveTs.current = ts;
-        ref.set({ ...data, _ts: ts }).catch(() => setFbStatus("error"));
+        subirNube(data, ts, n < enNube).catch(() => setFbStatus("error"));
       }
       setSaved(true);
     }, 1500); // aumentado a 1.5s para dar más margen a Firebase en redes lentas (ej. celular)
@@ -10572,8 +10703,53 @@ function MetodoGrowthPartner() {
   );
 }
 
+// ─── ACCESO: login con Google + lista de permitidos (spec 2026-10-16 §3.1) ─────
+// Sin SDK de Auth (sin red o CDN caído) se abre en modo local, sin sincronizar (spec §3.4).
+const PERMITIDOS = ["operativamaxima@gmail.com"];
+window.__gpUsuario = null;
+function esPermitido(u) {
+  return !!(u && u.emailVerified && PERMITIDOS.includes(String(u.email || "").toLowerCase()));
+}
+function PuertaAcceso({ children }) {
+  const authDisponible = typeof firebase !== "undefined" && typeof firebase.auth === "function";
+  const [estado, setEstado] = useState(authDisponible ? "cargando" : "local");
+  const [correo, setCorreo] = useState("");
+  useEffect(() => {
+    if (!authDisponible) return;
+    try { if (!firebase.apps.length) firebase.initializeApp(FB_CONFIG); } catch (e) { console.warn("Firebase init:", e); }
+    return firebase.auth().onAuthStateChanged(u => {
+      window.__gpUsuario = esPermitido(u) ? u : null;
+      setCorreo(u ? String(u.email || "") : "");
+      setEstado(!u ? "fuera" : (window.__gpUsuario ? "dentro" : "sin_acceso"));
+    });
+  }, []);
+  const entrar = () => firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => console.warn("Login:", e));
+  const salir = () => firebase.auth().signOut();
+  if (estado === "dentro" || estado === "local") return children;
+  const caja = { minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#F3F6FB" };
+  const tarjeta = { background:"#FFFFFF", border:"1px solid #D5DEEA", borderRadius:16, padding:"36px 40px", textAlign:"center", maxWidth:380 };
+  const boton = { background:INK, color:"#FFFFFF", border:"none", borderRadius:10, padding:"12px 22px", fontSize:15, fontWeight:600, cursor:"pointer" };
+  return (
+    <div style={caja}>
+      <div style={tarjeta}>
+        <div style={{ color:INK, fontSize:20, fontWeight:700, marginBottom:8 }}>Growth Partner AI</div>
+        {estado === "cargando" && <div style={{ color:GRAY, fontSize:14 }}>Verificando acceso…</div>}
+        {estado === "fuera" && <>
+          <div style={{ color:GRAY, fontSize:14, marginBottom:20 }}>Ingresa con tu cuenta autorizada.</div>
+          <button style={boton} onClick={entrar}>Entrar con Google</button>
+        </>}
+        {estado === "sin_acceso" && <>
+          <div style={{ color:INK, fontSize:15, fontWeight:600, marginBottom:6 }}>Sin acceso con esta cuenta</div>
+          <div style={{ color:GRAY, fontSize:13, marginBottom:20 }}>{correo}</div>
+          <button style={boton} onClick={salir}>Cambiar de cuenta</button>
+        </>}
+      </div>
+    </div>
+  );
+}
+
     const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<MetodoGrowthPartner />);
+    root.render(<PuertaAcceso><MetodoGrowthPartner /></PuertaAcceso>);
   </script>
 </body>
 </html>
