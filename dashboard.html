@@ -1099,7 +1099,8 @@ function decidirSubida({ localClients, nubeClients, nubeExiste, localTs, nubeTs 
   return "nada";
 }
 // Aplica el buzón gp_ops: solo marca (✅ o ➖), nunca desmarca ni cambia la fecha de lo ya hecho.
-function aplicarOps(data, ops, ahoraIso) {
+// Una fase ✅/➖ también marca sus tareas de PHASE_TASKS (igual que cuando JP la marca a mano), aunque la fase ya estuviera hecha.
+function aplicarOps(data, ops, ahoraIso, phaseTasks = {}) {
   const OK = ["✅", "➖"];
   let cambios = 0;
   const nota = (o) => "por el router: " + String(o.evidencia || "");
@@ -1109,7 +1110,13 @@ function aplicarOps(data, ops, ahoraIso) {
     let lp = c.launchPhases || {}, tasks = c.tasks || [], tocado = false;
     Object.entries(oc.fases || {}).forEach(([id, o]) => {
       const f = lp[id];
-      if (!o || !OK.includes(o.estado) || !f || f.done) return;
+      if (!o || !OK.includes(o.estado) || !f) return;
+      const ns = (phaseTasks[id] || []).map(String);
+      if (ns.length && tasks.some(t => ns.includes(String(t.n)) && !t.done)) {
+        tasks = tasks.map(t => ns.includes(String(t.n)) && !t.done ? { ...t, done: true, doneAt: o.fecha || String(ahoraIso).slice(0, 10), note: (t.note ? t.note + " · " : "") + nota(o) } : t);
+        cambios++; tocado = true;
+      }
+      if (f.done) return;
       lp = { ...lp, [id]: { ...f, done: true, date: o.fecha || String(ahoraIso).slice(0, 10), note: (f.note ? f.note + " · " : "") + nota(o) } };
       cambios++; tocado = true;
     });
@@ -10469,7 +10476,7 @@ function MetodoGrowthPartner() {
         return syncPhasesToClients([conSlug], d.globalLaunchPhases || [])[0];
       };
       const ra = aplicarAltas(d, o._altas, crear);
-      const r = aplicarOps(ra.data, o, new Date().toISOString());
+      const r = aplicarOps(ra.data, o, new Date().toISOString(), PHASE_TASKS);
       if (ra.cambios || r.cambios) desdeNube.current = false;  // altas y marcas nuevas sí se suben
       return ra.cambios || r.cambios ? r.data : d;
     });
