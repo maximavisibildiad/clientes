@@ -1099,6 +1099,13 @@ function decidirSubida({ localClients, nubeClients, nubeExiste, localTs, nubeTs 
   return "nada";
 }
 // Aplica el buzón gp_ops: solo marca (✅ o ➖), nunca desmarca ni cambia la fecha de lo ya hecho.
+// doneAt en milisegundos: acepta número o fecha "AAAA-MM-DD" (se toma a mediodía local); lo inválido = 0.
+function msDe(v) {
+  if (typeof v === "number") return v;
+  const s = String(v || "");
+  const t = Date.parse(/^\d{4}-\d{2}-\d{2}$/.test(s) ? s + "T12:00:00" : s);
+  return isNaN(t) ? 0 : t;
+}
 // Una fase ✅/➖ también marca sus tareas de PHASE_TASKS (igual que cuando JP la marca a mano), aunque la fase ya estuviera hecha.
 function aplicarOps(data, ops, ahoraIso, phaseTasks = {}) {
   const OK = ["✅", "➖"];
@@ -1113,7 +1120,7 @@ function aplicarOps(data, ops, ahoraIso, phaseTasks = {}) {
       if (!o || !OK.includes(o.estado) || !f) return;
       const ns = (phaseTasks[id] || []).map(String);
       if (ns.length && tasks.some(t => ns.includes(String(t.n)) && !t.done)) {
-        tasks = tasks.map(t => ns.includes(String(t.n)) && !t.done ? { ...t, done: true, doneAt: o.fecha || String(ahoraIso).slice(0, 10), note: (t.note ? t.note + " · " : "") + nota(o) } : t);
+        tasks = tasks.map(t => ns.includes(String(t.n)) && !t.done ? { ...t, done: true, doneAt: msDe(o.fecha || String(ahoraIso).slice(0, 10)), note: (t.note ? t.note + " · " : "") + nota(o) } : t);
         cambios++; tocado = true;
       }
       if (f.done) return;
@@ -1124,7 +1131,7 @@ function aplicarOps(data, ops, ahoraIso, phaseTasks = {}) {
       if (!o || !OK.includes(o.estado)) return;
       const i = tasks.findIndex(t => String(t.n) === String(n));
       if (i < 0 || tasks[i].done) return;
-      tasks = tasks.map((t, j) => j === i ? { ...t, done: true, doneAt: o.fecha || String(ahoraIso).slice(0, 10), note: (t.note ? t.note + " · " : "") + nota(o) } : t);
+      tasks = tasks.map((t, j) => j === i ? { ...t, done: true, doneAt: msDe(o.fecha || String(ahoraIso).slice(0, 10)), note: (t.note ? t.note + " · " : "") + nota(o) } : t);
       cambios++; tocado = true;
     });
     return tocado ? { ...c, launchPhases: lp, tasks } : c;
@@ -10182,9 +10189,9 @@ function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues, onUpdate
 
   const recentlyDone = data.clients.flatMap(c =>
     (c.tasks || [])
-      .filter(t => t.done && t.doneAt && (Date.now() - t.doneAt) < 7 * 24 * 60 * 60 * 1000)
+      .filter(t => t.done && t.doneAt && (Date.now() - msDe(t.doneAt)) < 7 * 24 * 60 * 60 * 1000)
       .map(t => ({ ...t, clientName: c.name }))
-  ).sort((a, b) => b.doneAt - a.doneAt).slice(0, 8);
+  ).sort((a, b) => msDe(b.doneAt) - msDe(a.doneAt)).slice(0, 8);
 
   const fmtDate = d => d.toLocaleDateString("es-CO", { weekday:"short", day:"2-digit", month:"short" });
   const today = new Date().toLocaleDateString("es-CO", { weekday:"long", day:"2-digit", month:"long", year:"numeric" });
@@ -10192,7 +10199,7 @@ function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues, onUpdate
   const openIssues = (data.issues||[]).filter(i=>i.status!=="listo");
   const urgentIssues = openIssues.filter(i=>i.priority==="rojo");
 
-  const weekDone = data.clients.reduce((s, c) => s + (c.tasks || []).filter(t => t.done && t.doneAt && (Date.now() - t.doneAt) < 7 * 24 * 60 * 60 * 1000).length, 0);
+  const weekDone = data.clients.reduce((s, c) => s + (c.tasks || []).filter(t => t.done && t.doneAt && (Date.now() - msDe(t.doneAt)) < 7 * 24 * 60 * 60 * 1000).length, 0);
   const maxPending = Math.max(1, ...Object.values(byOwner).map(o => o.pending));
   const urgentTasks = data.clients.flatMap(c =>
     (c.tasks||[]).filter(t => t.urgent && !t.done).map(t => ({ ...t, clientName: c.name, clientId: c.id }))
