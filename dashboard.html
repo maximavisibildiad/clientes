@@ -1157,6 +1157,7 @@ function claveRespaldo(fecha) {
 // ─── FIREBASE SYNC ────────────────────────────────────────────────────────────
 const FB_CONFIG = {
   apiKey: "AIzaSyC3u2YQK4Wvn7Ub94PFvI_tmdL8AFx9cqc",
+  authDomain: "growth-partner-37a25.firebaseapp.com",  // obligatorio para el login con Google (signInWithPopup)
   databaseURL: "https://growth-partner-37a25-default-rtdb.firebaseio.com",
   projectId: "growth-partner-37a25",
   appId: "1:513071811214:web:fb8e9acc5fac2a368e97df",
@@ -10714,6 +10715,7 @@ function PuertaAcceso({ children }) {
   const authDisponible = typeof firebase !== "undefined" && typeof firebase.auth === "function";
   const [estado, setEstado] = useState(authDisponible ? "cargando" : "local");
   const [correo, setCorreo] = useState("");
+  const [errorLogin, setErrorLogin] = useState("");
   useEffect(() => {
     if (!authDisponible) return;
     try { if (!firebase.apps.length) firebase.initializeApp(FB_CONFIG); } catch (e) { console.warn("Firebase init:", e); }
@@ -10723,7 +10725,7 @@ function PuertaAcceso({ children }) {
       setEstado(!u ? "fuera" : (window.__gpUsuario ? "dentro" : "sin_acceso"));
     });
   }, []);
-  const entrar = () => firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => console.warn("Login:", e));
+  const entrar = () => { setErrorLogin(""); firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => { console.warn("Login:", e); setErrorLogin(e && e.code === "auth/popup-blocked" ? "Chrome bloqueó la ventana de Google: permite las ventanas emergentes de este sitio e intenta de nuevo." : e && e.code === "auth/popup-closed-by-user" ? "" : "No se pudo entrar (" + String((e && e.code) || "error") + ")."); }); };
   const salir = () => firebase.auth().signOut();
   if (estado === "dentro" || estado === "local") return children;
   const caja = { minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#F3F6FB" };
@@ -10737,6 +10739,7 @@ function PuertaAcceso({ children }) {
         {estado === "fuera" && <>
           <div style={{ color:GRAY, fontSize:14, marginBottom:20 }}>Ingresa con tu cuenta autorizada.</div>
           <button style={boton} onClick={entrar}>Entrar con Google</button>
+          {errorLogin && <div role="alert" style={{ color:"#B42318", fontSize:13, marginTop:14 }}>{errorLogin}</div>}
         </>}
         {estado === "sin_acceso" && <>
           <div style={{ color:INK, fontSize:15, fontWeight:600, marginBottom:6 }}>Sin acceso con esta cuenta</div>
