@@ -209,6 +209,7 @@
     .r-2 { grid-row: span 2; }
     @media (max-width: 1100px) { .s-4 { grid-column: span 6; } .s-5, .s-7 { grid-column: span 12; } .r-2 { grid-row: span 1; } }
     @media (max-width: 700px)  { .gp-bento > * { grid-column: span 12 !important; } }
+    @media (max-width: 700px)  { .gp-header { padding: 0 12px !important; } .gp-header-row { flex-wrap: wrap; row-gap: 4px; } .gp-header .gp-nav-tab { padding: 12px 10px; } }
     @media (prefers-reduced-motion: reduce) {
       .gp-bento-card, .gp-rise, .gp-bar-fill { animation: none !important; }
       .gp-ring-fill { transition: none !important; }
@@ -4733,7 +4734,7 @@ function EntrenamientoSection({ personal, onUpdate }) {
               return (
                 <button key={d.id} onClick={()=>{ setSelDayId(d.id); setOpenExId(null); setDfStage(1); }}
                   style={{ padding:"8px 14px", borderRadius:10, border:`2px solid ${sel?d.color:BORDER}`,
-                    background: sel ? d.color+"22" : "transparent", color:sel?d.color:GRAY, cursor:"pointer", fontSize:12, fontWeight:sel?700:400,
+                    background: sel ? d.color+"22" : "transparent", color:sel?(d.color==="#C62828"?"#A61B1B":d.color):GRAY, cursor:"pointer", fontSize:12, fontWeight:sel?700:400,
                     position:"relative" }}>
                   {d.emoji} {d.day}
                   {isToday && <span style={{ position:"absolute", top:-4, right:-4, width:8, height:8, background:ACCENT, borderRadius:"50%", display:"block" }} />}
@@ -10237,6 +10238,8 @@ function resumenMetricas(m) {
     comision: (m.comision_pct || 0) * Math.max(0, cierre - (m.meta_contrato || 0)) };
 }
 const metricasValidas = (m) => !!(m && m.dias && m.periodo_mes && m.periodo_mes.ini && m.periodo_mes.dias);
+// Costos proyectados del mes (los publica el CAIO); null si no hay o el bloque viene incompleto.
+const costosValidos = (p) => (p && p.costos && Number.isFinite(p.costos.le_queda) ? p.costos : null);
 function TarjetaMetricas({ slug, nombre, m: mIn, onAbrir }) {
   const m = metricasValidas(mIn) ? mIn : null;
   const caja = { background: "#FFFFFF", border: `1px solid ${BORDER}`, borderTop: "4px solid " + ACCENT, borderRadius: 14, padding: 16, cursor: m ? "pointer" : "default", minWidth: 0 };
@@ -10248,7 +10251,7 @@ function TarjetaMetricas({ slug, nombre, m: mIn, onAbrir }) {
   const r = resumenMetricas(m), viejo = datoViejo(m.ts, Date.now());
   const ref = m.proyeccion ? m.proyeccion.facturacion : m.meta_contrato, primerDia = r.dc === 0;
   const est = semaforo(r.cierre, ref || 1);
-  const roas = r.mesHoy.gasto ? r.mesHoy.facturacion / r.mesHoy.gasto : null;
+  const roas = r.mesCompleto.gasto ? r.mesCompleto.facturacion / r.mesCompleto.gasto : null;
   return (
     <div style={{ ...caja, borderTopColor: viejo || primerDia ? MET_TOP.na : MET_TOP[est], opacity: viejo ? 0.7 : 1 }} data-gp-tarjeta={slug} onClick={() => onAbrir(slug)}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
@@ -10262,6 +10265,7 @@ function TarjetaMetricas({ slug, nombre, m: mIn, onAbrir }) {
         <span><b style={{ color: INK, fontSize: 15 }}>{roas ? dec1(roas) + "x" : "—"}</b> ROAS</span>
         <span>{r.dc} días completos de {r.pm.dias} · corte {m.corte}:00</span>
       </div>
+      {costosValidos(m.proyeccion) && <div style={{ fontSize: 12, color: GRAY, marginTop: 8 }}>Le queda proyectado: <b style={{ color: INK, fontSize: 15 }}>{dinero(m.proyeccion.costos.le_queda, m.moneda, true)}</b></div>}
     </div>);
 }
 function PanoramaCliente({ nombre, m, onCerrar }) {
@@ -10320,6 +10324,9 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
   const grid = { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 12 };
   const h3 = { fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: ACCENT, margin: "18px 0 10px", fontWeight: 700 };
   const plan = conGasto && m.proyeccion ? m.proyeccion.pauta / r.pm.dias : null;
+  const coP = costosValidos(m.proyeccion), l2 = coP && m.proyeccion.linea2 && m.proyeccion.linea2.nombre ? m.proyeccion.linea2.nombre : null;
+  const filasCo = coP ? [["Facturación proyectada" + (l2 ? " (de la cual " + l2 + ")" : ""), dinero(m.proyeccion.facturacion, mon)], ["Costo directo", dinero(coP.directo, mon)], ["Equipo", dinero(coP.equipo, mon)], ["Publicidad", dinero(coP.pauta, mon)], ["Gastos fijos", dinero(coP.fijos, mon)],
+    ...(coP.inversion > 0 ? [["Inversión única", dinero(coP.inversion, mon)]] : []), ...(l2 && coP.gasto_linea2 > 0 ? [["Gasto " + l2, dinero(coP.gasto_linea2, mon)]] : []), ["Growth Partner (fee, herramientas y comisión)", dinero(coP.gp, mon)]] : [];
   return (
     <div style={{ position: "fixed", inset: 0, background: BG, zIndex: 50, overflow: "auto" }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "16px 16px 40px", filter: viejo ? "grayscale(1)" : "none" }}>
@@ -10386,6 +10393,15 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
           {t.gasto == null ? <div style={{ color: GRAY, fontSize: 13 }}>Sin datos de Meta en este periodo.</div> : t.campanas.length === 0 ? <div style={{ color: GRAY, fontSize: 13 }}>Sin gasto en este periodo.</div> :
             t.campanas.map((c, i) => cuadro("c" + i, c.nombre, dinero(c.gasto, mon), <span>{pct(c.gasto, t.gasto)} del gasto · {c.conversaciones} conv. · <span style={{ color: MET[c.conversaciones ? semaforoCosto(c.gasto / c.conversaciones, b.lead) : "na"] }}>{c.conversaciones ? dinero(c.gasto / c.conversaciones, mon) + " c/u" : "sin conv."}</span></span>, c.conversaciones ? semaforoCosto(c.gasto / c.conversaciones, b.lead) : "na"))}
         </div>
+        {coP && (
+          <div data-gp-costos>
+            <div style={h3}>Proyección del mes: costos y lo que le queda</div>
+            <div style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "6px 14px", maxWidth: 520 }}>
+              {filasCo.map(([k, v]) => <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "9px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 14, color: INK }}><span>{k}</span><b>{v}</b></div>)}
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "12px 0 8px", fontSize: 16, color: INK, fontWeight: 800 }}><span>Le queda (antes de impuestos)</span><span>{dinero(coP.le_queda, mon)}</span></div>
+            </div>
+            <div style={{ fontSize: 12, color: GRAY, marginTop: 6 }}>Antes de impuestos; renta e ICA los da el contador.</div>
+          </div>)}
         {avisos.length > 0 && <div style={{ background: "#FBF1DC", color: "#7A4A00", borderRadius: 10, padding: "10px 12px", fontSize: 12, marginTop: 14, fontWeight: 600 }}>⚠ {avisos.join(" · ")}</div>}
       </div>
       {pop && detalle[pop] && (
@@ -10859,7 +10875,7 @@ function MetodoGrowthPartner() {
     <div style={{ minHeight:"100vh", background:"transparent", color:INK }}>
       {/* Header */}
       <div className="gp-header" style={{ background:"#1B2A4A", borderBottom:"1px solid #142039", padding:"0 24px", position:"sticky", top:0, zIndex:100, boxShadow:"0 2px 14px rgba(27,42,74,0.28)" }}>
-        <div style={{ maxWidth:1200, margin:"0 auto", display:"flex", alignItems:"center", gap:0 }}>
+        <div className="gp-header-row" style={{ maxWidth:1200, margin:"0 auto", display:"flex", alignItems:"center", gap:0 }}>
           {/* Logo */}
           <div style={{ padding:"14px 0", marginRight:28, display:"flex", alignItems:"baseline", gap:0 }}>
             <span className="gp-logo-text" style={{ fontWeight:900, fontSize:19, letterSpacing:1.5 }}>GP</span>
