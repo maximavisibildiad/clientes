@@ -1182,12 +1182,12 @@ function rangoPeriodo(modo, diaSel, periodoMes) {
 // Sumas de los días [desde, hasta]. Sin datos de Meta en todo el rango: gasto = null (nunca 0).
 function agregar(dias, desde, hasta) {
   const t = { k: 0, gasto: null, campanas: [], leads: 0, agendas: 0, citas_creadas: 0, citas_del_dia: 0, asistio: 0,
-    asistio_por_venta: 0, no_asistio: 0, sin_marcar: 0, ventas: 0, facturacion: 0 };
+    asistio_por_venta: 0, no_asistio: 0, sin_marcar: 0, ventas: 0, abonos: 0, facturacion: 0 };
   const camp = {};
   Object.keys(dias || {}).sort().forEach(k => {
     if (k < desde || k > hasta) return;
     const r = dias[k] || {}; t.k++;
-    ["leads", "agendas", "citas_creadas", "citas_del_dia", "asistio", "asistio_por_venta", "no_asistio", "sin_marcar", "ventas", "facturacion"]
+    ["leads", "agendas", "citas_creadas", "citas_del_dia", "asistio", "asistio_por_venta", "no_asistio", "sin_marcar", "ventas", "abonos", "facturacion"]
       .forEach(c => { t[c] += Number(r[c] || 0); });
     if (r.gasto !== undefined && r.gasto !== null) {
       t.gasto = (t.gasto || 0) + Number(r.gasto);
@@ -10302,7 +10302,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
   const vsP = (real, proy) => P && proy ? <span style={{ color: MET[semaforo(real, proy)] }}>{pct(real, proy)} de la proyección</span> : null;   // real = tC (días completos)
   const asist = t.citas_del_dia ? (t.sin_marcar ? "No medible" : t.asistio + t.asistio_por_venta) : "Sin citas";
   const detalle = {
-    fact: ["Facturación del mes", [["Real (GHL)", dinero(r.mesHoy.facturacion, mon) + " · " + r.mesHoy.ventas + " ventas"], ...(r.proyHoy ? [["Proyección a hoy", dinero(r.proyHoy.facturacion, mon)]] : []), ["Meta del contrato", dinero(m.meta_contrato, mon)]]],
+    fact: ["Facturación del mes", [["Real (GHL)", dinero(r.mesHoy.facturacion, mon) + " · " + r.mesHoy.ventas + " ventas" + (r.mesHoy.abonos ? " + " + r.mesHoy.abonos + " abonos" + (m.pacientes_abono ? " (" + m.pacientes_abono + " pacientes)" : "") : "")], ...(r.proyHoy ? [["Proyección a hoy", dinero(r.proyHoy.facturacion, mon)]] : []), ["Meta del contrato", dinero(m.meta_contrato, mon)]]],
     cierre: ["Cierre al ritmo actual", [["Cierre", dinero(r.cierre, mon)], ["Meta del contrato", dinero(m.meta_contrato, mon)], ...(m.proyeccion ? [["Proyección del mes", dinero(m.proyeccion.facturacion, mon)]] : []), ["GP al ritmo actual", "fee " + dinero(m.fee, mon) + " + comisión " + dinero(r.comision, mon)]]],
     ticket: ["Ticket promedio", [["Real", ticket ? dinero(ticket, mon) : "—"], ...(m.proyeccion ? [["Proyectado", dinero(m.proyeccion.ticket, mon)]] : [])]],
     roas: ["ROAS", [["Real", roasMes ? dec1(roasMes) + "x" : "—"], ...(m.proyeccion && m.proyeccion.roas ? [["Proyectado", dec1(m.proyeccion.roas) + "x"]] : []), ...(roasMes && m.fee ? [["Por cada $1 (pauta + fee GP del periodo)", "volvieron $" + (r.mesCompleto.facturacion / (r.mesCompleto.gasto + m.fee * r.dc / r.pm.dias)).toFixed(2).replace(".", ",")]] : [])]],
@@ -10314,7 +10314,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
     agendas: ["Agendas", [["Personas", t.agendas], ...(P && P.agendas ? [["Proyección", dec1(P.agendas)]] : []), ["Lead → agenda", t.leads ? dec1(t.agendas / t.leads * 100) + "%" : "—"], ["Costo", t.gasto != null && t.agendas ? dinero(t.gasto / t.agendas, mon) : "—"], ["Base", dinero(b.agenda, mon)]]],
     citas: ["Citas creadas", [["Real", t.citas_creadas], ["Costo", t.gasto != null && t.citas_creadas ? dinero(t.gasto / t.citas_creadas, mon) : "—"]]],
     asist: ["Asistidas", [["Citas del periodo", t.citas_del_dia], ["Asistió", t.asistio], ["Asistió (por la venta)", t.asistio_por_venta], ["No asistió", t.no_asistio], ["Sin marcar", t.sin_marcar]]],
-    ventas: ["Ventas", [["Real", t.ventas], ...(P && P.ventas ? [["Proyección", dec1(P.ventas)]] : []), ["Costo por venta", esDia ? "en Semana o Mes" : (t.gasto != null && t.ventas ? dinero(t.gasto / t.ventas, mon) : "—")], ["Base", dinero(b.venta, mon)]]],
+    ventas: ["Ventas", [["Real", t.ventas], ...(t.abonos ? [["Abonos (pagos parciales)", t.abonos]] : []), ...(t.abonos && m.pacientes_abono ? [["Pacientes con abono en el periodo", m.pacientes_abono]] : []), ...(P && P.ventas ? [["Proyección", dec1(P.ventas)]] : []), ["Costo por venta", esDia ? "en Semana o Mes" : (t.gasto != null && t.ventas ? dinero(t.gasto / t.ventas, mon) : "—")], ["Base", dinero(b.venta, mon)]]],
     factP: ["Facturación", [["Real", dinero(t.facturacion, mon)], ...(P && P.facturacion ? [["Proyección", dinero(P.facturacion, mon)]] : []), ["Ticket", t.ventas ? dinero(t.facturacion / t.ventas, mon) : "—"]]],
     roasP: ["ROAS", [["Real", esDia ? "en Semana o Mes" : (t.gasto && t.ventas ? dec1(t.facturacion / t.gasto) + "x" : "—")]]],
   };
@@ -10384,7 +10384,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
           {cuadro("agendas", "Agendas", t.agendas, costo(t.gasto, t.agendas, b.agenda), t.gasto != null && t.agendas ? semaforoCosto(t.gasto / t.agendas, b.agenda) : "na")}
           {cuadro("citas", "Citas creadas", t.citas_creadas, t.gasto != null && t.citas_creadas ? dinero(t.gasto / t.citas_creadas, mon) + " c/u" : "—", null)}
           {cuadro("asist", "Asistidas", asist, t.citas_del_dia ? (t.sin_marcar ? `${t.sin_marcar} de ${t.citas_del_dia} sin marcar` : `de ${t.citas_del_dia} citas`) : "no había citas", t.sin_marcar ? "mid" : "na")}
-          {cuadro("ventas", "Ventas", t.ventas, esDia ? "costo por venta: en Semana o Mes" : (t.ventas ? costo(t.gasto, t.ventas, b.venta) : "sin ventas"), !esDia && t.gasto != null && t.ventas ? semaforoCosto(t.gasto / t.ventas, b.venta) : "na")}
+          {cuadro("ventas", "Ventas", t.ventas, (t.abonos ? "+ " + t.abonos + " abonos · " : "") + (esDia ? "costo por venta: en Semana o Mes" : (t.ventas ? costo(t.gasto, t.ventas, b.venta) : "sin ventas")), !esDia && t.gasto != null && t.ventas ? semaforoCosto(t.gasto / t.ventas, b.venta) : "na")}
           {cuadro("factP", "Facturación", dinero(t.facturacion, mon), t.facturacion && P && P.facturacion ? vsP(tC.facturacion, P.facturacion) : (t.ventas ? "ticket " + dinero(t.facturacion / t.ventas, mon) : "sin ventas"), t.facturacion && P && P.facturacion ? semaforo(tC.facturacion, P.facturacion) : "na")}
           {cuadro("roasP", "ROAS", esDia ? "—" : (t.gasto && t.ventas ? dec1(t.facturacion / t.gasto) + "x" : "—"), esDia ? "en Semana o Mes" : (m.proyeccion && m.proyeccion.roas ? "proyectado " + dec1(m.proyeccion.roas) + "x" : ""), !esDia && t.gasto && t.ventas && m.proyeccion && m.proyeccion.roas ? semaforo(t.facturacion / t.gasto, m.proyeccion.roas) : "na")}
         </div>
