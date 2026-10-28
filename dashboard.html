@@ -10270,10 +10270,12 @@ function TarjetaMetricas({ slug, nombre, m: mIn, estado = "listo", onAbrir }) {
 }
 // Simulador de la proyección (JP 2026-10-28): casillas llenas con los números reales del mes; recalcula al instante con la
 // misma fórmula de la proyección financiera (costos.sim). No guarda nada: la proyección oficial cambia solo por el JSON/Excel.
-function SimuladorProyeccion({ p, real, mon, angosto, cierreReal }) {
+function SimuladorProyeccion({ p, real, mon, angosto, cierreReal, acuerdo }) {
   const ent = (x) => String(Math.round(x || 0));
   const reales = { pauta: ent(p.pauta), cpv: ent(real.cpv || p.cpv), ticket: ent(real.ticket || p.ticket),
-    cpl: ent(real.cpl || (p.leads ? p.pauta / p.leads : 0)), tasa: ((real.tasa || (p.leads && p.agendas ? p.agendas / p.leads : 0)) * 100).toFixed(1).replace(".", ",") };
+    cpl: ent(real.cpl || (p.leads ? p.pauta / p.leads : 0)), tasa: ((real.tasa || (p.leads && p.agendas ? p.agendas / p.leads : 0)) * 100).toFixed(1).replace(".", ","),
+    // JP 2026-10-28: su acuerdo se ve y se puede cambiar (por si cambia el acuerdo); arranca con el contrato vigente
+    fee: ent(acuerdo.fee), comision: String(+(acuerdo.pct * 100).toFixed(2)).replace(".", ","), umbral: ent(acuerdo.umbral) };
   const presets = [["real", "Números reales", reales], ...(p.escenarios || []).map(e => [e.escenario, { conservador: "Conservador", esperado: "Esperado", optimo: "Óptimo" }[e.escenario] || e.escenario,
     { ...reales, cpv: ent(e.cpv), ticket: ent(e.ticket) }])];
   const [v, setV] = useState(reales);
@@ -10281,15 +10283,31 @@ function SimuladorProyeccion({ p, real, mon, angosto, cierreReal }) {
   const pauta = n("pauta"), cpv = n("cpv"), tk = n("ticket"), cpl = n("cpl"), tasa = n("tasa") / 100;
   const ventas = cpv ? pauta / cpv : 0, fact = ventas * tk, leads = cpl ? pauta / cpl : 0, agendas = leads * tasa;
   const s = p.costos && p.costos.sim;
-  const gp = s ? s.fee + s.stack + s.comision_gp_pct * Math.max(0, fact - s.umbral) : null;
+  const fee = n("fee"), pctGp = n("comision") / 100, umbral = n("umbral"), stack = s ? s.stack : 0;
+  const excedente = Math.max(0, fact - umbral), comision = pctGp * excedente, gp = fee + stack + comision;
   const total = s ? ventas * s.directo_por_venta + fact * s.variable_pct + s.equipo_fijo + fact * s.comision_equipo_pct + gp + pauta + s.fijos + s.inversion : null;
+  const comisionHoy = cierreReal != null ? acuerdo.pct * Math.max(0, cierreReal - acuerdo.umbral) : null;
   const leQueda = total != null ? fact - total : null, roi = leQueda != null && pauta + gp > 0 ? leQueda / (pauta + gp) : null;
   const activo = (presets.find(([, , pv]) => Object.keys(pv).every(k => String(pv[k]) === String(v[k]))) || [])[0];
   const campos = [["pauta", "Pauta del mes", "$", "", Number(reales.pauta), "plan"], ["cpv", "Costo por venta", "$", "", real.cpv, "real"], ["ticket", "Ticket promedio", "$", "", real.ticket, "real"],
     ["cpl", "Costo por lead", "$", "", real.cpl, "real"], ["tasa", "De lead a agenda", "", "%", real.tasa != null ? real.tasa * 100 : null, "real"]];
+  const camposGp = [["fee", "Fee mensual", "$", "", acuerdo.fee, "contrato"], ["comision", "Comisión", "", "%", acuerdo.pct * 100, "contrato"], ["umbral", "Cobra comisión desde", "$", "", acuerdo.umbral, "contrato"]];
   const miles = (x) => { const d = String(x).replace(/\D/g, ""); return d ? Number(d).toLocaleString("es-CO") : ""; };
   const cambio = (k, ref) => { if (!ref) return null; const d = (n(k) - ref) / ref; return Math.abs(d) < 0.005 ? null : d; };   // % vs el real (o el plan)
   const lbl = { fontSize: 10, letterSpacing: 1.1, textTransform: "uppercase", color: GRAY, fontWeight: 700 };
+  const casilla = ([k, l, pre, suf, ref, de]) => { const d = cambio(k, ref); return (
+            <label key={k} style={{ display: "block", border: `1.5px solid ${d != null ? ACCENT : BORDER}`, borderRadius: 10, padding: "7px 10px", marginBottom: 7, background: d != null ? "#F4F8FD" : "#FFFFFF" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={lbl}>{l}</span>
+                {d != null && <span style={{ fontSize: 11, fontWeight: 800, color: ACCENT }}>{d > 0 ? "▲" : "▼"} {Math.round(Math.abs(d) * 100)}% vs {de}</span>}</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
+                {pre && <span style={{ fontSize: 17, fontWeight: 800, color: GRAY }}>{pre}</span>}
+                <input data-gp-sim={k} inputMode={suf === "%" ? "decimal" : "numeric"} value={suf === "%" ? v[k] : miles(v[k])}
+                  onChange={e => { const x = suf === "%" ? e.target.value.replace(/[^\d,]/g, "") : e.target.value.replace(/\D/g, ""); setV(o => ({ ...o, [k]: x })); }}
+                  style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: 19, fontWeight: 800, color: INK, padding: "2px 0", background: "transparent" }} />
+                {suf && <span style={{ fontSize: 17, fontWeight: 800, color: GRAY }}>{suf}</span>}
+              </div>
+              <div style={{ fontSize: 11, color: GRAY }}>{ref ? de + ": " + (suf === "%" ? dec1(ref) + "%" : dinero(ref, mon)) : "sin dato real"}</div>
+            </label>); };
   const paso = (l, val, sub, fuerte) => (
     <div key={l} data-gp-sim-paso={l} style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, padding: "9px 0", borderBottom: `1px solid ${BORDER}` }}>
       <div><div style={{ fontSize: 13, color: INK, fontWeight: fuerte ? 800 : 600 }}>{l}</div>{sub && <div style={{ fontSize: 11, color: GRAY }}>{sub}</div>}</div>
@@ -10306,19 +10324,9 @@ function SimuladorProyeccion({ p, real, mon, angosto, cierreReal }) {
       <div style={{ display: "grid", gridTemplateColumns: angosto ? "1fr" : "minmax(0,1fr) minmax(0,1.15fr)", gap: angosto ? 0 : 18, padding: "12px 16px 14px", background: "#FFFFFF" }}>
         <div>
           <div style={{ ...lbl, marginBottom: 6 }}>1 · Lo que usted mueve</div>
-          {campos.map(([k, l, pre, suf, ref, de]) => { const d = cambio(k, ref); return (
-            <label key={k} style={{ display: "block", border: `1.5px solid ${d != null ? ACCENT : BORDER}`, borderRadius: 10, padding: "7px 10px", marginBottom: 7, background: d != null ? "#F4F8FD" : "#FFFFFF" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span style={lbl}>{l}</span>
-                {d != null && <span style={{ fontSize: 11, fontWeight: 800, color: ACCENT }}>{d > 0 ? "▲" : "▼"} {Math.round(Math.abs(d) * 100)}% vs {de}</span>}</div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
-                {pre && <span style={{ fontSize: 17, fontWeight: 800, color: GRAY }}>{pre}</span>}
-                <input data-gp-sim={k} inputMode={k === "tasa" ? "decimal" : "numeric"} value={k === "tasa" ? v[k] : miles(v[k])}
-                  onChange={e => { const x = k === "tasa" ? e.target.value.replace(/[^\d,]/g, "") : e.target.value.replace(/\D/g, ""); setV(o => ({ ...o, [k]: x })); }}
-                  style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: 19, fontWeight: 800, color: INK, padding: "2px 0", background: "transparent" }} />
-                {suf && <span style={{ fontSize: 17, fontWeight: 800, color: GRAY }}>{suf}</span>}
-              </div>
-              <div style={{ fontSize: 11, color: GRAY }}>{ref ? de + ": " + (k === "tasa" ? dec1(ref) + "%" : dinero(ref, mon)) : "sin dato real"}</div>
-            </label>); })}
+          {campos.map(casilla)}
+          <div style={{ ...lbl, margin: "12px 0 6px" }}>Su acuerdo (GP)</div>
+          {camposGp.map(casilla)}
         </div>
         <div>
           <div style={{ ...lbl, margin: angosto ? "8px 0 2px" : "0 0 2px" }}>2 · Lo que daría en el mes</div>
@@ -10332,7 +10340,15 @@ function SimuladorProyeccion({ p, real, mon, angosto, cierreReal }) {
             <div style={{ fontSize: 26, fontWeight: 900, color: leQueda == null ? GRAY : leQueda >= 0 ? MET.ok : MET.bad }}>{leQueda != null ? dinero(leQueda, mon) : "sin costos en la proyección"}</div>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12, color: INK, marginTop: 4 }}>
               <span>ROAS <b>{pauta ? dec1(fact / pauta) + "x" : "—"}</b></span><span>ROI <b>{roi != null ? dec1(roi) + "x" : "—"}</b></span>
-              {gp != null && <span>GP <b>{dinero(gp, mon)}</b></span>}{cierreReal ? <span>Hoy al ritmo: <b>{dinero(cierreReal, mon)}</b> de facturación</span> : null}</div>
+              {cierreReal ? <span>Hoy al ritmo: <b>{dinero(cierreReal, mon)}</b> de facturación</span> : null}</div>
+          </div>
+          <div data-gp-sim-gp style={{ marginTop: 10, borderRadius: 12, padding: "12px 14px", background: "#EAF2FB" }}>
+            <div style={lbl}>Su comisión (GP) en este escenario</div>
+            <div style={{ fontSize: 26, fontWeight: 900, color: ACCENT }}>{dinero(comision, mon)}</div>
+            <div style={{ fontSize: 12, color: INK, marginTop: 2 }}>{dec1(pctGp * 100)}% sobre {dinero(excedente, mon)} facturados por encima de {dinero(umbral, mon)}</div>
+            <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12, color: INK, marginTop: 6 }}>
+              <span>Fee <b>{dinero(fee, mon)}</b></span>{stack ? <span>Herramientas <b>{dinero(stack, mon)}</b></span> : null}<span>Total GP <b>{dinero(gp, mon)}</b></span>
+              {comisionHoy != null && <span>Comisión hoy al ritmo: <b>{dinero(comisionHoy, mon)}</b></span>}</div>
           </div>
         </div>
       </div>
@@ -10523,7 +10539,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
                       <div style={{ fontSize: 12, color: INK, padding: "8px 0 0" }}>{cpvR == null ? "Sin ventas o sin pauta en el mes: el costo por venta real todavía no se mide." : sig ? <span>Para pasar al escenario <b>{nom[sig.escenario]}</b>: costo por venta de {dinero(sig.cpv, mon)} o menos (hoy {dinero(cpvR, mon)} según GHL), y la pauta del plan.</span> : <span>El costo por venta real ({dinero(cpvR, mon)}) ya está en el mejor escenario: la palanca es la pauta ({rc.gasto != null && ph.pauta ? pct(rc.gasto, ph.pauta) + " de la proyección a ayer" : "—"}).</span>}</div>
                     </div>);
                 })()}
-                <SimuladorProyeccion p={p} mon={mon} angosto={angosto} cierreReal={r.dc ? r.cierre : null} real={{ cpv: rc.gasto && rc.ventas ? rc.gasto / rc.ventas : null, ticket: ticket, cpl: rc.gasto && rc.leads ? rc.gasto / rc.leads : null, tasa: rc.leads ? rc.agendas / rc.leads : null }} />
+                <SimuladorProyeccion p={p} mon={mon} angosto={angosto} cierreReal={r.dc ? r.cierre : null} acuerdo={{ fee: (coP && coP.sim ? coP.sim.fee : m.fee) || 0, pct: (coP && coP.sim ? coP.sim.comision_gp_pct : m.comision_pct) || 0, umbral: (coP && coP.sim ? coP.sim.umbral : m.meta_contrato) || 0 }} real={{ cpv: rc.gasto && rc.ventas ? rc.gasto / rc.ventas : null, ticket: ticket, cpl: rc.gasto && rc.leads ? rc.gasto / rc.leads : null, tasa: rc.leads ? rc.agendas / rc.leads : null }} />
                 {m.proyeccion_link && <a href={m.proyeccion_link} target="_blank" rel="noopener" style={{ display: "inline-block", marginTop: 10, fontSize: 13, fontWeight: 800, color: ACCENT }}>Abrir la proyección financiera ↗</a>}
                 <div style={{ fontSize: 11, color: GRAY, padding: "8px 0" }}>Igual que la cabecera: real = {r.dc} de {r.pm.dias} días completos (sin hoy, que va a medias); proyección a ayer = proyección del mes × {r.dc}/{r.pm.dias}. Cierre al ritmo = lo facturado ÷ {r.dc} días × {r.pm.dias}. Proyección real del {p.fecha}{p.momento ? " (momento " + p.momento + ")" : ""}: costo por venta, ticket y escenarios salen de ahí{p.pauta_de ? "; la pauta del mes, del plan del " + p.pauta_de : ""}. Si el real de GHL se queda corto, mirar la salud del dato.{roiObj == null ? " ROI: la proyección de este mes no trae costos." : ""}</div>
               </div>);
