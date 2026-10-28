@@ -9982,16 +9982,16 @@ function IssuesPanel({ issues, team, roles, onChange }) {
 
   return (
     <div style={{ padding:22, background:"#FFFFFF", border:"1px solid #E5E7EB", borderRadius:14 }}>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:18 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          <span style={{ color:"#111827", fontWeight:700, fontSize:16 }}>🚦 Tablero de Tareas</span>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10, marginBottom:18 }}>
+        <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:12 }}>
+          <span style={{ color:"#111827", fontWeight:700, fontSize:16, whiteSpace:"nowrap" }}>🚦 Tablero de Tareas</span>
           <div style={{ display:"flex", gap:6 }}>
             <span style={{ background:"#FEF3C7", color:"#92400E", fontSize:11, fontWeight:600, padding:"2px 9px", borderRadius:20 }}>{openCount} abiertas</span>
             {doneCount > 0 && <span style={{ background:"#D1FAE5", color:"#065F46", fontSize:11, fontWeight:600, padding:"2px 9px", borderRadius:20 }}>{doneCount} listas</span>}
             <span style={{ background:"#F3F4F6", color:"#546681", fontSize:11, fontWeight:600, padding:"2px 9px", borderRadius:20 }}>{(issues||[]).length} total</span>
           </div>
         </div>
-        <div style={{ display:"flex", gap:8 }}>
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
           <div style={{ display:"flex", background:"#F3F4F6", borderRadius:8, padding:3 }}>
             {[["abiertas","Abiertas"],["todas","Todas"]].map(([v,l])=>(
               <button key={v} onClick={()=>setFilter(v)} style={{ padding:"4px 13px", borderRadius:6, fontSize:12, cursor:"pointer", border:"none",
@@ -10240,13 +10240,13 @@ function resumenMetricas(m) {
 const metricasValidas = (m) => !!(m && m.dias && m.periodo_mes && m.periodo_mes.ini && m.periodo_mes.dias);
 // Costos proyectados del mes (los publica el CAIO); null si no hay o el bloque viene incompleto.
 const costosValidos = (p) => (p && p.costos && Number.isFinite(p.costos.le_queda) ? p.costos : null);
-function TarjetaMetricas({ slug, nombre, m: mIn, onAbrir }) {
+function TarjetaMetricas({ slug, nombre, m: mIn, estado = "listo", onAbrir }) {
   const m = metricasValidas(mIn) ? mIn : null;
   const caja = { background: "#FFFFFF", border: `1px solid ${BORDER}`, borderTop: "4px solid " + ACCENT, borderRadius: 14, padding: 16, cursor: m ? "pointer" : "default", minWidth: 0 };
   if (!m) return (
     <div style={{ ...caja, borderTopColor: MET_TOP.na }} data-gp-tarjeta={slug}>
       <div style={{ fontWeight: 800, color: INK }}>{nombre}</div>
-      <div style={{ color: GRAY, fontSize: 13, marginTop: 8 }}>Sin datos: falta conectar el CAIO.</div>
+      <div style={{ color: GRAY, fontSize: 13, marginTop: 8 }}>{estado === "cargando" ? "Cargando métricas…" : estado === "error" ? "No se pudieron leer las métricas (revisá la conexión o el login)." : "Sin datos: falta conectar el CAIO."}</div>
     </div>);
   const r = resumenMetricas(m), viejo = datoViejo(m.ts, Date.now());
   const ref = m.proyeccion ? m.proyeccion.facturacion : m.meta_contrato, primerDia = r.dc === 0;
@@ -10270,6 +10270,7 @@ function TarjetaMetricas({ slug, nombre, m: mIn, onAbrir }) {
 }
 function PanoramaCliente({ nombre, m, onCerrar }) {
   const r = resumenMetricas(m), mon = m.moneda, viejo = datoViejo(m.ts, Date.now());
+  const angosto = typeof window !== "undefined" && window.innerWidth < 600;   // celular: tabla de metas sin "a ayer", días solo con número
   const [modo, setModo] = useState("mes"), [diaSel, setDiaSel] = useState(r.ayer), [rango, setRango] = useState(null), [pop, setPop] = useState(null);
   const [desde, hasta] = rango ? [rango.desde, rango.hasta] : rangoPeriodo(modo, diaSel, r.pm);
   const hastaReal = hasta > r.hoy ? r.hoy : hasta;
@@ -10278,7 +10279,8 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
   const hastaComp = hastaReal === r.hoy && r.ayer < r.hoy && desde <= r.ayer ? r.ayer : hastaReal;
   const tC = agregar(m.dias, desde, hastaComp), P = proyPeriodo(m.proyeccion, r.pm, tC.k);
   const esDia = !rango && modo === "dia";
-  const etiqueta = desde === hastaReal ? fechaCorta(desde) : `${diaMes(desde)} → ${fechaCorta(hastaReal)} · ${t.k} días`;
+  const etiqueta = (desde === hastaReal ? fechaCorta(desde) : `${diaMes(desde)} → ${fechaCorta(hastaReal)} · ${t.k} días`)
+    + (hastaReal === r.hoy && r.ayer < r.hoy ? " · incluye hoy (va a medias)" : "");
   const diasMes = r.keys.filter(k => k >= r.pm.ini && k <= r.hoy);
   const conGasto = diasMes.some(k => m.dias[k].gasto != null);
   const valorBarra = (k) => conGasto ? Number(m.dias[k].gasto || 0) : Number(m.dias[k].leads || 0);
@@ -10296,7 +10298,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
   const cuadro = (id, l, v, s, cls) => (
     <div key={id} data-gp-cuadro={id} onClick={() => setPop(id)} style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, borderTop: `4px solid ${MET_TOP[cls || "na"] || ACCENT}`, borderRadius: 12, padding: 14, cursor: "pointer", minWidth: 0 }}>
       <div style={{ fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", color: GRAY, fontWeight: 700 }}>{l}</div>
-      <div style={{ fontSize: 26, fontWeight: 800, marginTop: 3, color: cls && cls !== "na" ? MET[cls] : INK }}>{v}</div>
+      <div style={{ fontSize: angosto ? 20 : 26, fontWeight: 800, marginTop: 3, color: cls && cls !== "na" ? MET[cls] : INK, overflowWrap: "anywhere" }}>{v}</div>
       <div style={{ fontSize: 12, fontWeight: 700, marginTop: 3, color: GRAY }}>{s}</div></div>);
   const costo = (g, n, base) => g == null ? <span>sin datos de Meta</span> : n ? <span><span style={{ color: MET[semaforoCosto(g / n, base)] }}>{dinero(g / n, mon)} c/u</span>{base ? " · base " + dinero(base, mon) : ""}</span> : <span>—</span>;
   const vsP = (real, proy) => P && proy ? <span style={{ color: MET[semaforo(real, proy)] }}>{pct(real, proy)} de la proyección</span> : null;   // real = tC (días completos)
@@ -10321,7 +10323,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
   t.campanas.forEach((c, i) => { detalle["c" + i] = [c.nombre, [["Gasto", dinero(c.gasto, mon)], ["Conversaciones", c.conversaciones], ["Costo por conversación", c.conversaciones ? dinero(c.gasto / c.conversaciones, mon) : "—"], ["Base por lead", dinero(b.lead, mon)]]]; });
   const avisos = [...(m.avisos || []), ...(t.sin_marcar ? [`${t.sin_marcar} de ${t.citas_del_dia} citas sin asistencia marcada`] : [])];
   const btn = (k, txt) => <button key={k} onClick={() => { setRango(null); setModo(k); }} style={{ border: "none", background: !rango && modo === k ? INK : "none", color: !rango && modo === k ? "#FFFFFF" : GRAY, padding: "9px 22px", borderRadius: 9, fontWeight: 800, cursor: "pointer", fontSize: 14 }}>{txt}</button>;
-  const grid = { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))", gap: 12 };
+  const grid = { display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(130px,1fr))", gap: 10 };
   const h3 = { fontSize: 11, letterSpacing: 2, textTransform: "uppercase", color: ACCENT, margin: "18px 0 10px", fontWeight: 700 };
   const plan = conGasto && m.proyeccion ? m.proyeccion.pauta / r.pm.dias : null;
   const coP = costosValidos(m.proyeccion), l2 = coP && m.proyeccion.linea2 && m.proyeccion.linea2.nombre ? m.proyeccion.linea2.nombre : null;
@@ -10341,7 +10343,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
 {r.dc > 0 && <span style={{ fontSize: 12, fontWeight: 800, padding: "5px 12px", borderRadius: 99, background: "rgba(255,255,255,.12)", color: MET[semaforo(r.cierre, m.meta_contrato || 1) + "L"] }}>● {pct(r.cierre, m.meta_contrato)} del contrato</span>}
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(170px,1fr))", gap: 12, marginTop: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(120px,1fr))", gap: 10, marginTop: 16 }}>
             {tk("fact", "Facturación", dinero(r.mesHoy.facturacion, mon, true), r.proyHoy ? pct(r.mesCompleto.facturacion, r.proyHoy.facturacion) + " de la proyección a ayer" : "meta " + dinero(m.meta_contrato, mon, true), r.proyHoy ? semaforo(r.mesCompleto.facturacion, r.proyHoy.facturacion) : null)}
             {tk("cierre", "Cierre al ritmo actual", dinero(r.cierre, mon, true), pct(r.cierre, m.meta_contrato) + " del contrato", semaforo(r.cierre, m.meta_contrato || 1))}
             {tk("ticket", "Ticket promedio", ticket ? dinero(ticket, mon, true) : "—", m.proyeccion && ticket ? (ticket >= m.proyeccion.ticket ? "▲ " : "▼ ") + pct(Math.abs(ticket - m.proyeccion.ticket), m.proyeccion.ticket) + " vs proyectado" : "", m.proyeccion && ticket ? semaforo(ticket, m.proyeccion.ticket) : null)}
@@ -10355,43 +10357,19 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
                   style={{ flex: 1, height: Math.max(1.5, v / maxBarra * 100) + "%", background: sel ? "#FFFFFF" : (m.dias[k].ventas ? "rgba(61,220,151,.8)" : "rgba(255,255,255,.55)"), borderRadius: "6px 6px 0 0", cursor: "pointer", boxShadow: sel ? "0 0 0 3px " + MET.midL : "none" }} />; })}
             </div>
             {plan && <div style={{ position: "absolute", left: 0, right: 0, bottom: `calc(24px + ${plan / maxBarra} * (100% - 42px))`, borderTop: `2px dashed ${MET.midL}` }}><span style={{ position: "absolute", right: 0, top: -18, fontSize: 10, color: MET.midL, fontWeight: 700 }}>proyección {dinero(plan, mon)}/día</span></div>}
-            <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, display: "flex", gap: 8 }}>{diasMes.map(k => <span key={k} style={{ flex: 1, textAlign: "center", fontSize: 11, opacity: .75 }}>{diaMes(k)}</span>)}</div>
+            <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, display: "flex", gap: 8 }}>{diasMes.map(k => <span key={k} style={{ flex: 1, textAlign: "center", fontSize: 11, opacity: .75, overflow: "hidden", whiteSpace: "nowrap" }}>{angosto ? diaMes(k).split(" ")[1] : diaMes(k)}</span>)}</div>
           </div>
           <div style={{ fontSize: 11, opacity: .8, marginTop: 6 }}>{conGasto ? "Barras = gasto diario en Meta" : "Sin datos de Meta: barras = leads por día"} · verde = día con ventas · toca un día para verlo abajo.</div>
           <div style={{ height: 10, background: "rgba(255,255,255,.15)", borderRadius: 99, position: "relative", margin: "28px 0 4px" }}>
             <i style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: r.mesHoy.facturacion / tope * 100 + "%", background: "#FFFFFF", borderRadius: 99 }} />
             <i style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: r.cierre / tope * 100 + "%", background: "rgba(255,255,255,.35)", borderRadius: 99 }} />
-            {m.meta_contrato ? <span style={{ position: "absolute", top: -6, bottom: -6, width: 3, left: m.meta_contrato / tope * 100 + "%", background: MET.okL }}><b style={{ position: "absolute", top: -18, transform: "translateX(-50%)", fontSize: 10, whiteSpace: "nowrap", color: MET.okL }}>contrato {dinero(m.meta_contrato, mon, true)}</b></span> : null}
+            {m.meta_contrato ? <span style={{ position: "absolute", top: -6, bottom: -6, width: 3, left: m.meta_contrato / tope * 100 + "%", background: MET.okL }}><b style={{ position: "absolute", top: m.proyeccion ? 16 : -18, transform: "translateX(-50%)", fontSize: 10, whiteSpace: "nowrap", color: MET.okL }}>contrato {dinero(m.meta_contrato, mon, true)}</b></span> : null}
             {m.proyeccion ? <span style={{ position: "absolute", top: -6, bottom: -6, width: 3, left: `calc(${m.proyeccion.facturacion / tope * 100}% - 3px)`, background: MET.midL }}><b style={{ position: "absolute", top: -18, transform: "translateX(-95%)", fontSize: 10, whiteSpace: "nowrap", color: MET.midL }}>proyección {dinero(m.proyeccion.facturacion, mon, true)}</b></span> : null}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 12, marginTop: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(130px,1fr))", gap: 10, marginTop: 14 }}>
             {tk("falta_c", "Para la meta del contrato", fc.monto ? (fc.ventas ?? "—") + " ventas" : "Meta cumplida", fc.monto && fc.porDia != null ? dinero(fc.porDia, mon) + "/día de pauta" : "", fc.monto ? null : "ok")}
             {fp ? tk("falta_p", "Para la proyección del mes", fp.monto ? (fp.ventas ?? "—") + " ventas" : "Proyección cumplida", fp.monto && fp.porDia != null ? dinero(fp.porDia, mon) + "/día de pauta" : "", fp.monto ? null : "ok") : <div style={{ ...L, padding: 12, border: "1px dashed rgba(255,255,255,.3)", borderRadius: 12 }}>falta la proyección del mes</div>}
           </div>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, margin: "20px 0 8px" }}>
-          <div style={{ display: "flex", gap: 4, background: "#FFFFFF", border: `1px solid ${BORDER}`, padding: 5, borderRadius: 12 }}>{btn("dia", "Día")}{btn("semana", "Semana")}{btn("mes", "Mes")}</div>
-          <div style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12, color: GRAY }}>
-            <input type="date" data-gp-desde min={r.keys[0]} max={r.hoy} value={desde} onChange={e => e.target.value && setRango({ desde: e.target.value, hasta: hasta < e.target.value ? e.target.value : hastaReal })} style={{ border: `1px solid ${BORDER}`, borderRadius: 8, padding: "6px 8px", color: INK }} />
-            →<input type="date" data-gp-hasta min={r.keys[0]} max={r.hoy} value={hastaReal} onChange={e => e.target.value && setRango({ desde: desde > e.target.value ? e.target.value : desde, hasta: e.target.value })} style={{ border: `1px solid ${BORDER}`, borderRadius: 8, padding: "6px 8px", color: INK }} />
-          </div>
-          <div style={{ color: GRAY, fontSize: 13, fontWeight: 700 }}>{etiqueta}</div>
-        </div>
-        <div style={h3}>Embudo</div>
-        <div style={grid}>
-          {cuadro("pautaP", "Pauta", t.gasto != null ? dinero(t.gasto, mon) : "—", t.gasto == null ? "sin datos de Meta" : vsP(tC.gasto, P && P.pauta), t.gasto != null && P ? semaforo(tC.gasto, P.pauta) : "na")}
-          {cuadro("leads", "Leads", t.leads, costo(t.gasto, t.leads, b.lead), t.gasto != null && t.leads ? semaforoCosto(t.gasto / t.leads, b.lead) : "na")}
-          {cuadro("agendas", "Agendas", t.agendas, costo(t.gasto, t.agendas, b.agenda), t.gasto != null && t.agendas ? semaforoCosto(t.gasto / t.agendas, b.agenda) : "na")}
-          {cuadro("citas", "Citas creadas", t.citas_creadas, t.gasto != null && t.citas_creadas ? dinero(t.gasto / t.citas_creadas, mon) + " c/u" : "—", null)}
-          {cuadro("asist", "Asistidas", asist, t.citas_del_dia ? (t.sin_marcar ? `${t.sin_marcar} de ${t.citas_del_dia} sin marcar` : `de ${t.citas_del_dia} citas`) : "no había citas", t.sin_marcar ? "mid" : "na")}
-          {cuadro("ventas", "Ventas", t.ventas, (t.abonos ? "+ " + t.abonos + " abonos · " : "") + (esDia ? "costo por venta: en Semana o Mes" : (t.ventas ? costo(t.gasto, t.ventas, b.venta) : "sin ventas")), !esDia && t.gasto != null && t.ventas ? semaforoCosto(t.gasto / t.ventas, b.venta) : "na")}
-          {cuadro("factP", "Facturación", dinero(t.facturacion, mon), t.facturacion && P && P.facturacion ? vsP(tC.facturacion, P.facturacion) : (t.ventas ? "ticket " + dinero(t.facturacion / t.ventas, mon) : "sin ventas"), t.facturacion && P && P.facturacion ? semaforo(tC.facturacion, P.facturacion) : "na")}
-          {cuadro("roasP", "ROAS", esDia ? "—" : (t.gasto && t.ventas ? dec1(t.facturacion / t.gasto) + "x" : "—"), esDia ? "en Semana o Mes" : (m.proyeccion && m.proyeccion.roas ? "proyectado " + dec1(m.proyeccion.roas) + "x" : ""), !esDia && t.gasto && t.ventas && m.proyeccion && m.proyeccion.roas ? semaforo(t.facturacion / t.gasto, m.proyeccion.roas) : "na")}
-        </div>
-        <div style={h3}>Campañas</div>
-        <div style={grid}>
-          {t.gasto == null ? <div style={{ color: GRAY, fontSize: 13 }}>Sin datos de Meta en este periodo.</div> : t.campanas.length === 0 ? <div style={{ color: GRAY, fontSize: 13 }}>Sin gasto en este periodo.</div> :
-            t.campanas.map((c, i) => cuadro("c" + i, c.nombre, dinero(c.gasto, mon), <span>{pct(c.gasto, t.gasto)} del gasto · {c.conversaciones} conv. · <span style={{ color: MET[c.conversaciones ? semaforoCosto(c.gasto / c.conversaciones, b.lead) : "na"] }}>{c.conversaciones ? dinero(c.gasto / c.conversaciones, mon) + " c/u" : "sin conv."}</span></span>, c.conversaciones ? semaforoCosto(c.gasto / c.conversaciones, b.lead) : "na"))}
         </div>
         <div data-gp-metas>
           <div style={h3}>Lo que buscamos este mes</div>
@@ -10416,16 +10394,89 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
             const celda = { padding: "9px 8px", borderBottom: `1px solid ${BORDER}`, fontSize: 13, color: INK, textAlign: "right", whiteSpace: "nowrap" };
             return (
               <div style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "6px 14px", overflowX: "auto" }}>
+                {angosto ? filas.map(([k, meta, aHoy, real, porc, cls]) => (
+                  <div key={k} data-gp-meta-fila style={{ padding: "10px 0", borderBottom: `1px solid ${BORDER}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><b style={{ fontSize: 13, color: INK }}>{k}</b><b style={{ fontSize: 14, color: cls !== "na" ? MET[cls] : GRAY }}>{porc}</b></div>
+                    <div style={{ fontSize: 12, color: GRAY, marginTop: 2 }}>real <b style={{ color: INK }}>{real}</b> · proyección {meta}{aHoy !== "—" ? " (a ayer " + aHoy + ")" : ""}</div>
+                  </div>)) :
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead><tr>{["Indicador", "Proyección del mes", "Proyección a ayer", "Real a ayer", "%"].map((h, i) => <th key={h} style={{ ...celda, color: GRAY, fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", textAlign: i ? "right" : "left" }}>{h}</th>)}</tr></thead>
                   <tbody>{filas.map(([k, meta, aHoy, real, porc, cls]) => (
                     <tr key={k}><td style={{ ...celda, textAlign: "left", whiteSpace: "normal" }}>{k}</td><td style={celda}>{meta}</td><td style={celda}>{aHoy}</td>
                       <td style={{ ...celda, fontWeight: 800, color: INK }}>{real}</td>
                       <td style={{ ...celda, fontWeight: 800, color: cls !== "na" ? MET[cls] : GRAY }}>{porc}</td></tr>))}</tbody>
-                </table>
+                </table>}
                 <div style={{ fontSize: 11, color: GRAY, padding: "8px 0" }}>Igual que la cabecera: real = {r.dc} de {r.pm.dias} días completos (sin hoy, que va a medias); proyección a ayer = proyección del mes × {r.dc}/{r.pm.dias}. Cierre al ritmo = lo facturado ÷ {r.dc} días × {r.pm.dias}. Proyección del {p.fecha}{p.escenario ? " · escenario " + p.escenario.replace("_", " ") : ""}.{roiObj == null ? " ROI: la proyección de este mes no trae costos." : ""}</div>
               </div>);
           })() : <div style={{ color: GRAY, fontSize: 13, padding: 12, border: `1px dashed ${BORDER}`, borderRadius: 12 }}>Falta la proyección del mes: sin metas cargadas para este cliente.</div>}
+        </div>
+        {m.salud && (() => {
+          const sd = m.salud, rp = sd.reportado;
+          const items = [[sd.ventas_sin_valor, "ventas sin valor en GHL"], [sd.ventas_sin_cita, "ventas sin cita registrada"], [sd.ventas_sin_anuncio, "ventas sin anuncio de origen"], [sd.citas_sin_marcar, "citas sin asistencia marcada"]].filter(([n]) => n > 0);
+          const meta = m.fuentes && m.fuentes.meta !== "ok" ? (m.fuentes.meta || "sin datos de Meta") : null;
+          const todoBien = !items.length && !meta && !(rp && rp.ventas_ghl < rp.ventas);
+          return (
+            <div data-gp-salud>
+              <div style={h3}>Salud del dato · mes del contrato</div>
+              <div style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, borderTop: `4px solid ${todoBien ? MET_TOP.ok : MET_TOP.mid}`, borderRadius: 12, padding: 14 }}>
+                {todoBien && <div style={{ fontSize: 13, color: MET.ok, fontWeight: 700 }}>Sin problemas detectados en el dato del mes.</div>}
+                {items.map(([n, txt]) => <div key={txt} style={{ fontSize: 13, color: INK, padding: "4px 0" }}><b style={{ color: MET.mid }}>{n}</b> {txt}</div>)}
+                {meta && <div style={{ fontSize: 13, color: INK, padding: "4px 0" }}><b style={{ color: MET.mid }}>Meta:</b> {meta}</div>}
+                {rp && <div style={{ fontSize: 13, color: INK, padding: "8px 0 0", borderTop: items.length || meta ? `1px solid ${BORDER}` : "none", marginTop: items.length || meta ? 6 : 0 }}>
+                  GHL registra <b style={{ color: rp.ventas_ghl < rp.ventas ? MET.bad : MET.ok }}>{rp.ventas_ghl} de {rp.ventas} ventas</b> que reportó el cliente ({fechaCorta(rp.desde)} → {fechaCorta(rp.hasta)}) · facturación GHL {dinero(rp.facturacion_ghl, mon)} vs reportada {dinero(rp.facturacion, mon)}.
+                  <div style={{ fontSize: 11, color: GRAY, marginTop: 4 }}>Fuente del reporte: {rp.fuente}</div></div>}
+              </div>
+            </div>);
+        })()}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, margin: "20px 0 8px" }}>
+          <div style={{ display: "flex", gap: 4, background: "#FFFFFF", border: `1px solid ${BORDER}`, padding: 5, borderRadius: 12 }}>{btn("dia", "Día")}{btn("semana", "Semana")}{btn("mes", "Mes")}</div>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12, color: GRAY }}>
+            <input type="date" data-gp-desde min={r.keys[0]} max={r.hoy} value={desde} onChange={e => e.target.value && setRango({ desde: e.target.value, hasta: hasta < e.target.value ? e.target.value : hastaReal })} style={{ border: `1px solid ${BORDER}`, borderRadius: 8, padding: "6px 8px", color: INK }} />
+            →<input type="date" data-gp-hasta min={r.keys[0]} max={r.hoy} value={hastaReal} onChange={e => e.target.value && setRango({ desde: desde > e.target.value ? e.target.value : desde, hasta: e.target.value })} style={{ border: `1px solid ${BORDER}`, borderRadius: 8, padding: "6px 8px", color: INK }} />
+          </div>
+          <div style={{ color: GRAY, fontSize: 13, fontWeight: 700 }}>{etiqueta}</div>
+        </div>
+        <div style={h3}>Embudo</div>
+        <div style={grid}>
+          {cuadro("pautaP", "Pauta", t.gasto != null ? dinero(t.gasto, mon, angosto) : "—", t.gasto == null ? "sin datos de Meta" : vsP(tC.gasto, P && P.pauta), t.gasto != null && P ? semaforo(tC.gasto, P.pauta) : "na")}
+          {cuadro("leads", "Leads", t.leads, costo(t.gasto, t.leads, b.lead), t.gasto != null && t.leads ? semaforoCosto(t.gasto / t.leads, b.lead) : "na")}
+          {cuadro("agendas", "Agendas", t.agendas, costo(t.gasto, t.agendas, b.agenda), t.gasto != null && t.agendas ? semaforoCosto(t.gasto / t.agendas, b.agenda) : "na")}
+          {cuadro("citas", "Citas creadas", t.citas_creadas, t.gasto != null && t.citas_creadas ? dinero(t.gasto / t.citas_creadas, mon) + " c/u" : "—", null)}
+          {cuadro("asist", "Asistidas", asist, t.citas_del_dia ? (t.sin_marcar ? `${t.sin_marcar} de ${t.citas_del_dia} sin marcar` : `de ${t.citas_del_dia} citas`) : "no había citas", t.sin_marcar ? "mid" : "na")}
+          {cuadro("ventas", "Ventas", t.ventas, <span>{t.abonos ? "+ " + t.abonos + " abonos · " : ""}{esDia ? "costo por venta: en Semana o Mes" : (t.ventas ? costo(t.gasto, t.ventas, b.venta) : "sin ventas")}</span>, !esDia && t.gasto != null && t.ventas ? semaforoCosto(t.gasto / t.ventas, b.venta) : "na")}
+          {cuadro("factP", "Facturación", dinero(t.facturacion, mon, angosto), t.facturacion && P && P.facturacion ? vsP(tC.facturacion, P.facturacion) : (t.ventas ? "ticket " + dinero(t.facturacion / t.ventas, mon) : "sin ventas"), t.facturacion && P && P.facturacion ? semaforo(tC.facturacion, P.facturacion) : "na")}
+          {cuadro("roasP", "ROAS", esDia ? "—" : (t.gasto && t.ventas ? dec1(t.facturacion / t.gasto) + "x" : "—"), esDia ? "en Semana o Mes" : (m.proyeccion && m.proyeccion.roas ? "proyectado " + dec1(m.proyeccion.roas) + "x" : ""), !esDia && t.gasto && t.ventas && m.proyeccion && m.proyeccion.roas ? semaforo(t.facturacion / t.gasto, m.proyeccion.roas) : "na")}
+        </div>
+        <div style={h3}>Campañas</div>
+        <div style={grid}>
+          {t.gasto == null ? <div style={{ color: GRAY, fontSize: 13 }}>Sin datos de Meta en este periodo.</div> : t.campanas.length === 0 ? <div style={{ color: GRAY, fontSize: 13 }}>Sin gasto en este periodo.</div> :
+            t.campanas.map((c, i) => cuadro("c" + i, c.nombre, dinero(c.gasto, mon), <span>{pct(c.gasto, t.gasto)} del gasto · {c.conversaciones} conv. · <span style={{ color: MET[c.conversaciones ? semaforoCosto(c.gasto / c.conversaciones, b.lead) : "na"] }}>{c.conversaciones ? dinero(c.gasto / c.conversaciones, mon) + " c/u" : "sin conv."}</span></span>, c.conversaciones ? semaforoCosto(c.gasto / c.conversaciones, b.lead) : "na"))}
+        </div>
+        <div data-gp-lineas>
+          <div style={h3}>Por línea · mes del contrato</div>
+          {!Array.isArray(m.por_linea) ? <div style={{ color: GRAY, fontSize: 13, padding: 12, border: `1px dashed ${BORDER}`, borderRadius: 12 }}>Sin datos de Meta: no se puede separar por línea.</div> : (() => {
+            const celda = { padding: "9px 8px", borderBottom: `1px solid ${BORDER}`, fontSize: 13, color: INK, textAlign: "right", whiteSpace: "nowrap" };
+            const sinLinea = (l) => /^(sin anuncio|titular en varias)/.test(l);
+            return (
+              <div style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "6px 14px", overflowX: "auto" }}>
+                {angosto ? m.por_linea.map(x => (
+                  <div key={x.linea} style={{ padding: "10px 0", borderBottom: `1px solid ${BORDER}` }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: sinLinea(x.linea) ? GRAY : INK, fontStyle: sinLinea(x.linea) ? "italic" : "normal" }}>{x.linea}</div>
+                    <div style={{ fontSize: 12, color: GRAY, marginTop: 2 }}>pauta {x.gasto ? dinero(x.gasto, mon) : "—"} · {x.ventas} {x.ventas === 1 ? "venta" : "ventas"}{x.abonos ? " + " + x.abonos + " abonos" : ""} · <b style={{ color: INK }}>{x.facturacion ? dinero(x.facturacion, mon) : "—"}</b>{x.gasto && x.ventas ? " · " + dinero(x.gasto / x.ventas, mon) + " por venta" : ""}{x.gasto && x.facturacion ? " · ROAS " + dec1(x.facturacion / x.gasto) + "x" : ""}</div>
+                  </div>)) :
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead><tr>{["Línea (campaña de Meta)", "Pauta", "Ventas", "Facturación", "Costo por venta", "ROAS"].map((h, i) => <th key={h} style={{ ...celda, color: GRAY, fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", textAlign: i ? "right" : "left" }}>{h}</th>)}</tr></thead>
+                  <tbody>{m.por_linea.map(x => (
+                    <tr key={x.linea}><td style={{ ...celda, textAlign: "left", whiteSpace: "normal", color: sinLinea(x.linea) ? GRAY : INK, fontStyle: sinLinea(x.linea) ? "italic" : "normal" }}>{x.linea}</td>
+                      <td style={celda}>{x.gasto ? dinero(x.gasto, mon) : "—"}</td>
+                      <td style={celda}>{x.ventas}{x.abonos ? " + " + x.abonos + " abonos" : ""}</td>
+                      <td style={{ ...celda, fontWeight: 800 }}>{x.facturacion ? dinero(x.facturacion, mon) : "—"}</td>
+                      <td style={celda}>{x.gasto && x.ventas ? dinero(x.gasto / x.ventas, mon) : "—"}</td>
+                      <td style={celda}>{x.gasto && x.facturacion ? dec1(x.facturacion / x.gasto) + "x" : "—"}</td></tr>))}</tbody>
+                </table>}
+                <div style={{ fontSize: 11, color: GRAY, padding: "8px 0" }}>Cada venta va a la campaña cuyo titular de anuncio coincide con el que guardó GHL. Si el mismo titular está en varias campañas, la venta no se puede separar y no se adivina: para medir por línea, cada línea necesita un titular (o mensaje predefinido) propio.</div>
+              </div>);
+          })()}
         </div>
         {Array.isArray(m.temporadas) && (
           <div data-gp-temporadas>
@@ -10439,13 +10490,16 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
                       <div style={{ fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", color: GRAY, fontWeight: 700 }}>{fechaCorta(t.fecha)}{t.fecha_fin ? " → " + fechaCorta(t.fecha_fin) : ""}</div>
                       <div style={{ fontSize: 15, fontWeight: 800, color: INK, marginTop: 3 }}>{t.nombre}</div>
                       <div style={{ fontSize: 13, fontWeight: 800, marginTop: 4, color: enCurso ? MET.ok : prep ? MET.mid : INK }}>{enCurso ? "en curso" : "faltan " + t.dias_faltan + " días"}{!enCurso && (prep ? " · ya toca preparar" : " · preparar desde " + fechaCorta(t.preparar_desde))}</div>
+                      {t.tipo === "agenda" ? <div style={{ fontSize: 11, color: GRAY, marginTop: 4, fontWeight: 700 }}>AGENDA · confirmar citas y cupos</div> :
+                        Array.isArray(t.fases) && t.fases.length > 0 && <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 6 }}>{t.fases.map(f => (
+                          <span key={f.fase} title={f.desde + " → " + f.hasta} style={{ fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 99, background: t.fase_actual === f.fase ? INK : "#EEF2F8", color: t.fase_actual === f.fase ? "#FFFFFF" : INK }}>{f.fase} {fechaCorta(f.desde).replace(/^\S+ /, "")}</span>))}</div>}
                       <div style={{ fontSize: 12, color: GRAY, marginTop: 6 }}><b style={{ color: INK }}>A quién:</b> {t.publico}</div>
                       <div style={{ fontSize: 12, color: GRAY, marginTop: 3 }}><b style={{ color: INK }}>Ángulo:</b> {t.angulo}</div>
                       <div style={{ fontSize: 11, marginTop: 6, fontWeight: 700, color: ver ? MET.ok : MET.mid }}>{ver ? "✓ verificado" : "no verificado"}{t.fuente ? <> · <a href={t.fuente} target="_blank" rel="noreferrer" style={{ color: ACCENT }}>fuente</a></> : null}</div>
                     </div>);
                 })}
               </div>)}
-            <div style={{ fontSize: 11, color: GRAY, marginTop: 6 }}>Desde "preparar desde", el CAIO deja la tarea en el tablero del cliente (solo fechas verificadas). Nada se lanza sin el ok de JP.</div>
+            <div style={{ fontSize: 11, color: GRAY, marginTop: 6 }}>Remarketing en 3 fases: expectativa (desde "preparar desde"), lanzamiento (3 días antes hasta la fecha) y cierre (3 días). El CAIO deja una tarea por fase en el tablero del cliente, solo para fechas verificadas. Nada se lanza sin el ok de JP.</div>
           </div>)}
         {coP && (
           <div data-gp-costos>
@@ -10469,7 +10523,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
     </div>);
 }
 
-function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues, onUpdateClient, metricasOps = {}, onAbrirPanorama = () => {} }) {
+function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues, onUpdateClient, metricasOps = {}, estadoMetricas = "listo", onAbrirPanorama = () => {} }) {
   const [addingTo, setAddingTo] = useState(null);   // client id con form abierto
   const [quickTitle, setQuickTitle] = useState("");
   const [quickOwner, setQuickOwner] = useState("JP");
@@ -10551,7 +10605,7 @@ function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues, onUpdate
           <div style={{ color:ACCENT_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:5 }}>Métricas reales vs proyección</div>
           <div style={{ color:INK, fontWeight:800, fontSize:16, marginBottom:12 }}>Operación por cliente</div>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:14 }}>
-            {data.clients.filter(c => c.servicioSlug).map(c => <TarjetaMetricas key={c.id} slug={c.servicioSlug} nombre={c.name} m={metricasOps[c.servicioSlug]} onAbrir={onAbrirPanorama} />)}
+            {data.clients.filter(c => c.servicioSlug).map(c => <TarjetaMetricas key={c.id} slug={c.servicioSlug} nombre={c.name} m={metricasOps[c.servicioSlug]} estado={estadoMetricas} onAbrir={onAbrirPanorama} />)}
           </div>
         </div>
       )}
@@ -10758,6 +10812,7 @@ function MetodoGrowthPartner() {
   const [data, setData] = useState(getInitialData);
   const [tab, setTab] = useState("inicio");
   const [metricasOps, setMetricasOps] = useState(() => (typeof window !== "undefined" && window.__gpMetricasPrueba) || {});
+  const [estadoMetricas, setEstadoMetricas] = useState(() => (typeof window !== "undefined" && window.__gpMetricasPrueba) ? "listo" : "cargando");
   const [panoramaSlug, setPanoramaSlug] = useState(null);
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [saved, setSaved] = useState(true);
@@ -10800,6 +10855,7 @@ function MetodoGrowthPartner() {
     .then(() => { nubeClientes.current = (datos.clients || []).length; });
   const aplicarBuzon = () => firebase.database().ref("gp_ops").once("value").then(sn => {
     const ops = sn.val();
+    setEstadoMetricas("listo");
     if (!ops) return;
     const o = fbToJs(ops);
     const met = {};
@@ -10854,9 +10910,9 @@ function MetodoGrowthPartner() {
           }
           firebaseInitDone.current = true;
         }
-        aplicarBuzon();
+        aplicarBuzon().catch(() => setEstadoMetricas("error"));
         setFbStatus("ok");
-      }).catch(() => setFbStatus("error"));
+      }).catch(() => { setFbStatus("error"); setEstadoMetricas("error"); });
     };
 
     syncFromFirebase(true);
@@ -10995,6 +11051,7 @@ function MetodoGrowthPartner() {
                 onUpdateIssues={(issues)=>updateData({...data, issues})}
                 onUpdateClient={updateClient}
                 metricasOps={metricasOps}
+                estadoMetricas={estadoMetricas}
                 onAbrirPanorama={setPanoramaSlug}
               />
             )}
