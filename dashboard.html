@@ -10268,6 +10268,51 @@ function TarjetaMetricas({ slug, nombre, m: mIn, estado = "listo", onAbrir }) {
       {costosValidos(m.proyeccion) && <div style={{ fontSize: 12, color: GRAY, marginTop: 8 }}>Le queda proyectado: <b style={{ color: INK, fontSize: 15 }}>{dinero(m.proyeccion.costos.le_queda, m.moneda, true)}</b></div>}
     </div>);
 }
+// Simulador de la proyección (JP 2026-10-28): casillas llenas con los números reales del mes; recalcula al instante con la
+// misma fórmula de la proyección financiera (costos.sim). No guarda nada: la proyección oficial cambia solo por el JSON/Excel.
+function SimuladorProyeccion({ p, real, mon, angosto }) {
+  const base = () => ({ pauta: Math.round(p.pauta), cpv: Math.round(real.cpv || p.cpv), ticket: Math.round(real.ticket || p.ticket),
+    cpl: Math.round(real.cpl || (p.leads ? p.pauta / p.leads : 0)), tasa: ((real.tasa || (p.leads && p.agendas ? p.agendas / p.leads : 0)) * 100).toFixed(1) });
+  const [v, setV] = useState(base);
+  const n = (k) => parseFloat(String(v[k]).replace(",", ".")) || 0;
+  const pauta = n("pauta"), cpv = n("cpv"), tk = n("ticket"), cpl = n("cpl"), tasa = n("tasa") / 100;
+  const ventas = cpv ? pauta / cpv : 0, fact = ventas * tk, leads = cpl ? pauta / cpl : 0, agendas = leads * tasa;
+  const s = p.costos && p.costos.sim;
+  const gp = s ? s.fee + s.stack + s.comision_gp_pct * Math.max(0, fact - s.umbral) : null;
+  const total = s ? ventas * s.directo_por_venta + fact * s.variable_pct + s.equipo_fijo + fact * s.comision_equipo_pct + gp + pauta + s.fijos + s.inversion : null;
+  const leQueda = total != null ? fact - total : null, roi = leQueda != null && pauta + gp > 0 ? leQueda / (pauta + gp) : null;
+  const campos = [["pauta", "Pauta del mes", p.pauta, "plan"], ["cpv", "Costo por venta", real.cpv, "real GHL"], ["ticket", "Ticket promedio", real.ticket, "real GHL"],
+    ["cpl", "Costo por lead", real.cpl, "real"], ["tasa", "Lead → agenda (%)", real.tasa != null ? real.tasa * 100 : null, "real"]];
+  const res = [["Ventas", ventas ? dec1(ventas) : "—"], ["Facturación", dinero(fact, mon, true)], ["ROAS", pauta ? dec1(fact / pauta) + "x" : "—"],
+    ["Leads", Math.round(leads).toLocaleString("es-CO")], ["Agendas", Math.round(agendas).toLocaleString("es-CO")],
+    ["Le queda", leQueda != null ? dinero(leQueda, mon, true) : "sin costos"], ["ROI", roi != null ? dec1(roi) + "x" : "—"]];
+  const caja = { border: `1px solid ${BORDER}`, borderRadius: 10, padding: "8px 10px", minWidth: 0 };
+  return (
+    <div data-gp-simulador style={{ marginTop: 10, paddingTop: 8, borderTop: `1px solid ${BORDER}` }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "4px 0 8px" }}>
+        <div style={{ fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", color: GRAY, fontWeight: 700 }}>Simulador · arranca con los números reales del mes</div>
+        <button onClick={() => setV(base())} style={{ border: `1px solid ${BORDER}`, background: "#FFFFFF", color: ACCENT, fontWeight: 800, fontSize: 12, borderRadius: 8, padding: "5px 10px", cursor: "pointer" }}>Volver a los números reales</button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fill,minmax(${angosto ? 140 : 170}px,1fr))`, gap: 8 }}>
+        {campos.map(([k, l, ref, de]) => (
+          <label key={k} style={caja}>
+            <div style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", color: GRAY, fontWeight: 700 }}>{l}</div>
+            <input data-gp-sim={k} inputMode="decimal" value={v[k]} onChange={e => { const x = e.target.value; setV(o => ({ ...o, [k]: x })); }}
+              style={{ width: "100%", border: "none", outline: "none", fontSize: 18, fontWeight: 800, color: INK, padding: "4px 0", background: "transparent" }} />
+            <div style={{ fontSize: 11, color: GRAY }}>{ref != null && ref ? de + ": " + (k === "tasa" ? dec1(ref) + "%" : dinero(ref, mon)) : "sin dato real"}</div>
+          </label>))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fill,minmax(${angosto ? 110 : 130}px,1fr))`, gap: 8, marginTop: 8 }}>
+        {res.map(([l, x]) => (
+          <div key={l} data-gp-sim-res={l} style={{ ...caja, background: "#F4F7FB", border: "none" }}>
+            <div style={{ fontSize: 10, letterSpacing: 1, textTransform: "uppercase", color: GRAY, fontWeight: 700 }}>{l}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: l === "Le queda" && leQueda != null ? (leQueda >= 0 ? MET.ok : MET.bad) : INK, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{x}</div>
+          </div>))}
+      </div>
+      <div style={{ fontSize: 11, color: GRAY, paddingTop: 6 }}>Ventas = pauta ÷ costo por venta; facturación = ventas × ticket; le queda con los costos de la proyección real (antes de impuestos). Vs proyección oficial: {p.facturacion ? pct(fact, p.facturacion) : "—"} de la facturación. Simula, no guarda: la proyección oficial cambia solo en el Excel de la proyección.</div>
+    </div>);
+}
+
 function PanoramaCliente({ nombre, m, onCerrar }) {
   const r = resumenMetricas(m), mon = m.moneda, viejo = datoViejo(m.ts, Date.now());
   const angosto = typeof window !== "undefined" && window.innerWidth < 600;   // celular: tabla de metas sin "a ayer", días solo con número
@@ -10451,6 +10496,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
                       <div style={{ fontSize: 12, color: INK, padding: "8px 0 0" }}>{cpvR == null ? "Sin ventas o sin pauta en el mes: el costo por venta real todavía no se mide." : sig ? <span>Para pasar al escenario <b>{nom[sig.escenario]}</b>: costo por venta de {dinero(sig.cpv, mon)} o menos (hoy {dinero(cpvR, mon)} según GHL), y la pauta del plan.</span> : <span>El costo por venta real ({dinero(cpvR, mon)}) ya está en el mejor escenario: la palanca es la pauta ({rc.gasto != null && ph.pauta ? pct(rc.gasto, ph.pauta) + " de la proyección a ayer" : "—"}).</span>}</div>
                     </div>);
                 })()}
+                <SimuladorProyeccion p={p} mon={mon} angosto={angosto} real={{ cpv: rc.gasto && rc.ventas ? rc.gasto / rc.ventas : null, ticket: ticket, cpl: rc.gasto && rc.leads ? rc.gasto / rc.leads : null, tasa: rc.leads ? rc.agendas / rc.leads : null }} />
                 {m.proyeccion_link && <a href={m.proyeccion_link} target="_blank" rel="noopener" style={{ display: "inline-block", marginTop: 10, fontSize: 13, fontWeight: 800, color: ACCENT }}>Abrir la proyección financiera ↗</a>}
                 <div style={{ fontSize: 11, color: GRAY, padding: "8px 0" }}>Igual que la cabecera: real = {r.dc} de {r.pm.dias} días completos (sin hoy, que va a medias); proyección a ayer = proyección del mes × {r.dc}/{r.pm.dias}. Cierre al ritmo = lo facturado ÷ {r.dc} días × {r.pm.dias}. Proyección real del {p.fecha}{p.momento ? " (momento " + p.momento + ")" : ""}: costo por venta, ticket y escenarios salen de ahí{p.pauta_de ? "; la pauta del mes, del plan del " + p.pauta_de : ""}. Si el real de GHL se queda corto, mirar la salud del dato.{roiObj == null ? " ROI: la proyección de este mes no trae costos." : ""}</div>
               </div>);
