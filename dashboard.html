@@ -10348,7 +10348,7 @@ function SimuladorProyeccion({ p, real, mon, angosto, cierreReal, acuerdo, hoy, 
                 <div style={{ fontSize: 10, color: GRAY, fontWeight: 700, textTransform: "uppercase", letterSpacing: .8 }}>{l}</div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: INK, overflowWrap: "anywhere" }}>{x}</div></div>))}
           </div>
-          <div style={{ fontSize: 11, color: GRAY, marginTop: 6 }}>Súbale o bájele la pauta abajo: con estos costos reales, a la derecha sale lo que daría en el mes.</div>
+          <div style={{ fontSize: 11, color: GRAY, marginTop: 6 }}>Súbale o bájele la pauta abajo: con estos costos reales, {angosto ? "más abajo" : "a la derecha"} sale lo que daría en el mes.</div>
         </div>)}
       <div style={{ display: "grid", gridTemplateColumns: angosto ? "1fr" : "minmax(0,1fr) minmax(0,1.15fr)", gap: angosto ? 0 : 18, padding: "12px 16px 14px", background: "#FFFFFF" }}>
         <div>
