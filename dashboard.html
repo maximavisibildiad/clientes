@@ -1200,9 +1200,9 @@ function agregar(dias, desde, hasta) {
   t.pacientes = pac.size;
   return t;
 }
-// Ticket = plata del periodo (ventas + abonos) ÷ pacientes que pagaron (JP 2026-10-28: dividir solo por las ventas lo inflaba,
-// porque la plata de los abonos entraba sin contar a esos pacientes). Sin detalle de ventas, cae a ÷ ventas.
-const ticketReal = (t) => t.pacientes ? t.facturacion / t.pacientes : (t.ventas ? t.facturacion / t.ventas : null);
+// Ticket real = facturación ÷ ventas, la misma definición de GHL que se usó siempre (JP 2026-10-28: los números reales
+// no se redefinen; lo vigila la prueba "números reales" de verificar_dashboard_metricas.js).
+const ticketReal = (t) => t.ventas ? t.facturacion / t.ventas : null;
 // Proyección del mes repartida por igual en los días del mes del contrato, para un periodo de k días.
 function proyPeriodo(proy, periodoMes, k) {
   if (!proy) return null;
@@ -10413,7 +10413,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
     citas: ["Citas creadas", [["Real", t.citas_creadas], ["Costo", t.gasto != null && t.citas_creadas ? dinero(t.gasto / t.citas_creadas, mon) : "—"]]],
     asist: ["Asistidas", [["Citas del periodo", t.citas_del_dia], ["Asistió", t.asistio], ["Asistió (por la venta)", t.asistio_por_venta], ["No asistió", t.no_asistio], ["Sin marcar", t.sin_marcar]]],
     ventas: ["Ventas", [["Real", t.ventas], ...(t.abonos ? [["Abonos (pagos parciales)", t.abonos]] : []), ...(t.abonos && m.pacientes_abono ? [["Pacientes con abono en el periodo", m.pacientes_abono]] : []), ...(P && P.ventas ? [["Proyección", dec1(P.ventas)]] : []), ["Costo por venta", esDia ? "en Semana o Mes" : (t.gasto != null && t.ventas ? dinero(t.gasto / t.ventas, mon) : "—")], ["Base", dinero(b.venta, mon)]]],
-    factP: ["Facturación", [["Real", dinero(t.facturacion, mon)], ...(P && P.facturacion ? [["Proyección", dinero(P.facturacion, mon)]] : []), ["Ticket (plata ÷ pacientes que pagaron)", ticketReal(t) ? dinero(ticketReal(t), mon) : "—"]]],
+    factP: ["Facturación", [["Real", dinero(t.facturacion, mon)], ...(P && P.facturacion ? [["Proyección", dinero(P.facturacion, mon)]] : []), ["Ticket (facturación ÷ ventas)", ticketReal(t) ? dinero(ticketReal(t), mon) : "—"]]],
     roasP: ["ROAS", [["Real", esDia ? "en Semana o Mes" : (t.gasto && t.ventas ? dec1(t.facturacion / t.gasto) + "x" : "—")]]],
   };
   t.campanas.forEach((c, i) => { detalle["c" + i] = [c.nombre, [["Gasto", dinero(c.gasto, mon)], ["Conversaciones", c.conversaciones], ["Costo por conversación", c.conversaciones ? dinero(c.gasto / c.conversaciones, mon) : "—"], ["Base por lead", dinero(b.lead, mon)]]]; });
@@ -10499,8 +10499,8 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
             return (
               <div style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "6px 14px", overflowX: "auto" }}>
                 {Array.isArray(p.escenarios) && p.escenarios.length > 0 && (() => {
-                  // misma base que el ticket: pacientes que pagaron (ventas + abonos); así ventas × ticket = la plata real
-                  const pagaron = rc.pacientes || rc.ventas, cpvR = rc.gasto && pagaron ? rc.gasto / pagaron : null, venR = r.dc ? pagaron / r.dc * r.pm.dias : null;
+                  // costo por venta real = pauta ÷ ventas de GHL, la misma definición de la tarjeta Ventas
+                  const pagaron = rc.ventas, cpvR = rc.gasto && pagaron ? rc.gasto / pagaron : null, venR = r.dc ? pagaron / r.dc * r.pm.dias : null;
                   const nom = { conservador: "Conservador", esperado: "Esperado", optimo: "Óptimo" };
                   const sig = cpvR != null ? p.escenarios.find(e => e.cpv < cpvR) : null;   // ordenados de peor a mejor costo por venta
                   const filasE = [...p.escenarios.map(e => [nom[e.escenario] || e.escenario, dinero(e.cpv, mon), dinero(e.ticket, mon), uno(e.ventas), dinero(e.facturacion, mon), cpvR != null && cpvR <= e.cpv]),
@@ -10517,10 +10517,10 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
                           <tr key={k} style={{ background: ok === null ? "#F4F7FB" : "transparent" }}><td style={{ ...celda, textAlign: "left", fontWeight: ok === null ? 800 : 400, color: ok ? MET.ok : INK }}>{k}{ok ? " ✓" : ""}</td>
                             <td style={celda}>{c}</td><td style={celda}>{tk2}</td><td style={celda}>{v}</td><td style={{ ...celda, fontWeight: 800 }}>{f}</td></tr>))}</tbody>
                       </table>}
-                      <div style={{ fontSize: 12, color: INK, padding: "8px 0 0" }}>{cpvR == null ? "Sin ventas o sin pauta en el mes: el costo por venta real todavía no se mide." : sig ? <span>Para pasar al escenario <b>{nom[sig.escenario]}</b>: costo por venta de {dinero(sig.cpv, mon)} o menos (hoy {dinero(cpvR, mon)} según GHL, pauta ÷ pacientes que pagaron), y la pauta del plan.</span> : <span>El costo por venta real ({dinero(cpvR, mon)}) ya está en el mejor escenario: la palanca es la pauta ({rc.gasto != null && ph.pauta ? pct(rc.gasto, ph.pauta) + " de la proyección a ayer" : "—"}).</span>}</div>
+                      <div style={{ fontSize: 12, color: INK, padding: "8px 0 0" }}>{cpvR == null ? "Sin ventas o sin pauta en el mes: el costo por venta real todavía no se mide." : sig ? <span>Para pasar al escenario <b>{nom[sig.escenario]}</b>: costo por venta de {dinero(sig.cpv, mon)} o menos (hoy {dinero(cpvR, mon)} según GHL, pauta ÷ ventas), y la pauta del plan.</span> : <span>El costo por venta real ({dinero(cpvR, mon)}) ya está en el mejor escenario: la palanca es la pauta ({rc.gasto != null && ph.pauta ? pct(rc.gasto, ph.pauta) + " de la proyección a ayer" : "—"}).</span>}</div>
                     </div>);
                 })()}
-                <SimuladorProyeccion p={p} mon={mon} angosto={angosto} cierreReal={r.dc ? r.cierre : null} acuerdo={{ fee: (coP && coP.sim ? coP.sim.fee : m.fee) || 0, pct: (coP && coP.sim ? coP.sim.comision_gp_pct : m.comision_pct) || 0, umbral: (coP && coP.sim ? coP.sim.umbral : m.meta_contrato) || 0 }} real={{ cpv: rc.gasto && (rc.pacientes || rc.ventas) ? rc.gasto / (rc.pacientes || rc.ventas) : null, ticket: ticket, cpl: rc.gasto && rc.leads ? rc.gasto / rc.leads : null, tasa: rc.leads ? rc.agendas / rc.leads : null }} />
+                <SimuladorProyeccion p={p} mon={mon} angosto={angosto} cierreReal={r.dc ? r.cierre : null} acuerdo={{ fee: (coP && coP.sim ? coP.sim.fee : m.fee) || 0, pct: (coP && coP.sim ? coP.sim.comision_gp_pct : m.comision_pct) || 0, umbral: (coP && coP.sim ? coP.sim.umbral : m.meta_contrato) || 0 }} real={{ cpv: rc.gasto && rc.ventas ? rc.gasto / rc.ventas : null, ticket: ticket, cpl: rc.gasto && rc.leads ? rc.gasto / rc.leads : null, tasa: rc.leads ? rc.agendas / rc.leads : null }} />
                 {m.proyeccion_link && <a href={m.proyeccion_link} target="_blank" rel="noopener" style={{ display: "inline-block", marginTop: 10, fontSize: 13, fontWeight: 800, color: ACCENT }}>Abrir la proyección financiera ↗</a>}
                 <div style={{ fontSize: 11, color: GRAY, padding: "8px 0" }}>Real = {r.dc} de {r.pm.dias} días completos (sin hoy, que va a medias); al ritmo = lo facturado ÷ {r.dc} días × {r.pm.dias}. Proyección real del {p.fecha}{p.momento ? " (momento " + p.momento + ")" : ""}: costo por venta, ticket y escenarios salen de ahí{p.pauta_de ? "; la pauta del mes, del plan del " + p.pauta_de : ""}. Si el real de GHL se queda corto, mirar la salud del dato.</div>
               </div>);
