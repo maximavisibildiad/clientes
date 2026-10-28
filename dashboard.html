@@ -1182,13 +1182,14 @@ function rangoPeriodo(modo, diaSel, periodoMes) {
 // Sumas de los días [desde, hasta]. Sin datos de Meta en todo el rango: gasto = null (nunca 0).
 function agregar(dias, desde, hasta) {
   const t = { k: 0, gasto: null, campanas: [], leads: 0, agendas: 0, citas_creadas: 0, citas_del_dia: 0, asistio: 0,
-    asistio_por_venta: 0, no_asistio: 0, sin_marcar: 0, ventas: 0, abonos: 0, facturacion: 0 };
-  const camp = {};
+    asistio_por_venta: 0, no_asistio: 0, sin_marcar: 0, ventas: 0, abonos: 0, facturacion: 0, pacientes: 0 };
+  const camp = {}, pac = new Set();
   Object.keys(dias || {}).sort().forEach(k => {
     if (k < desde || k > hasta) return;
     const r = dias[k] || {}; t.k++;
     ["leads", "agendas", "citas_creadas", "citas_del_dia", "asistio", "asistio_por_venta", "no_asistio", "sin_marcar", "ventas", "abonos", "facturacion"]
       .forEach(c => { t[c] += Number(r[c] || 0); });
+    (r.ventas_detalle || []).forEach(x => { if (x.oportunidad) pac.add(x.oportunidad); });
     if (r.gasto !== undefined && r.gasto !== null) {
       t.gasto = (t.gasto || 0) + Number(r.gasto);
       (r.campanas || []).forEach(c => { const id = c.id || c.nombre; const x = camp[id] || (camp[id] = { id, nombre: c.nombre, gasto: 0, conversaciones: 0 });
@@ -1196,8 +1197,12 @@ function agregar(dias, desde, hasta) {
     }
   });
   t.campanas = Object.values(camp).sort((a, b) => b.gasto - a.gasto);
+  t.pacientes = pac.size;
   return t;
 }
+// Ticket = plata del periodo (ventas + abonos) ÷ pacientes que pagaron (JP 2026-10-28: dividir solo por las ventas lo inflaba,
+// porque la plata de los abonos entraba sin contar a esos pacientes). Sin detalle de ventas, cae a ÷ ventas.
+const ticketReal = (t) => t.pacientes ? t.facturacion / t.pacientes : (t.ventas ? t.facturacion / t.ventas : null);
 // Proyección del mes repartida por igual en los días del mes del contrato, para un periodo de k días.
 function proyPeriodo(proy, periodoMes, k) {
   if (!proy) return null;
@@ -1209,7 +1214,7 @@ function cierreRitmo(facturacionMes, diasCompletos, diasMes) { return diasComple
 // Lo que falta para `meta` con el ticket, las tasas y el costo por venta reales del mes (o el ticket de la proyección).
 function faltante(meta, t, proy, diasRestantes) {
   const monto = Math.max(0, meta - t.facturacion);
-  const ticket = t.ventas ? t.facturacion / t.ventas : (proy && proy.ticket) || 0;
+  const ticket = ticketReal(t) || (proy && proy.ticket) || 0;
   const ventas = ticket ? Math.ceil(monto / ticket) : null;
   const cpv = t.ventas && t.gasto ? t.gasto / t.ventas : (t.gasto === 0 ? null : (proy && proy.cpv) || null);
   const pauta = ventas != null && cpv != null ? ventas * cpv : null;
@@ -10345,10 +10350,12 @@ function SimuladorProyeccion({ p, real, mon, angosto, cierreReal, acuerdo }) {
           <div data-gp-sim-gp style={{ marginTop: 10, borderRadius: 12, padding: "12px 14px", background: "#EAF2FB" }}>
             <div style={lbl}>Su comisión (GP) en este escenario</div>
             <div style={{ fontSize: 26, fontWeight: 900, color: ACCENT }}>{dinero(comision, mon)}</div>
-            <div style={{ fontSize: 12, color: INK, marginTop: 2 }}>{dec1(pctGp * 100)}% sobre {dinero(excedente, mon)} facturados por encima de {dinero(umbral, mon)}</div>
-            <div style={{ display: "flex", gap: 14, flexWrap: "wrap", fontSize: 12, color: INK, marginTop: 6 }}>
-              <span>Fee <b>{dinero(fee, mon)}</b></span>{stack ? <span>Herramientas <b>{dinero(stack, mon)}</b></span> : null}<span>Total GP <b>{dinero(gp, mon)}</b></span>
-              {comisionHoy != null && <span>Comisión hoy al ritmo: <b>{dinero(comisionHoy, mon)}</b></span>}</div>
+            <div style={{ fontSize: 12, color: INK, marginTop: 6 }}>
+              {[["Facturación del escenario", dinero(fact, mon)], ["− Lo que no paga comisión (acuerdo)", "− " + dinero(umbral, mon)], ["= Excedente", dinero(excedente, mon)], ["× " + dec1(pctGp * 100).replace(",0", "") + "% de comisión", dinero(comision, mon)]].map(([l, x], i) => (
+                <div key={l} style={{ display: "flex", justifyContent: "space-between", gap: 10, padding: "3px 0", borderTop: i === 2 || i === 3 ? `1px solid rgba(41,102,165,.25)` : "none", fontWeight: i === 3 ? 800 : 400 }}><span>{l}</span><span style={{ whiteSpace: "nowrap" }}>{x}</span></div>))}
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: 13, color: INK, fontWeight: 800, marginTop: 8, paddingTop: 6, borderTop: `1px solid rgba(41,102,165,.25)` }}><span>Lo suyo: fee {dinero(fee, mon)} + comisión</span><span style={{ whiteSpace: "nowrap" }}>{dinero(fee + comision, mon)}</span></div>
+            <div style={{ fontSize: 11, color: GRAY, marginTop: 4 }}>{stack ? "Aparte, herramientas " + dinero(stack, mon) + ": las paga el doctor para el stack, no es ganancia. " : ""}{comisionHoy != null ? "Hoy, al ritmo del mes (" + dinero(cierreReal, mon) + "), la comisión va en " + dinero(comisionHoy, mon) + "." : ""}</div>
           </div>
         </div>
       </div>
@@ -10376,7 +10383,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
   const fc = faltante(m.meta_contrato || 0, r.mesCompleto, m.proyeccion, r.restantes);
   const fp = m.proyeccion ? faltante(m.proyeccion.facturacion, r.mesCompleto, m.proyeccion, r.restantes) : null;
   const tope = Math.max(r.cierre, m.meta_contrato || 0, m.proyeccion ? m.proyeccion.facturacion : 0, 1);
-  const ticket = r.mesCompleto.ventas ? r.mesCompleto.facturacion / r.mesCompleto.ventas : null;
+  const ticket = ticketReal(r.mesCompleto);
   const roasMes = r.mesCompleto.gasto ? r.mesCompleto.facturacion / r.mesCompleto.gasto : null;
   const L = { color: "rgba(255,255,255,.75)", fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: 700 };
   const tk = (id, l, v, d, cls) => (
@@ -10406,7 +10413,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
     citas: ["Citas creadas", [["Real", t.citas_creadas], ["Costo", t.gasto != null && t.citas_creadas ? dinero(t.gasto / t.citas_creadas, mon) : "—"]]],
     asist: ["Asistidas", [["Citas del periodo", t.citas_del_dia], ["Asistió", t.asistio], ["Asistió (por la venta)", t.asistio_por_venta], ["No asistió", t.no_asistio], ["Sin marcar", t.sin_marcar]]],
     ventas: ["Ventas", [["Real", t.ventas], ...(t.abonos ? [["Abonos (pagos parciales)", t.abonos]] : []), ...(t.abonos && m.pacientes_abono ? [["Pacientes con abono en el periodo", m.pacientes_abono]] : []), ...(P && P.ventas ? [["Proyección", dec1(P.ventas)]] : []), ["Costo por venta", esDia ? "en Semana o Mes" : (t.gasto != null && t.ventas ? dinero(t.gasto / t.ventas, mon) : "—")], ["Base", dinero(b.venta, mon)]]],
-    factP: ["Facturación", [["Real", dinero(t.facturacion, mon)], ...(P && P.facturacion ? [["Proyección", dinero(P.facturacion, mon)]] : []), ["Ticket", t.ventas ? dinero(t.facturacion / t.ventas, mon) : "—"]]],
+    factP: ["Facturación", [["Real", dinero(t.facturacion, mon)], ...(P && P.facturacion ? [["Proyección", dinero(P.facturacion, mon)]] : []), ["Ticket (plata ÷ pacientes que pagaron)", ticketReal(t) ? dinero(ticketReal(t), mon) : "—"]]],
     roasP: ["ROAS", [["Real", esDia ? "en Semana o Mes" : (t.gasto && t.ventas ? dec1(t.facturacion / t.gasto) + "x" : "—")]]],
   };
   t.campanas.forEach((c, i) => { detalle["c" + i] = [c.nombre, [["Gasto", dinero(c.gasto, mon)], ["Conversaciones", c.conversaciones], ["Costo por conversación", c.conversaciones ? dinero(c.gasto / c.conversaciones, mon) : "—"], ["Base por lead", dinero(b.lead, mon)]]]; });
@@ -10474,7 +10481,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
           {cuadro("citas", "Citas creadas", t.citas_creadas, t.gasto != null && t.citas_creadas ? dinero(t.gasto / t.citas_creadas, mon) + " c/u" : "—", null)}
           {cuadro("asist", "Asistidas", asist, t.citas_del_dia ? (t.sin_marcar ? `${t.sin_marcar} de ${t.citas_del_dia} sin marcar` : `de ${t.citas_del_dia} citas`) : "no había citas", t.sin_marcar ? "mid" : "na")}
           {cuadro("ventas", "Ventas", t.ventas, <span>{t.abonos ? "+ " + t.abonos + " abonos · " : ""}{esDia ? "costo por venta: en Semana o Mes" : (t.ventas ? costo(t.gasto, t.ventas, b.venta) : "sin ventas")}{vsProy(tC.ventas, P && P.ventas, dec1)}</span>, !esDia && t.gasto != null && t.ventas ? semaforoCosto(t.gasto / t.ventas, b.venta) : "na")}
-          {cuadro("factP", "Facturación", dinero(t.facturacion, mon, true), t.facturacion && P && P.facturacion ? vsP(tC.facturacion, P.facturacion) : (t.ventas ? "ticket " + dinero(t.facturacion / t.ventas, mon) : "sin ventas"), t.facturacion && P && P.facturacion ? semaforo(tC.facturacion, P.facturacion) : "na")}
+          {cuadro("factP", "Facturación", dinero(t.facturacion, mon, true), t.facturacion && P && P.facturacion ? vsP(tC.facturacion, P.facturacion) : (ticketReal(t) ? "ticket " + dinero(ticketReal(t), mon) : "sin ventas"), t.facturacion && P && P.facturacion ? semaforo(tC.facturacion, P.facturacion) : "na")}
           {cuadro("roasP", "ROAS", esDia ? "—" : (t.gasto && t.ventas ? dec1(t.facturacion / t.gasto) + "x" : "—"), esDia ? "en Semana o Mes" : (m.proyeccion && m.proyeccion.roas ? "proyectado " + dec1(m.proyeccion.roas) + "x" : ""), !esDia && t.gasto && t.ventas && m.proyeccion && m.proyeccion.roas ? semaforo(t.facturacion / t.gasto, m.proyeccion.roas) : "na")}
         </div>
         <div style={h3}>Campañas</div>
@@ -10492,7 +10499,8 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
             return (
               <div style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "6px 14px", overflowX: "auto" }}>
                 {Array.isArray(p.escenarios) && p.escenarios.length > 0 && (() => {
-                  const cpvR = rc.gasto && rc.ventas ? rc.gasto / rc.ventas : null, venR = r.dc ? rc.ventas / r.dc * r.pm.dias : null;
+                  // misma base que el ticket: pacientes que pagaron (ventas + abonos); así ventas × ticket = la plata real
+                  const pagaron = rc.pacientes || rc.ventas, cpvR = rc.gasto && pagaron ? rc.gasto / pagaron : null, venR = r.dc ? pagaron / r.dc * r.pm.dias : null;
                   const nom = { conservador: "Conservador", esperado: "Esperado", optimo: "Óptimo" };
                   const sig = cpvR != null ? p.escenarios.find(e => e.cpv < cpvR) : null;   // ordenados de peor a mejor costo por venta
                   const filasE = [...p.escenarios.map(e => [nom[e.escenario] || e.escenario, dinero(e.cpv, mon), dinero(e.ticket, mon), uno(e.ventas), dinero(e.facturacion, mon), cpvR != null && cpvR <= e.cpv]),
@@ -10509,10 +10517,10 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
                           <tr key={k} style={{ background: ok === null ? "#F4F7FB" : "transparent" }}><td style={{ ...celda, textAlign: "left", fontWeight: ok === null ? 800 : 400, color: ok ? MET.ok : INK }}>{k}{ok ? " ✓" : ""}</td>
                             <td style={celda}>{c}</td><td style={celda}>{tk2}</td><td style={celda}>{v}</td><td style={{ ...celda, fontWeight: 800 }}>{f}</td></tr>))}</tbody>
                       </table>}
-                      <div style={{ fontSize: 12, color: INK, padding: "8px 0 0" }}>{cpvR == null ? "Sin ventas o sin pauta en el mes: el costo por venta real todavía no se mide." : sig ? <span>Para pasar al escenario <b>{nom[sig.escenario]}</b>: costo por venta de {dinero(sig.cpv, mon)} o menos (hoy {dinero(cpvR, mon)} según GHL), y la pauta del plan.</span> : <span>El costo por venta real ({dinero(cpvR, mon)}) ya está en el mejor escenario: la palanca es la pauta ({rc.gasto != null && ph.pauta ? pct(rc.gasto, ph.pauta) + " de la proyección a ayer" : "—"}).</span>}</div>
+                      <div style={{ fontSize: 12, color: INK, padding: "8px 0 0" }}>{cpvR == null ? "Sin ventas o sin pauta en el mes: el costo por venta real todavía no se mide." : sig ? <span>Para pasar al escenario <b>{nom[sig.escenario]}</b>: costo por venta de {dinero(sig.cpv, mon)} o menos (hoy {dinero(cpvR, mon)} según GHL, pauta ÷ pacientes que pagaron), y la pauta del plan.</span> : <span>El costo por venta real ({dinero(cpvR, mon)}) ya está en el mejor escenario: la palanca es la pauta ({rc.gasto != null && ph.pauta ? pct(rc.gasto, ph.pauta) + " de la proyección a ayer" : "—"}).</span>}</div>
                     </div>);
                 })()}
-                <SimuladorProyeccion p={p} mon={mon} angosto={angosto} cierreReal={r.dc ? r.cierre : null} acuerdo={{ fee: (coP && coP.sim ? coP.sim.fee : m.fee) || 0, pct: (coP && coP.sim ? coP.sim.comision_gp_pct : m.comision_pct) || 0, umbral: (coP && coP.sim ? coP.sim.umbral : m.meta_contrato) || 0 }} real={{ cpv: rc.gasto && rc.ventas ? rc.gasto / rc.ventas : null, ticket: ticket, cpl: rc.gasto && rc.leads ? rc.gasto / rc.leads : null, tasa: rc.leads ? rc.agendas / rc.leads : null }} />
+                <SimuladorProyeccion p={p} mon={mon} angosto={angosto} cierreReal={r.dc ? r.cierre : null} acuerdo={{ fee: (coP && coP.sim ? coP.sim.fee : m.fee) || 0, pct: (coP && coP.sim ? coP.sim.comision_gp_pct : m.comision_pct) || 0, umbral: (coP && coP.sim ? coP.sim.umbral : m.meta_contrato) || 0 }} real={{ cpv: rc.gasto && (rc.pacientes || rc.ventas) ? rc.gasto / (rc.pacientes || rc.ventas) : null, ticket: ticket, cpl: rc.gasto && rc.leads ? rc.gasto / rc.leads : null, tasa: rc.leads ? rc.agendas / rc.leads : null }} />
                 {m.proyeccion_link && <a href={m.proyeccion_link} target="_blank" rel="noopener" style={{ display: "inline-block", marginTop: 10, fontSize: 13, fontWeight: 800, color: ACCENT }}>Abrir la proyección financiera ↗</a>}
                 <div style={{ fontSize: 11, color: GRAY, padding: "8px 0" }}>Real = {r.dc} de {r.pm.dias} días completos (sin hoy, que va a medias); al ritmo = lo facturado ÷ {r.dc} días × {r.pm.dias}. Proyección real del {p.fecha}{p.momento ? " (momento " + p.momento + ")" : ""}: costo por venta, ticket y escenarios salen de ahí{p.pauta_de ? "; la pauta del mes, del plan del " + p.pauta_de : ""}. Si el real de GHL se queda corto, mirar la salud del dato.</div>
               </div>);
