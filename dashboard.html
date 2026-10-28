@@ -10275,7 +10275,7 @@ function TarjetaMetricas({ slug, nombre, m: mIn, estado = "listo", onAbrir }) {
 }
 // Simulador de la proyección (JP 2026-10-28): casillas llenas con los números reales del mes; recalcula al instante con la
 // misma fórmula de la proyección financiera (costos.sim). No guarda nada: la proyección oficial cambia solo por el JSON/Excel.
-function SimuladorProyeccion({ p, real, mon, angosto, cierreReal, acuerdo }) {
+function SimuladorProyeccion({ p, real, mon, angosto, cierreReal, acuerdo, hoy, pautaRitmo }) {
   const ent = (x) => String(Math.round(x || 0));
   const reales = { pauta: ent(p.pauta), cpv: ent(real.cpv || p.cpv), ticket: ent(real.ticket || p.ticket),
     cpl: ent(real.cpl || (p.leads ? p.pauta / p.leads : 0)), tasa: ((real.tasa || (p.leads && p.agendas ? p.agendas / p.leads : 0)) * 100).toFixed(1).replace(".", ","),
@@ -10284,6 +10284,15 @@ function SimuladorProyeccion({ p, real, mon, angosto, cierreReal, acuerdo }) {
   const presets = [["real", "Números reales", reales], ...(p.escenarios || []).map(e => [e.escenario, { conservador: "Conservador", esperado: "Esperado", optimo: "Óptimo" }[e.escenario] || e.escenario,
     { ...reales, cpv: ent(e.cpv), ticket: ent(e.ticket) }])];
   const [v, setV] = useState(reales);
+  // JP 2026-10-28: cada refresco del buzón trae números reales nuevos; si las casillas siguen en los reales anteriores
+  // (nadie las movió), se actualizan solas. Si JP está simulando, no se le pisa lo que escribió.
+  const firmaReales = JSON.stringify(reales), realesAntes = useRef(firmaReales);
+  useEffect(() => {
+    if (realesAntes.current === firmaReales) return;
+    const viejo = JSON.parse(realesAntes.current), nuevo = JSON.parse(firmaReales);
+    realesAntes.current = firmaReales;
+    setV(cur => Object.keys(viejo).every(k => String(cur[k]) === String(viejo[k])) ? nuevo : cur);
+  }, [firmaReales]);
   const n = (k) => parseFloat(String(v[k]).replace(/\./g, "").replace(",", ".")) || 0;
   const pauta = n("pauta"), cpv = n("cpv"), tk = n("ticket"), cpl = n("cpl"), tasa = n("tasa") / 100;
   const ventas = cpv ? pauta / cpv : 0, fact = ventas * tk, leads = cpl ? pauta / cpl : 0, agendas = leads * tasa;
@@ -10326,6 +10335,21 @@ function SimuladorProyeccion({ p, real, mon, angosto, cierreReal, acuerdo }) {
           {presets.map(([k, l, pv]) => <button key={k} data-gp-sim-preset={k} onClick={() => setV(pv)} style={{ border: "1px solid rgba(255,255,255,.35)", background: activo === k ? "#FFFFFF" : "rgba(255,255,255,.08)", color: activo === k ? INK : "#FFFFFF", fontWeight: 800, fontSize: 12, borderRadius: 99, padding: "6px 12px", cursor: "pointer" }}>{l}</button>)}
         </div>
       </div>
+      {hoy && (
+        // JP 2026-10-28: lo real exacto del mes a hoy (GHL + Meta, último refresco), sin redondear, antes de simular.
+        <div data-gp-sim-real style={{ padding: "12px 16px", background: "#F4F8FD", borderBottom: `1px solid ${BORDER}` }}>
+          <div style={{ ...lbl, marginBottom: 8 }}>Lo real del mes a hoy · exacto</div>
+          <div style={{ display: "grid", gridTemplateColumns: angosto ? "repeat(2,minmax(0,1fr))" : "repeat(4,minmax(0,1fr))", gap: 8 }}>
+            {[["Gastado en Meta", hoy.gasto != null ? dinero(hoy.gasto, mon) : "—"], ["Leads", hoy.leads],
+              ["Costo por lead", hoy.gasto != null && hoy.leads ? dinero(hoy.gasto / hoy.leads, mon) : "—"], ["Agendas", hoy.agendas],
+              ["Ventas", hoy.ventas + (hoy.abonos ? " + " + hoy.abonos + " abonos" : "")], ["Costo por venta", hoy.gasto != null && hoy.ventas ? dinero(hoy.gasto / hoy.ventas, mon) : "—"],
+              ["Facturación", dinero(hoy.facturacion, mon)], ["Pauta al ritmo del mes", pautaRitmo ? dinero(pautaRitmo, mon) : "—"]].map(([l, x]) => (
+              <div key={l} data-gp-sim-real-dato={l} style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "7px 10px", minWidth: 0 }}>
+                <div style={{ fontSize: 10, color: GRAY, fontWeight: 700, textTransform: "uppercase", letterSpacing: .8 }}>{l}</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: INK, overflowWrap: "anywhere" }}>{x}</div></div>))}
+          </div>
+          <div style={{ fontSize: 11, color: GRAY, marginTop: 6 }}>Súbale o bájele la pauta abajo: con estos costos reales, a la derecha sale lo que daría en el mes.</div>
+        </div>)}
       <div style={{ display: "grid", gridTemplateColumns: angosto ? "1fr" : "minmax(0,1fr) minmax(0,1.15fr)", gap: angosto ? 0 : 18, padding: "12px 16px 14px", background: "#FFFFFF" }}>
         <div>
           <div style={{ ...lbl, marginBottom: 6 }}>1 · Lo que usted mueve</div>
@@ -10520,7 +10544,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
                       <div style={{ fontSize: 12, color: INK, padding: "8px 0 0" }}>{cpvR == null ? "Sin ventas o sin pauta en el mes: el costo por venta real todavía no se mide." : sig ? <span>Para pasar al escenario <b>{nom[sig.escenario]}</b>: costo por venta de {dinero(sig.cpv, mon)} o menos (hoy {dinero(cpvR, mon)} según GHL, pauta ÷ ventas), y la pauta del plan.</span> : <span>El costo por venta real ({dinero(cpvR, mon)}) ya está en el mejor escenario: la palanca es la pauta ({rc.gasto != null && ph.pauta ? pct(rc.gasto, ph.pauta) + " de la proyección a ayer" : "—"}).</span>}</div>
                     </div>);
                 })()}
-                <SimuladorProyeccion p={p} mon={mon} angosto={angosto} cierreReal={r.dc ? r.cierre : null} acuerdo={{ fee: (coP && coP.sim ? coP.sim.fee : m.fee) || 0, pct: (coP && coP.sim ? coP.sim.comision_gp_pct : m.comision_pct) || 0, umbral: (coP && coP.sim ? coP.sim.umbral : m.meta_contrato) || 0 }} real={{ cpv: rc.gasto && rc.ventas ? rc.gasto / rc.ventas : null, ticket: ticket, cpl: rc.gasto && rc.leads ? rc.gasto / rc.leads : null, tasa: rc.leads ? rc.agendas / rc.leads : null }} />
+                <SimuladorProyeccion p={p} mon={mon} angosto={angosto} cierreReal={r.dc ? r.cierre : null} acuerdo={{ fee: (coP && coP.sim ? coP.sim.fee : m.fee) || 0, pct: (coP && coP.sim ? coP.sim.comision_gp_pct : m.comision_pct) || 0, umbral: (coP && coP.sim ? coP.sim.umbral : m.meta_contrato) || 0 }} hoy={r.mesHoy} pautaRitmo={r.dc && rc.gasto ? rc.gasto / r.dc * r.pm.dias : null} real={{ cpv: r.mesHoy.gasto && r.mesHoy.ventas ? r.mesHoy.gasto / r.mesHoy.ventas : null, ticket: ticket, cpl: r.mesHoy.gasto && r.mesHoy.leads ? r.mesHoy.gasto / r.mesHoy.leads : null, tasa: r.mesHoy.leads ? r.mesHoy.agendas / r.mesHoy.leads : null }} />
                 {m.proyeccion_link && <a href={m.proyeccion_link} target="_blank" rel="noopener" style={{ display: "inline-block", marginTop: 10, fontSize: 13, fontWeight: 800, color: ACCENT }}>Abrir la proyección financiera ↗</a>}
                 <div style={{ fontSize: 11, color: GRAY, padding: "8px 0" }}>Real = {r.dc} de {r.pm.dias} días completos (sin hoy, que va a medias); al ritmo = lo facturado ÷ {r.dc} días × {r.pm.dias}. Proyección real del {p.fecha}{p.momento ? " (momento " + p.momento + ")" : ""}: costo por venta, ticket y escenarios salen de ahí{p.pauta_de ? "; la pauta del mes, del plan del " + p.pauta_de : ""}. Si el real de GHL se queda corto, mirar la salud del dato.</div>
               </div>);
@@ -10934,6 +10958,13 @@ function MetodoGrowthPartner() {
   const [tab, setTab] = useState("inicio");
   const [metricasOps, setMetricasOps] = useState(() => (typeof window !== "undefined" && window.__gpMetricasPrueba) || {});
   const [estadoMetricas, setEstadoMetricas] = useState(() => (typeof window !== "undefined" && window.__gpMetricasPrueba) ? "listo" : "cargando");
+  // Solo pruebas: simula un refresco del buzón con el panel abierto (verificar_dashboard_metricas.js, "refresco en vivo").
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.__gpMetricasPrueba) return;
+    const f = (e) => setMetricasOps(e.detail);
+    window.addEventListener("gp-metricas-prueba", f);
+    return () => window.removeEventListener("gp-metricas-prueba", f);
+  }, []);
   const [panoramaSlug, setPanoramaSlug] = useState(null);
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [saved, setSaved] = useState(true);
