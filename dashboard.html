@@ -10297,8 +10297,8 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
       <div style={{ fontSize: 12, fontWeight: 800, marginTop: 2, color: cls ? MET[cls + "L"] : "rgba(255,255,255,.85)" }}>{d}</div></div>);
   const cuadro = (id, l, v, s, cls) => (
     <div key={id} data-gp-cuadro={id} onClick={() => setPop(id)} style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, borderTop: `4px solid ${MET_TOP[cls || "na"] || ACCENT}`, borderRadius: 12, padding: 14, cursor: "pointer", minWidth: 0 }}>
-      <div style={{ fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", color: GRAY, fontWeight: 700 }}>{l}</div>
-      <div style={{ fontSize: angosto ? 20 : 26, fontWeight: 800, marginTop: 3, color: cls && cls !== "na" ? MET[cls] : INK, overflowWrap: "anywhere" }}>{v}</div>
+      <div title={typeof l === "string" ? l : undefined} style={{ fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", color: GRAY, fontWeight: 700, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", minHeight: 26 }}>{l}</div>
+      <div style={{ fontSize: typeof v === "string" && v.length > 8 ? 18 : (angosto ? 20 : 26), fontWeight: 800, marginTop: 3, color: cls && cls !== "na" ? MET[cls] : INK, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", lineHeight: 1.15 }}>{v}</div>
       <div style={{ fontSize: 12, fontWeight: 700, marginTop: 3, color: GRAY }}>{s}</div></div>);
   const costo = (g, n, base) => g == null ? <span>sin datos de Meta</span> : n ? <span><span style={{ color: MET[semaforoCosto(g / n, base)] }}>{dinero(g / n, mon)} c/u</span>{base ? " · base " + dinero(base, mon) : ""}</span> : <span>—</span>;
   const vsP = (real, proy) => P && proy ? <span style={{ color: MET[semaforo(real, proy)] }}>{pct(real, proy)} de la proyección</span> : null;   // real = tC (días completos)
@@ -10438,19 +10438,19 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
         </div>
         <div style={h3}>Embudo</div>
         <div style={grid}>
-          {cuadro("pautaP", "Pauta", t.gasto != null ? dinero(t.gasto, mon, angosto) : "—", t.gasto == null ? "sin datos de Meta" : vsP(tC.gasto, P && P.pauta), t.gasto != null && P ? semaforo(tC.gasto, P.pauta) : "na")}
+          {cuadro("pautaP", "Pauta", t.gasto != null ? dinero(t.gasto, mon, true) : "—", t.gasto == null ? "sin datos de Meta" : vsP(tC.gasto, P && P.pauta), t.gasto != null && P ? semaforo(tC.gasto, P.pauta) : "na")}
           {cuadro("leads", "Leads", t.leads, costo(t.gasto, t.leads, b.lead), t.gasto != null && t.leads ? semaforoCosto(t.gasto / t.leads, b.lead) : "na")}
           {cuadro("agendas", "Agendas", t.agendas, costo(t.gasto, t.agendas, b.agenda), t.gasto != null && t.agendas ? semaforoCosto(t.gasto / t.agendas, b.agenda) : "na")}
           {cuadro("citas", "Citas creadas", t.citas_creadas, t.gasto != null && t.citas_creadas ? dinero(t.gasto / t.citas_creadas, mon) + " c/u" : "—", null)}
           {cuadro("asist", "Asistidas", asist, t.citas_del_dia ? (t.sin_marcar ? `${t.sin_marcar} de ${t.citas_del_dia} sin marcar` : `de ${t.citas_del_dia} citas`) : "no había citas", t.sin_marcar ? "mid" : "na")}
           {cuadro("ventas", "Ventas", t.ventas, <span>{t.abonos ? "+ " + t.abonos + " abonos · " : ""}{esDia ? "costo por venta: en Semana o Mes" : (t.ventas ? costo(t.gasto, t.ventas, b.venta) : "sin ventas")}</span>, !esDia && t.gasto != null && t.ventas ? semaforoCosto(t.gasto / t.ventas, b.venta) : "na")}
-          {cuadro("factP", "Facturación", dinero(t.facturacion, mon, angosto), t.facturacion && P && P.facturacion ? vsP(tC.facturacion, P.facturacion) : (t.ventas ? "ticket " + dinero(t.facturacion / t.ventas, mon) : "sin ventas"), t.facturacion && P && P.facturacion ? semaforo(tC.facturacion, P.facturacion) : "na")}
+          {cuadro("factP", "Facturación", dinero(t.facturacion, mon, true), t.facturacion && P && P.facturacion ? vsP(tC.facturacion, P.facturacion) : (t.ventas ? "ticket " + dinero(t.facturacion / t.ventas, mon) : "sin ventas"), t.facturacion && P && P.facturacion ? semaforo(tC.facturacion, P.facturacion) : "na")}
           {cuadro("roasP", "ROAS", esDia ? "—" : (t.gasto && t.ventas ? dec1(t.facturacion / t.gasto) + "x" : "—"), esDia ? "en Semana o Mes" : (m.proyeccion && m.proyeccion.roas ? "proyectado " + dec1(m.proyeccion.roas) + "x" : ""), !esDia && t.gasto && t.ventas && m.proyeccion && m.proyeccion.roas ? semaforo(t.facturacion / t.gasto, m.proyeccion.roas) : "na")}
         </div>
         <div style={h3}>Campañas</div>
         <div style={grid}>
           {t.gasto == null ? <div style={{ color: GRAY, fontSize: 13 }}>Sin datos de Meta en este periodo.</div> : t.campanas.length === 0 ? <div style={{ color: GRAY, fontSize: 13 }}>Sin gasto en este periodo.</div> :
-            t.campanas.map((c, i) => cuadro("c" + i, c.nombre, dinero(c.gasto, mon), <span>{pct(c.gasto, t.gasto)} del gasto · {c.conversaciones} conv. · <span style={{ color: MET[c.conversaciones ? semaforoCosto(c.gasto / c.conversaciones, b.lead) : "na"] }}>{c.conversaciones ? dinero(c.gasto / c.conversaciones, mon) + " c/u" : "sin conv."}</span></span>, c.conversaciones ? semaforoCosto(c.gasto / c.conversaciones, b.lead) : "na"))}
+            t.campanas.map((c, i) => cuadro("c" + i, c.nombre, dinero(c.gasto, mon, true), <span>{pct(c.gasto, t.gasto)} del gasto · {c.conversaciones} conv. · <span style={{ color: MET[c.conversaciones ? semaforoCosto(c.gasto / c.conversaciones, b.lead) : "na"] }}>{c.conversaciones ? dinero(c.gasto / c.conversaciones, mon) + " c/u" : "sin conv."}</span></span>, c.conversaciones ? semaforoCosto(c.gasto / c.conversaciones, b.lead) : "na"))}
         </div>
         <div data-gp-lineas>
           <div style={h3}>Por línea · mes del contrato</div>
@@ -10461,20 +10461,20 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
               <div style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "6px 14px", overflowX: "auto" }}>
                 {angosto ? m.por_linea.map(x => (
                   <div key={x.linea} style={{ padding: "10px 0", borderBottom: `1px solid ${BORDER}` }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: sinLinea(x.linea) ? GRAY : INK, fontStyle: sinLinea(x.linea) ? "italic" : "normal" }}>{x.linea}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: sinLinea(x.linea) ? GRAY : INK, fontStyle: sinLinea(x.linea) ? "italic" : "normal" }}>{x.linea}{x.por_chat ? <span title="Línea tomada del mensaje predefinido del anuncio en el primer mensaje del chat" style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, color: ACCENT, background: "#EAF2FB", borderRadius: 99, padding: "2px 7px", fontStyle: "normal", whiteSpace: "nowrap" }}>{x.por_chat} por chat</span> : null}</div>
                     <div style={{ fontSize: 12, color: GRAY, marginTop: 2 }}>pauta {x.gasto ? dinero(x.gasto, mon) : "—"} · {x.ventas} {x.ventas === 1 ? "venta" : "ventas"}{x.abonos ? " + " + x.abonos + " abonos" : ""} · <b style={{ color: INK }}>{x.facturacion ? dinero(x.facturacion, mon) : "—"}</b>{x.gasto && x.ventas ? " · " + dinero(x.gasto / x.ventas, mon) + " por venta" : ""}{x.gasto && x.facturacion ? " · ROAS " + dec1(x.facturacion / x.gasto) + "x" : ""}</div>
                   </div>)) :
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead><tr>{["Línea (campaña de Meta)", "Pauta", "Ventas", "Facturación", "Costo por venta", "ROAS"].map((h, i) => <th key={h} style={{ ...celda, color: GRAY, fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", textAlign: i ? "right" : "left" }}>{h}</th>)}</tr></thead>
+                  <thead><tr>{["Línea (campaña de Meta o chat)", "Pauta", "Ventas", "Facturación", "Costo por venta", "ROAS"].map((h, i) => <th key={h} style={{ ...celda, color: GRAY, fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", textAlign: i ? "right" : "left" }}>{h}</th>)}</tr></thead>
                   <tbody>{m.por_linea.map(x => (
-                    <tr key={x.linea}><td style={{ ...celda, textAlign: "left", whiteSpace: "normal", color: sinLinea(x.linea) ? GRAY : INK, fontStyle: sinLinea(x.linea) ? "italic" : "normal" }}>{x.linea}</td>
+                    <tr key={x.linea}><td style={{ ...celda, textAlign: "left", whiteSpace: "normal", color: sinLinea(x.linea) ? GRAY : INK, fontStyle: sinLinea(x.linea) ? "italic" : "normal" }}>{x.linea}{x.por_chat ? <span title="Línea tomada del mensaje predefinido del anuncio en el primer mensaje del chat" style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, color: ACCENT, background: "#EAF2FB", borderRadius: 99, padding: "2px 7px", fontStyle: "normal", whiteSpace: "nowrap" }}>{x.por_chat} por chat</span> : null}</td>
                       <td style={celda}>{x.gasto ? dinero(x.gasto, mon) : "—"}</td>
                       <td style={celda}>{x.ventas}{x.abonos ? " + " + x.abonos + " abonos" : ""}</td>
                       <td style={{ ...celda, fontWeight: 800 }}>{x.facturacion ? dinero(x.facturacion, mon) : "—"}</td>
                       <td style={celda}>{x.gasto && x.ventas ? dinero(x.gasto / x.ventas, mon) : "—"}</td>
                       <td style={celda}>{x.gasto && x.facturacion ? dec1(x.facturacion / x.gasto) + "x" : "—"}</td></tr>))}</tbody>
                 </table>}
-                <div style={{ fontSize: 11, color: GRAY, padding: "8px 0" }}>Cada venta va a la campaña cuyo titular de anuncio coincide con el que guardó GHL. Si el mismo titular está en varias campañas, la venta no se puede separar y no se adivina: para medir por línea, cada línea necesita un titular (o mensaje predefinido) propio.</div>
+                <div style={{ fontSize: 11, color: GRAY, padding: "8px 0" }}>Cada venta va a la campaña cuyo titular de anuncio coincide con el que guardó GHL. Si el mismo titular está en varias campañas, la venta no se puede separar y no se adivina: para medir por línea, cada línea necesita un titular (o mensaje predefinido) propio. «Por chat»: la campaña no se pudo separar, así que la línea sale del mensaje predefinido del anuncio en el primer mensaje del chat (se registra una vez por venta). Esas filas no tienen pauta propia porque Meta no dice de qué campaña salió ese mensaje.</div>
               </div>);
           })()}
         </div>
