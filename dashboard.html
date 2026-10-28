@@ -10371,6 +10371,30 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
             {fp ? tk("falta_p", "Para la proyección del mes", fp.monto ? (fp.ventas ?? "—") + " ventas" : "Proyección cumplida", fp.monto && fp.porDia != null ? dinero(fp.porDia, mon) + "/día de pauta" : "", fp.monto ? null : "ok") : <div style={{ ...L, padding: 12, border: "1px dashed rgba(255,255,255,.3)", borderRadius: 12 }}>falta la proyección del mes</div>}
           </div>
         </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, margin: "20px 0 8px" }}>
+          <div style={{ display: "flex", gap: 4, background: "#FFFFFF", border: `1px solid ${BORDER}`, padding: 5, borderRadius: 12 }}>{btn("dia", "Día")}{btn("semana", "Semana")}{btn("mes", "Mes")}</div>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12, color: GRAY }}>
+            <input type="date" data-gp-desde min={r.keys[0]} max={r.hoy} value={desde} onChange={e => e.target.value && setRango({ desde: e.target.value, hasta: hasta < e.target.value ? e.target.value : hastaReal })} style={{ border: `1px solid ${BORDER}`, borderRadius: 8, padding: "6px 8px", color: INK }} />
+            →<input type="date" data-gp-hasta min={r.keys[0]} max={r.hoy} value={hastaReal} onChange={e => e.target.value && setRango({ desde: desde > e.target.value ? e.target.value : desde, hasta: e.target.value })} style={{ border: `1px solid ${BORDER}`, borderRadius: 8, padding: "6px 8px", color: INK }} />
+          </div>
+          <div style={{ color: GRAY, fontSize: 13, fontWeight: 700 }}>{etiqueta}</div>
+        </div>
+        <div style={h3}>Embudo</div>
+        <div style={grid}>
+          {cuadro("pautaP", "Pauta", t.gasto != null ? dinero(t.gasto, mon, true) : "—", t.gasto == null ? "sin datos de Meta" : vsP(tC.gasto, P && P.pauta), t.gasto != null && P ? semaforo(tC.gasto, P.pauta) : "na")}
+          {cuadro("leads", "Leads", t.leads, costo(t.gasto, t.leads, b.lead), t.gasto != null && t.leads ? semaforoCosto(t.gasto / t.leads, b.lead) : "na")}
+          {cuadro("agendas", "Agendas", t.agendas, costo(t.gasto, t.agendas, b.agenda), t.gasto != null && t.agendas ? semaforoCosto(t.gasto / t.agendas, b.agenda) : "na")}
+          {cuadro("citas", "Citas creadas", t.citas_creadas, t.gasto != null && t.citas_creadas ? dinero(t.gasto / t.citas_creadas, mon) + " c/u" : "—", null)}
+          {cuadro("asist", "Asistidas", asist, t.citas_del_dia ? (t.sin_marcar ? `${t.sin_marcar} de ${t.citas_del_dia} sin marcar` : `de ${t.citas_del_dia} citas`) : "no había citas", t.sin_marcar ? "mid" : "na")}
+          {cuadro("ventas", "Ventas", t.ventas, <span>{t.abonos ? "+ " + t.abonos + " abonos · " : ""}{esDia ? "costo por venta: en Semana o Mes" : (t.ventas ? costo(t.gasto, t.ventas, b.venta) : "sin ventas")}</span>, !esDia && t.gasto != null && t.ventas ? semaforoCosto(t.gasto / t.ventas, b.venta) : "na")}
+          {cuadro("factP", "Facturación", dinero(t.facturacion, mon, true), t.facturacion && P && P.facturacion ? vsP(tC.facturacion, P.facturacion) : (t.ventas ? "ticket " + dinero(t.facturacion / t.ventas, mon) : "sin ventas"), t.facturacion && P && P.facturacion ? semaforo(tC.facturacion, P.facturacion) : "na")}
+          {cuadro("roasP", "ROAS", esDia ? "—" : (t.gasto && t.ventas ? dec1(t.facturacion / t.gasto) + "x" : "—"), esDia ? "en Semana o Mes" : (m.proyeccion && m.proyeccion.roas ? "proyectado " + dec1(m.proyeccion.roas) + "x" : ""), !esDia && t.gasto && t.ventas && m.proyeccion && m.proyeccion.roas ? semaforo(t.facturacion / t.gasto, m.proyeccion.roas) : "na")}
+        </div>
+        <div style={h3}>Campañas</div>
+        <div style={grid}>
+          {t.gasto == null ? <div style={{ color: GRAY, fontSize: 13 }}>Sin datos de Meta en este periodo.</div> : t.campanas.length === 0 ? <div style={{ color: GRAY, fontSize: 13 }}>Sin gasto en este periodo.</div> :
+            t.campanas.map((c, i) => cuadro("c" + i, c.nombre, dinero(c.gasto, mon, true), <span>{pct(c.gasto, t.gasto)} del gasto · {c.conversaciones} conv. · <span style={{ color: MET[c.conversaciones ? semaforoCosto(c.gasto / c.conversaciones, b.lead) : "na"] }}>{c.conversaciones ? dinero(c.gasto / c.conversaciones, mon) + " c/u" : "sin conv."}</span></span>, c.conversaciones ? semaforoCosto(c.gasto / c.conversaciones, b.lead) : "na"))}
+        </div>
         <div data-gp-metas>
           <div style={h3}>Lo que buscamos este mes</div>
           {m.proyeccion ? (() => {
@@ -10406,7 +10430,29 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
                       <td style={{ ...celda, fontWeight: 800, color: INK }}>{real}</td>
                       <td style={{ ...celda, fontWeight: 800, color: cls !== "na" ? MET[cls] : GRAY }}>{porc}</td></tr>))}</tbody>
                 </table>}
-                <div style={{ fontSize: 11, color: GRAY, padding: "8px 0" }}>Igual que la cabecera: real = {r.dc} de {r.pm.dias} días completos (sin hoy, que va a medias); proyección a ayer = proyección del mes × {r.dc}/{r.pm.dias}. Cierre al ritmo = lo facturado ÷ {r.dc} días × {r.pm.dias}. Proyección del {p.fecha}{p.escenario ? " · escenario " + p.escenario.replace("_", " ") : ""}.{roiObj == null ? " ROI: la proyección de este mes no trae costos." : ""}</div>
+                {Array.isArray(p.escenarios) && p.escenarios.length > 0 && (() => {
+                  const cpvR = rc.gasto && rc.ventas ? rc.gasto / rc.ventas : null, venR = r.dc ? rc.ventas / r.dc * r.pm.dias : null;
+                  const nom = { conservador: "Conservador", esperado: "Esperado", optimo: "Óptimo" };
+                  const sig = cpvR != null ? p.escenarios.find(e => e.cpv < cpvR) : null;   // ordenados de peor a mejor costo por venta
+                  const filasE = [...p.escenarios.map(e => [nom[e.escenario] || e.escenario, dinero(e.cpv, mon), dinero(e.ticket, mon), uno(e.ventas), dinero(e.facturacion, mon), cpvR != null && cpvR <= e.cpv]),
+                    ["Real (al ritmo)", cpvR != null ? dinero(cpvR, mon) : "—", ticket ? dinero(ticket, mon) : "—", venR != null ? uno(venR) : "—", r.dc ? dinero(r.cierre, mon) : "—", null]];
+                  return (
+                    <div data-gp-escenarios style={{ marginTop: 10, paddingTop: 8, borderTop: `1px solid ${BORDER}` }}>
+                      <div style={{ fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", color: GRAY, fontWeight: 700, padding: "4px 0 6px" }}>Escenarios de la proyección real · con la pauta del mes ({dinero(p.pauta, mon)})</div>
+                      {angosto ? filasE.map(([k, c, tk2, v, f, ok]) => (
+                        <div key={k} style={{ padding: "8px 0", borderBottom: `1px solid ${BORDER}`, fontSize: 12, color: GRAY }}>
+                          <b style={{ color: ok ? MET.ok : INK, fontSize: 13 }}>{k}{ok ? " ✓" : ""}</b><div>costo por venta {c} · ticket {tk2} · {v} ventas · <b style={{ color: INK }}>{f}</b></div></div>)) :
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead><tr>{["Escenario", "Costo por venta", "Ticket", "Ventas del mes", "Facturación"].map((h, i) => <th key={h} style={{ ...celda, color: GRAY, fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", textAlign: i ? "right" : "left" }}>{h}</th>)}</tr></thead>
+                        <tbody>{filasE.map(([k, c, tk2, v, f, ok]) => (
+                          <tr key={k} style={{ background: ok === null ? "#F4F7FB" : "transparent" }}><td style={{ ...celda, textAlign: "left", fontWeight: ok === null ? 800 : 400, color: ok ? MET.ok : INK }}>{k}{ok ? " ✓" : ""}</td>
+                            <td style={celda}>{c}</td><td style={celda}>{tk2}</td><td style={celda}>{v}</td><td style={{ ...celda, fontWeight: 800 }}>{f}</td></tr>))}</tbody>
+                      </table>}
+                      <div style={{ fontSize: 12, color: INK, padding: "8px 0 0" }}>{cpvR == null ? "Sin ventas o sin pauta en el mes: el costo por venta real todavía no se mide." : sig ? <span>Para pasar al escenario <b>{nom[sig.escenario]}</b>: costo por venta de {dinero(sig.cpv, mon)} o menos (hoy {dinero(cpvR, mon)} según GHL), y la pauta del plan.</span> : <span>El costo por venta real ({dinero(cpvR, mon)}) ya está en el mejor escenario: la palanca es la pauta ({rc.gasto != null && ph.pauta ? pct(rc.gasto, ph.pauta) + " de la proyección a ayer" : "—"}).</span>}</div>
+                    </div>);
+                })()}
+                {m.proyeccion_link && <a href={m.proyeccion_link} target="_blank" rel="noopener" style={{ display: "inline-block", marginTop: 10, fontSize: 13, fontWeight: 800, color: ACCENT }}>Abrir la proyección financiera ↗</a>}
+                <div style={{ fontSize: 11, color: GRAY, padding: "8px 0" }}>Igual que la cabecera: real = {r.dc} de {r.pm.dias} días completos (sin hoy, que va a medias); proyección a ayer = proyección del mes × {r.dc}/{r.pm.dias}. Cierre al ritmo = lo facturado ÷ {r.dc} días × {r.pm.dias}. Proyección real del {p.fecha}{p.momento ? " (momento " + p.momento + ")" : ""}: costo por venta, ticket y escenarios salen de ahí{p.pauta_de ? "; la pauta del mes, del plan del " + p.pauta_de : ""}. Si el real de GHL se queda corto, mirar la salud del dato.{roiObj == null ? " ROI: la proyección de este mes no trae costos." : ""}</div>
               </div>);
           })() : <div style={{ color: GRAY, fontSize: 13, padding: 12, border: `1px dashed ${BORDER}`, borderRadius: 12 }}>Falta la proyección del mes: sin metas cargadas para este cliente.</div>}
         </div>
@@ -10428,30 +10474,6 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
               </div>
             </div>);
         })()}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, margin: "20px 0 8px" }}>
-          <div style={{ display: "flex", gap: 4, background: "#FFFFFF", border: `1px solid ${BORDER}`, padding: 5, borderRadius: 12 }}>{btn("dia", "Día")}{btn("semana", "Semana")}{btn("mes", "Mes")}</div>
-          <div style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 12, color: GRAY }}>
-            <input type="date" data-gp-desde min={r.keys[0]} max={r.hoy} value={desde} onChange={e => e.target.value && setRango({ desde: e.target.value, hasta: hasta < e.target.value ? e.target.value : hastaReal })} style={{ border: `1px solid ${BORDER}`, borderRadius: 8, padding: "6px 8px", color: INK }} />
-            →<input type="date" data-gp-hasta min={r.keys[0]} max={r.hoy} value={hastaReal} onChange={e => e.target.value && setRango({ desde: desde > e.target.value ? e.target.value : desde, hasta: e.target.value })} style={{ border: `1px solid ${BORDER}`, borderRadius: 8, padding: "6px 8px", color: INK }} />
-          </div>
-          <div style={{ color: GRAY, fontSize: 13, fontWeight: 700 }}>{etiqueta}</div>
-        </div>
-        <div style={h3}>Embudo</div>
-        <div style={grid}>
-          {cuadro("pautaP", "Pauta", t.gasto != null ? dinero(t.gasto, mon, true) : "—", t.gasto == null ? "sin datos de Meta" : vsP(tC.gasto, P && P.pauta), t.gasto != null && P ? semaforo(tC.gasto, P.pauta) : "na")}
-          {cuadro("leads", "Leads", t.leads, costo(t.gasto, t.leads, b.lead), t.gasto != null && t.leads ? semaforoCosto(t.gasto / t.leads, b.lead) : "na")}
-          {cuadro("agendas", "Agendas", t.agendas, costo(t.gasto, t.agendas, b.agenda), t.gasto != null && t.agendas ? semaforoCosto(t.gasto / t.agendas, b.agenda) : "na")}
-          {cuadro("citas", "Citas creadas", t.citas_creadas, t.gasto != null && t.citas_creadas ? dinero(t.gasto / t.citas_creadas, mon) + " c/u" : "—", null)}
-          {cuadro("asist", "Asistidas", asist, t.citas_del_dia ? (t.sin_marcar ? `${t.sin_marcar} de ${t.citas_del_dia} sin marcar` : `de ${t.citas_del_dia} citas`) : "no había citas", t.sin_marcar ? "mid" : "na")}
-          {cuadro("ventas", "Ventas", t.ventas, <span>{t.abonos ? "+ " + t.abonos + " abonos · " : ""}{esDia ? "costo por venta: en Semana o Mes" : (t.ventas ? costo(t.gasto, t.ventas, b.venta) : "sin ventas")}</span>, !esDia && t.gasto != null && t.ventas ? semaforoCosto(t.gasto / t.ventas, b.venta) : "na")}
-          {cuadro("factP", "Facturación", dinero(t.facturacion, mon, true), t.facturacion && P && P.facturacion ? vsP(tC.facturacion, P.facturacion) : (t.ventas ? "ticket " + dinero(t.facturacion / t.ventas, mon) : "sin ventas"), t.facturacion && P && P.facturacion ? semaforo(tC.facturacion, P.facturacion) : "na")}
-          {cuadro("roasP", "ROAS", esDia ? "—" : (t.gasto && t.ventas ? dec1(t.facturacion / t.gasto) + "x" : "—"), esDia ? "en Semana o Mes" : (m.proyeccion && m.proyeccion.roas ? "proyectado " + dec1(m.proyeccion.roas) + "x" : ""), !esDia && t.gasto && t.ventas && m.proyeccion && m.proyeccion.roas ? semaforo(t.facturacion / t.gasto, m.proyeccion.roas) : "na")}
-        </div>
-        <div style={h3}>Campañas</div>
-        <div style={grid}>
-          {t.gasto == null ? <div style={{ color: GRAY, fontSize: 13 }}>Sin datos de Meta en este periodo.</div> : t.campanas.length === 0 ? <div style={{ color: GRAY, fontSize: 13 }}>Sin gasto en este periodo.</div> :
-            t.campanas.map((c, i) => cuadro("c" + i, c.nombre, dinero(c.gasto, mon, true), <span>{pct(c.gasto, t.gasto)} del gasto · {c.conversaciones} conv. · <span style={{ color: MET[c.conversaciones ? semaforoCosto(c.gasto / c.conversaciones, b.lead) : "na"] }}>{c.conversaciones ? dinero(c.gasto / c.conversaciones, mon) + " c/u" : "sin conv."}</span></span>, c.conversaciones ? semaforoCosto(c.gasto / c.conversaciones, b.lead) : "na"))}
-        </div>
         <div data-gp-lineas>
           <div style={h3}>Por línea · mes del contrato</div>
           {!Array.isArray(m.por_linea) ? <div style={{ color: GRAY, fontSize: 13, padding: 12, border: `1px dashed ${BORDER}`, borderRadius: 12 }}>Sin datos de Meta: no se puede separar por línea.</div> : (() => {
@@ -10465,7 +10487,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
                     <div style={{ fontSize: 12, color: GRAY, marginTop: 2 }}>pauta {x.gasto ? dinero(x.gasto, mon) : "—"} · {x.ventas} {x.ventas === 1 ? "venta" : "ventas"}{x.abonos ? " + " + x.abonos + " abonos" : ""} · <b style={{ color: INK }}>{x.facturacion ? dinero(x.facturacion, mon) : "—"}</b>{x.gasto && x.ventas ? " · " + dinero(x.gasto / x.ventas, mon) + " por venta" : ""}{x.gasto && x.facturacion ? " · ROAS " + dec1(x.facturacion / x.gasto) + "x" : ""}</div>
                   </div>)) :
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead><tr>{["Línea (campaña de Meta o chat)", "Pauta", "Ventas", "Facturación", "Costo por venta", "ROAS"].map((h, i) => <th key={h} style={{ ...celda, color: GRAY, fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", textAlign: i ? "right" : "left" }}>{h}</th>)}</tr></thead>
+                  <thead><tr>{["Línea (campaña de Meta)", "Pauta", "Ventas", "Facturación", "Costo por venta", "ROAS"].map((h, i) => <th key={h} style={{ ...celda, color: GRAY, fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", textAlign: i ? "right" : "left" }}>{h}</th>)}</tr></thead>
                   <tbody>{m.por_linea.map(x => (
                     <tr key={x.linea}><td style={{ ...celda, textAlign: "left", whiteSpace: "normal", color: sinLinea(x.linea) ? GRAY : INK, fontStyle: sinLinea(x.linea) ? "italic" : "normal" }}>{x.linea}{x.por_chat ? <span title="Línea tomada del mensaje predefinido del anuncio en el primer mensaje del chat" style={{ marginLeft: 6, fontSize: 10, fontWeight: 800, color: ACCENT, background: "#EAF2FB", borderRadius: 99, padding: "2px 7px", fontStyle: "normal", whiteSpace: "nowrap" }}>{x.por_chat} por chat</span> : null}</td>
                       <td style={celda}>{x.gasto ? dinero(x.gasto, mon) : "—"}</td>
@@ -10474,7 +10496,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
                       <td style={celda}>{x.gasto && x.ventas ? dinero(x.gasto / x.ventas, mon) : "—"}</td>
                       <td style={celda}>{x.gasto && x.facturacion ? dec1(x.facturacion / x.gasto) + "x" : "—"}</td></tr>))}</tbody>
                 </table>}
-                <div style={{ fontSize: 11, color: GRAY, padding: "8px 0" }}>Cada venta va a la campaña cuyo titular de anuncio coincide con el que guardó GHL. Si el mismo titular está en varias campañas, la venta no se puede separar y no se adivina: para medir por línea, cada línea necesita un titular (o mensaje predefinido) propio. «Por chat»: la campaña no se pudo separar, así que la línea sale del mensaje predefinido del anuncio en el primer mensaje del chat (se registra una vez por venta). Esas filas no tienen pauta propia porque Meta no dice de qué campaña salió ese mensaje.</div>
+                <div style={{ fontSize: 11, color: GRAY, padding: "8px 0" }}>Cada venta va a la campaña cuyo titular de anuncio coincide con el que guardó GHL. Si el mismo titular está en varias campañas, la venta no se puede separar y no se adivina: para medir por línea, cada línea necesita un titular (o mensaje predefinido) propio. «Por chat»: el titular no separaba la campaña, así que la venta se atribuye por el mensaje predefinido de la plantilla de cada campaña, leído en el primer mensaje del chat (se registra una vez por venta).</div>
               </div>);
           })()}
         </div>
