@@ -10261,11 +10261,11 @@ function TarjetaMetricas({ slug, nombre, m: mIn, estado = "listo", onAbrir }) {
     <div style={{ ...caja, borderTopColor: viejo || primerDia ? MET_TOP.na : MET_TOP[est], opacity: viejo ? 0.7 : 1 }} data-gp-tarjeta={slug} onClick={() => onAbrir(slug)}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
         <span style={{ fontWeight: 800, color: INK }}>{nombre}</span>
-        <span style={{ fontSize: 12, fontWeight: 800, color: viejo || primerDia ? GRAY : MET[est] }}>{viejo ? "dato del " + new Date(m.ts).toLocaleDateString("es-CO") : primerDia ? "primer día del mes" : pct(r.cierre, ref) + (m.proyeccion ? " de la proyección" : " del contrato")}</span>
+        <span style={{ fontSize: 12, fontWeight: 800, color: viejo || primerDia ? GRAY : MET[semaforo(Math.max(r.cierre, r.mesHoy.facturacion), m.meta_contrato || 1)] }}>{viejo ? "dato del " + new Date(m.ts).toLocaleDateString("es-CO") : primerDia ? "primer día del mes" : pct(r.mesHoy.facturacion, m.meta_contrato) + " de la meta"}</span>
       </div>
       <div style={{ color: GRAY, fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase", marginTop: 10 }}>Facturación del mes</div>
       <div style={{ fontSize: 24, fontWeight: 800, color: INK }}>{dinero(r.mesHoy.facturacion, m.moneda)}</div>
-      <div style={{ fontSize: 12, color: GRAY }}>cierre al ritmo actual {dinero(r.cierre, m.moneda, true)} · meta {dinero(m.meta_contrato, m.moneda, true)}</div>
+      <div style={{ fontSize: 12, color: GRAY }}>cierre al ritmo actual {dinero(r.cierre, m.moneda, true)}{m.proyeccion && !primerDia ? <b style={{ color: MET[est] }}> ({pct(r.cierre, ref)} de la proyección)</b> : null} · meta {dinero(m.meta_contrato, m.moneda, true)}</div>
       <div style={{ display: "flex", gap: 16, marginTop: 10, fontSize: 12, color: GRAY }}>
         <span><b style={{ color: INK, fontSize: 15 }}>{roas ? dec1(roas) + "x" : "—"}</b> ROAS</span>
         <span>{r.dc} días completos de {r.pm.dias} · corte {m.corte}:00</span>
@@ -10458,7 +10458,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "flex-start" }}>
               {r.dc === 0 && <span style={{ fontSize: 12, fontWeight: 800, padding: "5px 12px", borderRadius: 99, background: "rgba(255,255,255,.12)" }}>primer día del mes</span>}
               {r.dc > 0 && m.proyeccion && <span style={{ fontSize: 12, fontWeight: 800, padding: "5px 12px", borderRadius: 99, background: "rgba(255,255,255,.12)", color: MET[semaforo(r.cierre, m.proyeccion.facturacion) + "L"] }}>● {pct(r.cierre, m.proyeccion.facturacion)} de la proyección</span>}
-{r.dc > 0 && <span style={{ fontSize: 12, fontWeight: 800, padding: "5px 12px", borderRadius: 99, background: "rgba(255,255,255,.12)", color: MET[semaforo(r.cierre, m.meta_contrato || 1) + "L"] }}>● {pct(r.cierre, m.meta_contrato)} del contrato</span>}
+{r.dc > 0 && <span style={{ fontSize: 12, fontWeight: 800, padding: "5px 12px", borderRadius: 99, background: "rgba(255,255,255,.12)", color: MET[semaforo(Math.max(r.cierre, r.mesHoy.facturacion), m.meta_contrato || 1) + "L"] }}>● {pct(r.mesHoy.facturacion, m.meta_contrato)} de la meta</span>}
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(120px,1fr))", gap: 10, marginTop: 16 }}>
