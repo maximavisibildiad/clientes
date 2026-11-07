@@ -10600,7 +10600,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
                       <td style={celda}>{x.gasto && x.ventas ? dinero(x.gasto / x.ventas, mon) : "—"}</td>
                       <td style={celda}>{x.gasto && x.facturacion ? dec1(x.facturacion / x.gasto) + "x" : "—"}</td></tr>))}</tbody>
                 </table>}
-                <div style={{ fontSize: 11, color: GRAY, padding: "8px 0" }}>Cada venta va a la campaña cuyo titular de anuncio coincide con el que guardó GHL. Si el mismo titular está en varias campañas, la venta no se puede separar y no se adivina: para medir por línea, cada línea necesita un titular (o mensaje predefinido) propio. «Por chat»: el titular no separaba la campaña, así que la venta se atribuye por el mensaje predefinido de la plantilla de cada campaña, leído en el primer mensaje del chat (se registra una vez por venta).</div>
+                <div style={{ fontSize: 11, color: GRAY, padding: "8px 0" }}>Cada venta va a la campaña del anuncio exacto que trajo al paciente: GHL guarda el ID del anuncio de Meta (última atribución) y Meta dice a qué campaña pertenece. Si GHL no tiene el ID, se usa el titular del anuncio cuando está en una sola campaña. «Por chat»: GHL no registró el anuncio, y la venta se atribuye por el mensaje predefinido de la campaña que el paciente envió en su primer mensaje. «Sin anuncio de origen»: GHL no tiene ningún anuncio de ese paciente (llegó por otro canal o se creó a mano), y no se adivina.</div>
               </div>);
           })()}
         </div>
