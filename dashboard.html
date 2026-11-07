@@ -10348,6 +10348,16 @@ function SimuladorProyeccion({ p, real, mon, angosto, cierreReal, acuerdo, hoy, 
                 <div style={{ fontSize: 10, color: GRAY, fontWeight: 700, textTransform: "uppercase", letterSpacing: .8 }}>{l}</div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: INK, overflowWrap: "anywhere" }}>{x}</div></div>))}
           </div>
+          {acuerdo && acuerdo.pct ? (() => {
+            // JP 2026-11-07: comisión de GP en tiempo real con el contrato vigente: (facturación real del periodo − umbral) × %.
+            const fr = Number(hoy.facturacion || 0), exc = Math.max(0, fr - acuerdo.umbral), comReal = acuerdo.pct * exc;
+            return (
+            <div data-gp-sim-comision-real style={{ marginTop: 8, background: "#EAF2FB", border: `1px solid ${BORDER}`, borderRadius: 10, padding: "8px 10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 10, color: GRAY, fontWeight: 700, textTransform: "uppercase", letterSpacing: .8 }}>Su comisión (GP) a hoy · exacta</span>
+                <span style={{ fontSize: 18, fontWeight: 900, color: ACCENT }}>{dinero(comReal, mon)}</span></div>
+              <div style={{ fontSize: 12, color: INK, marginTop: 2 }}>{dinero(fr, mon)} facturado − {dinero(acuerdo.umbral, mon)} del acuerdo = {dinero(exc, mon)} × {dec1(acuerdo.pct * 100).replace(",0", "")}%{exc > 0 ? "" : " · faltan " + dinero(acuerdo.umbral - fr, mon) + " para empezar a cobrar comisión"} · fee {dinero(acuerdo.fee, mon)} aparte</div>
+            </div>); })() : null}
           <div style={{ fontSize: 11, color: GRAY, marginTop: 6 }}>Súbale o bájele la pauta abajo: con estos costos reales, {angosto ? "más abajo" : "a la derecha"} sale lo que daría en el mes.</div>
         </div>)}
       <div style={{ display: "grid", gridTemplateColumns: angosto ? "1fr" : "minmax(0,1fr) minmax(0,1.15fr)", gap: angosto ? 0 : 18, padding: "12px 16px 14px", background: "#FFFFFF" }}>
@@ -10544,7 +10554,7 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
                       <div style={{ fontSize: 12, color: INK, padding: "8px 0 0" }}>{cpvR == null ? "Sin ventas o sin pauta en el mes: el costo por venta real todavía no se mide." : sig ? <span>Para pasar al escenario <b>{nom[sig.escenario]}</b>: costo por venta de {dinero(sig.cpv, mon)} o menos (hoy {dinero(cpvR, mon)} según GHL, pauta ÷ ventas), y la pauta del plan.</span> : <span>El costo por venta real ({dinero(cpvR, mon)}) ya está en el mejor escenario: la palanca es la pauta ({rc.gasto != null && ph.pauta ? pct(rc.gasto, ph.pauta) + " de la proyección a ayer" : "—"}).</span>}</div>
                     </div>);
                 })()}
-                <SimuladorProyeccion p={p} mon={mon} angosto={angosto} cierreReal={r.dc ? r.cierre : null} acuerdo={{ fee: (coP && coP.sim ? coP.sim.fee : m.fee) || 0, pct: (coP && coP.sim ? coP.sim.comision_gp_pct : m.comision_pct) || 0, umbral: (coP && coP.sim ? coP.sim.umbral : m.meta_contrato) || 0 }} hoy={r.mesHoy} pautaRitmo={r.dc && rc.gasto ? rc.gasto / r.dc * r.pm.dias : null} real={{ cpv: r.mesHoy.gasto && r.mesHoy.ventas ? r.mesHoy.gasto / r.mesHoy.ventas : null, ticket: ticket, cpl: r.mesHoy.gasto && r.mesHoy.leads ? r.mesHoy.gasto / r.mesHoy.leads : null, tasa: r.mesHoy.leads ? r.mesHoy.agendas / r.mesHoy.leads : null }} />
+                <SimuladorProyeccion p={p} mon={mon} angosto={angosto} cierreReal={r.dc ? r.cierre : null} acuerdo={{ fee: (m.fee != null ? m.fee : coP && coP.sim ? coP.sim.fee : 0) || 0, pct: (m.comision_pct != null ? m.comision_pct : coP && coP.sim ? coP.sim.comision_gp_pct : 0) || 0, umbral: (m.meta_contrato != null ? m.meta_contrato : coP && coP.sim ? coP.sim.umbral : 0) || 0 }} hoy={r.mesHoy} pautaRitmo={r.dc && rc.gasto ? rc.gasto / r.dc * r.pm.dias : null} real={{ cpv: r.mesHoy.gasto && r.mesHoy.ventas ? r.mesHoy.gasto / r.mesHoy.ventas : null, ticket: ticket, cpl: r.mesHoy.gasto && r.mesHoy.leads ? r.mesHoy.gasto / r.mesHoy.leads : null, tasa: r.mesHoy.leads ? r.mesHoy.agendas / r.mesHoy.leads : null }} />
                 {m.proyeccion_link && <a href={m.proyeccion_link} target="_blank" rel="noopener" style={{ display: "inline-block", marginTop: 10, fontSize: 13, fontWeight: 800, color: ACCENT }}>Abrir la proyección financiera ↗</a>}
                 <div style={{ fontSize: 11, color: GRAY, padding: "8px 0" }}>Real = {r.dc} de {r.pm.dias} días completos (sin hoy, que va a medias); al ritmo = lo facturado ÷ {r.dc} días × {r.pm.dias}. Proyección real del {p.fecha}{p.momento ? " (momento " + p.momento + ")" : ""}: costo por venta, ticket y escenarios salen de ahí{p.pauta_de ? "; la pauta del mes, del plan del " + p.pauta_de : ""}. Si el real de GHL se queda corto, mirar la salud del dato.</div>
               </div>);
