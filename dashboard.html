@@ -10604,6 +10604,50 @@ function PanoramaCliente({ nombre, m, onCerrar }) {
               </div>);
           })()}
         </div>
+        {Array.isArray(m.historial) && m.historial.length > 0 && (
+          // JP 2026-11-07: cada mes del contrato queda registrado (ticket, pauta, ventas por línea y comisión con sus términos).
+          <div data-gp-historial>
+            <div style={h3}>Historial por mes del contrato</div>
+            {(() => {
+              const celda = { padding: "8px 8px", borderBottom: `1px solid ${BORDER}`, fontSize: 13, color: INK, textAlign: "right", whiteSpace: "nowrap" };
+              const v = (x, f) => x == null ? "—" : f(x);
+              const din = (x) => v(x, y => dinero(y, mon));
+              const veces = (x) => v(x, y => dec1(y) + "x");
+              const sinLinea = (l) => /^(sin anuncio|titular en varias)/.test(l);
+              const cols = ["Pauta", "Ventas", "Facturación", "Ticket promedio", "Costo por venta", "ROAS"];
+              const fila = (x) => [din(x.gasto), x.ventas + (x.abonos ? " + " + x.abonos + " abonos" : ""), din(x.facturacion), din(x.ventas ? x.facturacion / x.ventas : null),
+                din(x.gasto != null && x.ventas ? x.gasto / x.ventas : null), veces(x.gasto ? x.facturacion / x.gasto : null)];
+              return m.historial.map(h => (
+                <details key={h.ini} data-gp-historial-mes={h.ini} open={!!h.en_curso} style={{ background: "#FFFFFF", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "10px 14px", marginBottom: 8 }}>
+                  <summary style={{ cursor: "pointer", listStyle: "revert" }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: INK }}>{fechaCorta(h.ini)} → {fechaCorta(h.fin)}</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, marginLeft: 8, color: h.en_curso ? ACCENT : GRAY }}>{h.en_curso ? "en curso" : "cerrado"}</span>
+                    <div style={{ display: "grid", gridTemplateColumns: angosto ? "repeat(2,minmax(0,1fr))" : "repeat(4,minmax(0,1fr))", gap: 6, marginTop: 8 }}>
+                      {[["Facturación", din(h.facturacion)], ["Ventas", h.ventas + (h.abonos ? " + " + h.abonos + " abonos" : "")], ["Ticket promedio", din(h.ticket)], ["Pauta", din(h.gasto)],
+                        ["Costo por venta", din(h.costo_por_venta)], ["ROAS", veces(h.roas)],
+                        ["Comisión GP", h.comision == null ? "sin términos registrados" : dinero(h.comision, mon) + " · " + dec1(h.comision_pct * 100).replace(",0", "") + "% sobre " + dinero(h.meta_contrato, mon)],
+                        ["Fee", din(h.fee)]].map(([l, x]) => (
+                        <div key={l} style={{ minWidth: 0 }}><div style={{ fontSize: 10, color: GRAY, fontWeight: 700, textTransform: "uppercase", letterSpacing: .8 }}>{l}</div>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: INK, overflowWrap: "anywhere" }}>{x}</div></div>))}
+                    </div>
+                  </summary>
+                  {!Array.isArray(h.por_linea) ? <div style={{ color: GRAY, fontSize: 12, paddingTop: 8 }}>Sin datos de Meta en este mes: no se puede separar por línea.</div> : (
+                    <div style={{ overflowX: "auto", marginTop: 8 }}>
+                      {angosto ? h.por_linea.map(x => (
+                        <div key={x.linea} style={{ padding: "8px 0", borderBottom: `1px solid ${BORDER}` }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: sinLinea(x.linea) ? GRAY : INK }}>{x.linea}</div>
+                          <div style={{ fontSize: 12, color: GRAY }}>{cols.map((c, i) => c + " " + fila(x)[i]).join(" · ")}</div></div>)) :
+                      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                        <thead><tr>{["Línea", ...cols].map((c, i) => <th key={c} style={{ ...celda, color: GRAY, fontSize: 10, letterSpacing: 1.2, textTransform: "uppercase", textAlign: i ? "right" : "left" }}>{c}</th>)}</tr></thead>
+                        <tbody>{h.por_linea.map(x => (
+                          <tr key={x.linea}><td style={{ ...celda, textAlign: "left", whiteSpace: "normal", color: sinLinea(x.linea) ? GRAY : INK }}>{x.linea}</td>
+                            {fila(x).map((c, i) => <td key={i} style={{ ...celda, fontWeight: i === 2 ? 800 : 400 }}>{c}</td>)}</tr>))}</tbody>
+                      </table>}
+                    </div>)}
+                </details>));
+            })()}
+            <div style={{ fontSize: 11, color: GRAY, marginTop: 2 }}>Ticket promedio = facturación ÷ ventas del mes. Abono = pago parcial de un paciente que todavía no pagó completo; cuando pasa a pago completo deja de contarse como abono y su plata se queda en el día que entró. Cada mes se calcula con los términos del contrato que regían ese mes.</div>
+          </div>)}
         {Array.isArray(m.temporadas) && (
           <div data-gp-temporadas>
             <div style={h3}>Remarketing por temporada · próximos 90 días</div>
