@@ -10275,6 +10275,53 @@ function TarjetaMetricas({ slug, nombre, m: mIn, estado = "listo", onAbrir }) {
       {costosValidos(m.proyeccion) && <div style={{ fontSize: 12, color: GRAY, marginTop: 8 }}>Le queda proyectado: <b style={{ color: INK, fontSize: 15 }}>{dinero(m.proyeccion.costos.le_queda, m.moneda, true)}</b></div>}
     </div>);
 }
+// Plata del mes (vista Hoy, JP 2026-11-14): lo que GP factura este mes por cliente = fee + comisión estimada al ritmo
+// actual. Solo lee el buzón gp_ops/<slug>/metricas (fee, comision_pct, meta_contrato, días); nunca guarda nada.
+// Las monedas no se mezclan: un total por moneda.
+function PlataMes({ clientes, metricasOps = {}, estado = "listo" }) {
+  const filas = clientes.map(c => {
+    const m = metricasValidas(metricasOps[c.servicioSlug]) ? metricasOps[c.servicioSlug] : null;
+    if (!m) return { c, m: null };
+    const r = resumenMetricas(m), fee = Number(m.fee || 0);
+    const conComision = m.comision_pct != null && m.meta_contrato != null;
+    const comision = conComision ? r.comision : null;
+    const falta = conComision ? Math.max(0, (m.meta_contrato || 0) - r.mesHoy.facturacion) : null;
+    return { c, m, r, fee, comision, falta, total: fee + (comision || 0), viejo: datoViejo(m.ts, Date.now()) };
+  });
+  const totales = {};
+  filas.filter(f => f.m).forEach(f => { const k = f.m.moneda || "COP"; totales[k] = (totales[k] || 0) + f.total; });
+  const lbl = { color: GRAY, fontSize: 10, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase" };
+  return (
+    <div data-gp-plata style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 14, padding: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 12, marginBottom: 12 }}>
+        <div>
+          <div style={lbl}>GP este mes · fee + comisión al ritmo actual</div>
+          <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 4 }}>
+            {Object.keys(totales).length === 0
+              ? <span style={{ fontSize: 13, color: GRAY }}>{estado === "cargando" ? "Cargando…" : "Sin datos del CAIO todavía."}</span>
+              : Object.entries(totales).map(([mon, v]) => <span key={mon} style={{ fontSize: 26, fontWeight: 800, color: INK, letterSpacing: -0.5 }}>{dinero(v, mon)}</span>)}
+          </div>
+        </div>
+        <div style={{ fontSize: 11, color: GRAY, maxWidth: 360 }}>La comisión es estimada: % del contrato sobre lo que el cierre al ritmo actual pase de la meta. Se confirma en el cierre del mes.</div>
+      </div>
+      <div style={{ overflowX: "auto", maxWidth: "100%" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(120px,1.4fr) repeat(4, minmax(80px,1fr))", gap: "6px 12px", fontSize: 12.5, alignItems: "baseline", minWidth: 520 }}>
+        {["Cliente", "Fee", "Comisión est.", "Le falta para la meta", "Total GP"].map(h => <div key={h} style={{ ...lbl, fontSize: 9.5 }}>{h}</div>)}
+        {filas.map(({ c, m, fee, comision, falta, total, viejo }) => (
+          <React.Fragment key={c.id}>
+            <div style={{ color: INK, fontWeight: 600 }}>{c.name}{viejo ? <span style={{ color: GRAY, fontWeight: 400 }}> · dato viejo</span> : null}</div>
+            {m ? <>
+              <div style={{ color: INK }}>{dinero(fee, m.moneda)}</div>
+              <div style={{ color: comision ? GREEN : GRAY }}>{comision == null ? "sin % en el contrato" : dinero(comision, m.moneda)}</div>
+              <div style={{ color: falta ? INK : GREEN }}>{falta == null ? "—" : falta ? dinero(falta, m.moneda) : "meta cumplida"}</div>
+              <div style={{ color: INK, fontWeight: 800 }}>{dinero(total, m.moneda)}</div>
+            </> : <div style={{ gridColumn: "span 4", color: GRAY }}>Sin datos: falta conectar el CAIO.</div>}
+          </React.Fragment>
+        ))}
+      </div>
+      </div>
+    </div>);
+}
 // Simulador de la proyección (JP 2026-10-28): casillas llenas con los números reales del mes; recalcula al instante con la
 // misma fórmula de la proyección financiera (costos.sim). No guarda nada: la proyección oficial cambia solo por el JSON/Excel.
 function SimuladorProyeccion({ p, real, mon, angosto, cierreReal, acuerdo, hoy, pautaRitmo, rotulo, mesActual }) {
@@ -10803,19 +10850,27 @@ function HomeTab({ data, onGoToClients, onSelectClient, onUpdateIssues, onUpdate
       <div style={{ marginBottom:24, display:"flex", alignItems:"flex-end", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
         <div className="gp-rise">
           <div style={{ color:ACCENT_DIM, fontSize:10, fontWeight:700, letterSpacing:3, textTransform:"uppercase", marginBottom:6 }}>Dashboard</div>
-          <h2 style={{ color:INK, fontSize:24, fontWeight:800, letterSpacing:-0.5, lineHeight:1 }}>Centro de Comando</h2>
+          <h2 style={{ color:INK, fontSize:24, fontWeight:800, letterSpacing:-0.5, lineHeight:1 }}>Hoy</h2>
         </div>
         <div style={{ color:GRAY, fontSize:12, textTransform:"capitalize", textAlign:"right" }}>{today}</div>
       </div>
       {data.clients.some(c => c.servicioSlug) && (
         <div style={{ marginBottom:24 }}>
-          <div style={{ color:ACCENT_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:5 }}>Métricas reales vs proyección</div>
-          <div style={{ color:INK, fontWeight:800, fontSize:16, marginBottom:12 }}>Operación por cliente</div>
+          <div style={{ color:ACCENT_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:5 }}>1 · Clientes · real vs meta y proyección</div>
+          <div style={{ color:INK, fontWeight:800, fontSize:16, marginBottom:12 }}>Cómo va cada cliente</div>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:14 }}>
             {data.clients.filter(c => c.servicioSlug).map(c => <TarjetaMetricas key={c.id} slug={c.servicioSlug} nombre={c.name} m={metricasOps[c.servicioSlug]} estado={estadoMetricas} onAbrir={onAbrirPanorama} />)}
           </div>
         </div>
       )}
+      {data.clients.some(c => c.servicioSlug) && (
+        <div style={{ marginBottom:28 }}>
+          <div style={{ color:ACCENT_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:5 }}>2 · Plata del mes</div>
+          <div style={{ color:INK, fontWeight:800, fontSize:16, marginBottom:12 }}>Lo que GP factura este mes</div>
+          <PlataMes clientes={data.clients.filter(c => c.servicioSlug)} metricasOps={metricasOps} estado={estadoMetricas} />
+        </div>
+      )}
+      <div style={{ color:ACCENT_DIM, fontSize:9, fontWeight:700, letterSpacing:2.5, textTransform:"uppercase", marginBottom:12, paddingTop:16, borderTop:`1px solid ${BORDER}` }}>3 · Seguimiento del método y tareas</div>
 
       <div className="gp-bento">
         {/* Héroe: avance global */}
